@@ -292,13 +292,13 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', short: '2 Overclocks/Purge, no Accelerate', shortBonus: 'Overclock step −1', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
   { id: 'overclockStep3', name: 'Beyond Googol', group: 'overclockStep', short: `DeGoogol, Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+`, shortBonus: 'Overclock step −1', trigger: `After Overclock fast and DeGoogol, claim an Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+2 → +1)', condition: { kind: 'counter', key: 'overflowDeepOverclock', min: 1 } },
   // Power group (#1051). Stack Overflow / Turbo button are recorded by activateComputeBoost.
-  { id: 'powerUser', name: 'Power user', group: 'power', trigger: 'Unlock the Power page', short: 'Unlock Power', condition: { kind: 'powerPageUnlocked' } },
-  { id: 'batteriesIncluded', name: 'Batteries included', group: 'power', trigger: 'Build your first Battery', short: 'First Battery', condition: { kind: 'computeEntityBuilt', fromIndex: 1 } },
-  { id: 'turboButton', name: 'Turbo button', group: 'power', trigger: 'Activate your first Turbo Boost', short: 'First Turbo', condition: { kind: 'counter', key: 'turboBoosts', min: 1 } },
+  { id: 'powerUser', selfExplanatory: true, name: 'Power user', group: 'power', trigger: 'Unlock the Power page', short: 'Unlock Power', condition: { kind: 'powerPageUnlocked' } },
+  { id: 'batteriesIncluded', selfExplanatory: true, name: 'Batteries included', group: 'power', trigger: 'Build your first Battery', short: 'First Battery', condition: { kind: 'computeEntityBuilt', fromIndex: 1 } },
+  { id: 'turboButton', selfExplanatory: true, name: 'Turbo button', group: 'power', trigger: 'Activate your first Turbo Boost', short: 'First Turbo', condition: { kind: 'counter', key: 'turboBoosts', min: 1 } },
   { id: 'stackOverflow', name: 'Stack Overflow', group: 'power', trigger: 'Stack a Boost to its maximum', short: 'Max Boost stack', condition: { kind: 'counter', key: 'maxBoostStack', min: 1 } },
   { id: 'coldFusion', name: 'Cold fusion', group: 'power', trigger: 'Build your first Fusion', short: 'First Fusion', condition: { kind: 'computeEntityBuilt', fromIndex: 9 } },
   // First Purge and after (#1051). Lifetime Purge counts survive Reboot (`purge.count` does not).
-  { id: 'justGoogolIt', name: 'Just Googol it', group: 'firstPurge', trigger: 'Reach 1 Googol Bytes', short: '1 Googol Bytes', reveal: { kind: 'storageUnlocked' }, condition: { kind: 'googolReached' } },
+  { id: 'justGoogolIt', selfExplanatory: true, name: 'Just Googol it', group: 'firstPurge', trigger: 'Reach 1 Googol Bytes', short: '1 Googol Bytes', reveal: { kind: 'storageUnlocked' }, condition: { kind: 'googolReached' } },
   { id: 'remindMeLater', details: 'The timer only runs while a Purge is available and unclaimed, so Auto-Purge (which claims it for you) must be paused.', name: 'Remind me later', group: 'firstPurge', trigger: `Leave a Purge available but unclaimed for ${REMIND_ME_LATER_SECONDS} seconds (pause Auto-Purge if you own it)`, short: 'Purge pending 1 min', condition: { kind: 'counter', key: 'purgeWaitSeconds', min: REMIND_ME_LATER_SECONDS } },
   { id: 'startAllOver', name: 'Wait, do I start all over?', group: 'firstPurge', trigger: 'Purge for the first time', short: 'Purge', condition: { kind: 'lifetimePurges', min: 1 } },
   { id: 'tenTypes', name: 'There are 10 types of people', group: 'firstPurge', trigger: 'Purge at least 2 times', short: 'Purge ×2', condition: { kind: 'lifetimePurges', min: 2 } },
@@ -320,7 +320,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'rmRf', name: 'rm -rf', group: 'reboot', trigger: 'Reformat the Byte Foundry', short: 'Reformat Foundry', condition: { kind: 'counter', key: 'reformats', min: 1 } },
   { id: 'kernelPanic', details: 'Measured in time actually played, not time away.', name: 'Kernel panic', group: 'reboot', trigger: 'Reboot twice within an hour of play', short: 'Reboot ×2 in 1 h', condition: { kind: 'counter', key: 'quickReboots', min: 1 } },
   { id: 'popcorn', name: 'Popcorn', group: 'reboot', trigger: `Earn ${POPCORN_KERNELS} Kernels in total`, short: `${POPCORN_KERNELS} Kernels`, condition: { kind: 'kernelsEarned', min: POPCORN_KERNELS } },
-].map(def => ({ secret: false, platformDependent: false, details: null, bonus: null, short: null, shortBonus: null, reveal: undefined, ...def }))
+].map(def => ({ secret: false, platformDependent: false, selfExplanatory: false, details: null, bonus: null, short: null, shortBonus: null, reveal: undefined, ...def }))
 // Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [

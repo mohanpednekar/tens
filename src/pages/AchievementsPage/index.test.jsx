@@ -213,7 +213,19 @@ describe('AppMenu achievements entry', () => {
     unmount()
     renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
     openGroup('Reboot')
-    fireEvent.click(screen.getByLabelText('rm -rf details'))
+    // Collapsed: the short requirement; expanded: the full one.
     expect(screen.getByText('Reformat Foundry')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('rm -rf details'))
+    expect(screen.getByText('Reformat the Byte Foundry')).toBeTruthy()
+  })
+
+  it('a revealed row shows its requirement, then its reward once earned, without expanding', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
+    openGroup('Reboot')
+    expect(screen.getByLabelText('Kernel panic summary').textContent).toBe('Reboot ×2 in 1 h')
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({ quettaSpent: true, tier10Bought: true }, { purchased: { tier10: 1 } })} />)
+    openGroup('Tier ladder')
+    expect(screen.getByLabelText('Quetta broke summary').textContent).toMatch(/^Reward earned: /)
   })
 })

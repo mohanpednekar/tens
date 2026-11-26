@@ -285,12 +285,20 @@ const AchievementsPage = ({ game }) => {
                           <strong>{label}</strong>
                         </NameButton>
                       )}
-                      {!masked && !spoiler && openRows[def.id] && <Detail>{getAchievementShortRequirement(def)}</Detail>}
+                      {/* Revealed rows always say something: the requirement until earned, then the reward (the requirement when there is none). */}
+                      {/* A title that already says it (selfExplanatory) skips the requirement line; a reward line still shows. */}
+                      {!masked && !spoiler && !openRows[def.id] && (earned ? getAchievementShortReward(def) : !def.selfExplanatory) && (
+                        <Detail aria-label={`${def.name} summary`}>
+                          {earned ? `Reward earned: ${getAchievementShortReward(def)}` : getAchievementShortRequirement(def)}
+                        </Detail>
+                      )}
+                      {!masked && !spoiler && openRows[def.id] && <Detail>{def.trigger}</Detail>}
                       {!masked && !spoiler && openRows[def.id] && getAchievementReward(def) && (
                         <Detail aria-label={`${def.name} reward ${earned ? 'earned' : 'pending'}`}>
                           {earned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
                         </Detail>
                       )}
+                      {!masked && !spoiler && openRows[def.id] && def.details && <Detail aria-label={`${def.name} details text`}>{def.details}</Detail>}
                     </Text>
                     <Badge $color={earned ? theme.color.good : theme.color.textMuted}>{progressText && !earned ? `${progressText} ` : ''}{earned ? '✅' : '🔒'}</Badge>
                   </Row>
