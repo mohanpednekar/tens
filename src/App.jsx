@@ -15,27 +15,11 @@ import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, loadThemePreference, saveThemePreference } from 'game/storage'
 import { GlobalStyle, LayoutProvider, ThemeProvider, resolveThemeMode } from 'theme'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazyPage } from './lazyPage'
+import { Suspense, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 // Rarely-visited pages load on demand so the entry chunk stays small (perf pass, #1144).
-// A deploy can delete an old tab's hashed chunks; reload once (guarded per session) to pick up the new build.
-const RELOAD_FLAG = 'tens_chunk_reload'
-const lazyPage = loader =>
-  lazy(() =>
-    loader().catch(error => {
-      try {
-        if (!sessionStorage.getItem(RELOAD_FLAG)) {
-          sessionStorage.setItem(RELOAD_FLAG, '1')
-          window.location.reload()
-          return new Promise(() => {})
-        }
-      } catch {
-        // storage unavailable: fall through and surface the error
-      }
-      throw error
-    }),
-  )
 const AchievementsPage = lazyPage(() => import('pages/AchievementsPage'))
 const InfoPage = lazyPage(() => import('pages/InfoPage'))
 const MilestonesPage = lazyPage(() => import('pages/MilestonesPage'))
