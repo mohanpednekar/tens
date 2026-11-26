@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- Buy mode options are now named **Bytes** (default, fills up to the level boundary) and **Bits** (exactly one unit per Buy and per autobuyer attempt).
 - **Firmware appears as soon as it has something usable** (e.g. an unlocked Buy max, even before the first Purge). Its tabs and sections stay hidden until their own content is reached: Automation and Purge Points after the first Purge, Prestige once Buy max is unlocked or after the first Purge. Challenges still appears with the first Purge.\n- **Stricter spoilers**: the Achievements screen lists a group only once its layer is reached (names and star totals included), and the Manual no longer mentions Reboot, Kernels, Flops, Power, Overflow mode or future layers before you reach them.
 - **Buy max is now unlocked by the Click fast, buy max achievement** instead of the 2 PP Firmware purchase (saves that already bought it keep it).
 - First-time **Disk full** screen is shorter and centered: the Purge Point reward up front, a two-column Resets / Keeps summary, and a full-width Purge button; the backdrop is lighter and blurred.

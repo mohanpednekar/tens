@@ -125,7 +125,7 @@ Saves must already carry `purchaseLevels`/`purchaseLevelProgress` in the current
 `storage.js`'s `mergeState` only fills missing fields from fresh defaults and does not derive levels
 from legacy `purchased` counts.
 
-### Buy mode (Level / Single)
+### Buy mode (player labels Bytes = `level` / Bits = `single`)
 
 A per-device UI preference (`storage.js` `loadBuyUnitPreference`/`saveBuyUnitPreference`, key `tens_buy_unit_mode`, not game
 state; hook `buyUnitMode`/`setBuyUnitMode`, read via `buyUnitModeRef`). **Level** (default): a manual Factory Buy fills up to the level

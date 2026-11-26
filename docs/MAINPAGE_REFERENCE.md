@@ -731,7 +731,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
   *Purge Points* (Speed bonus 1 PP, Sleep mode 4 h → 24 h ladder, Compression leveled upgrade, Cache Warm 20 PP,
   Playtime bonus 100 PP, Overflow mode — locked until Auto Purge's interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`)
-  and *Purchasing* (Buy mode: Level default / Single, `components/BuyModeToggle`; Buy max: locked until the Click fast, buy max achievement, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
+  and *Purchasing* (Buy mode: Bytes (code `level`, default) / Bits (code `single`), `components/BuyModeToggle`; Buy max: locked until the Click fast, buy max achievement, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
   the name is a button (`"<name> details"`, `aria-expanded`) toggling a full-width description
   (`"<name> description"`); under the name one short, plain value line (`"<name> value"`) — usually
   `now → after` while buyable (e.g. "Time away: up to 4h → 8h"), the current effect once owned/maxed, or a plain
