@@ -1049,7 +1049,7 @@ Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving t
 token-driven `FullScreenCard` (`surfaceRaised` panel with a `warn` top border, max 24rem): 💾 icon, "Disk full"
 `warn` heading, "Production stopped" (`PurgeMutedText`), a `DiskFullReward` line ("+N Purge Point(s)" from
 `purgeAwardPreview`, `warn`), a `DiskFullEffects` `<dl>` of two equal centered columns (Resets: Bits, tiers,
-upgrades / Keeps: PP, autobuyers) and a full-width "✦ Purge now" button — everything on one center axis. Repeat-run reminders use `TopPurgeBar`
+Accelerate / Keeps: Purge Points, Foundry) and a full-width "✦ Purge now" button — everything on one center axis. Repeat-run reminders use `TopPurgeBar`
 (`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `PurgeMutedText` + a
 `variant="prestige"` `$pulse` button. Both prestige buttons keep their existing `aria-label`s; the
 full-screen button still auto-focuses on mount. Presentation gates (`showFullScreenPrompt` /

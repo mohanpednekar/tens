@@ -1222,17 +1222,17 @@ const MainPage = ({ game }) => {
             <h2>Disk full</h2>
             <PurgeMutedText>Production stopped</PurgeMutedText>
           </DiskFullHeader>
-          <DiskFullReward aria-label="purge reward">
+          <DiskFullReward role="group" aria-label="purge reward">
             +{formatAmount(purgeAwardPreview)} Purge Point{purgeAwardPreview === 1 ? '' : 's'}
           </DiskFullReward>
           <DiskFullEffects>
             <div>
               <dt>Resets</dt>
-              <dd>Bits, tiers, upgrades</dd>
+              <dd>Bits, tiers, Accelerate</dd>
             </div>
             <div>
               <dt>Keeps</dt>
-              <dd>PP, autobuyers</dd>
+              <dd>Purge Points, Foundry</dd>
             </div>
           </DiskFullEffects>
           <Button
