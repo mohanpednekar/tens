@@ -258,7 +258,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
   ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
     id: `reclaim${i + 1}`,
-    name: `Reclamation ${['I', 'II', 'III', 'IV', 'V'][i]}`,
+    name: ['Flush with success', 'Garbage, collected', "Marie Kondo'd", 'Swamp drained', 'The Great Flushening'][i],
     group: 'foundry',
     trigger: pools === 1 ? 'Flush a Storage pool for the first time' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Flush every Storage pool at least once' : `Flush ${pools} different Storage pools`,
     short: pools === 1 ? 'Flush a pool' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Flush every pool' : `Flush ${pools} pools`,
@@ -273,14 +273,14 @@ export const ACHIEVEMENT_DEFINITIONS = [
     short: `Buy ${tier.symbol}`,
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
-  { id: 'quettaSpent', details: 'You must click Restage yourself; Auto Restage does not count.', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
+  { id: 'quettaSpent', details: 'You must click Restage yourself; Auto Restage does not count.', name: 'Quetta broke', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', short: 'Accelerate 1', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', short: 'Accelerate 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, condition: { kind: 'overclocked' } },
   { id: BUY_MAX_ACHIEVEMENT_ID, details: 'Manual clicks only: autobuyers do not count, a click that buys nothing does not count, and clicking any other Buy or Accelerate button in between starts the count over. Works on any Factory Buy or Accelerate button, as long as all ten are on the same one.', name: 'Click fast, buy max', group: 'earlyFactory', trigger: `Click the same Factory Buy button ${BUY_MAX_RUSH_CLICKS} times within 1 second`, short: `Buy ×${BUY_MAX_RUSH_CLICKS} in 1 s`, shortBonus: 'Unlocks Buy max', bonus: 'Unlocks Buy max mode on Firmware → Prestige: each purchase buys every affordable level', condition: { kind: 'counter', key: 'buyMaxRushes', min: 1 } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
-    name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,
+    name: ['High five', 'Five alive', 'Take five', 'The Fifth Element', 'Jackson 5', 'Six pack', 'Lucky seven', 'Eight is enough', 'Cloud nine', 'Perfect ten'][i],
     group: 'levelPower',
     trigger: `Complete ${getLevelPowerAchievementLevel(tierNumber)} levels on ${TIER_DEFINITIONS[tierNumber - 1].name}`,
     short: `${TIER_DEFINITIONS[tierNumber - 1].symbol} level ${getLevelPowerAchievementLevel(tierNumber)}`,

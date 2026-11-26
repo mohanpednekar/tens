@@ -7561,7 +7561,7 @@ export const setAutobuyerEnabled = (tierId, enabled) => state => {
 // owned[tier.id] move together, so requiring only `available >= cost` could drain a non-last tier to
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
 // even though the purchase "succeeded". Require at least 1 generator left over instead, except the
-// last tier (QB), which may spend to 0 (a manual Restage at 0 QB then earns Spent QB — see restageManually).
+// last tier (QB), which may spend to 0 (a manual Restage at 0 QB then earns Quetta broke — see restageManually).
 // Challenge-aware tickspeed charge for reaching `targetLevel`: F16 Egress Fees charges the next level's cost; F20 Burn Rate
 // spends the full requirement (now the baseline spend for every tier, so F20 is a no-op on spend).
 const getTickspeedChargeLevel = (state, tierId, targetLevel) =>
@@ -8697,7 +8697,7 @@ export const consumeXpForLastTierTickspeed = amount => state => consumeXpForLast
 
 // A player-clicked Restage (MainPage button, Daily-run action). Unlike Auto Restage, it is allowed while the last tier
 // owns 0 — the real stall: every tier and Bits end at 0 with nothing left to rebuild them. Doing so counts the lifetime
-// `emptyRestages` achievement counter, which earns Spent QB (whose regardless-of-balance credit is the way out).
+// `emptyRestages` achievement counter, which earns Quetta broke (whose regardless-of-balance credit is the way out).
 export const restageManually = amount => state => {
   const emptyLastTier = clampNonNegative(state.owned?.[getEffectiveLastTier(state).id]) <= 0
   const next = consumeXpForLastTierTickspeedCore(amount, true)(state)
@@ -8722,7 +8722,7 @@ const consumeXpForLastTierTickspeedCore = (amount, allowEmptyLastTier) => state 
   // guard, consuming XP while the last tier owns nothing would still wipe every other tier's
   // owned/resources and the Bits balance for a tickspeed bonus with nothing left to apply it
   // to — a pure, irreversible-feeling loss with no offsetting benefit. See docs/DESIGN_HISTORY.md.
-  // (restageManually opts out: a deliberate click at 0 QB is the Spent QB stall.)
+  // (restageManually opts out: a deliberate click at 0 QB is the Quetta broke stall.)
   if (!allowEmptyLastTier && clampNonNegative(state.owned?.[lastTierId]) <= 0) return state
 
   const safeAmount = Math.floor(clampNonNegative(amount))

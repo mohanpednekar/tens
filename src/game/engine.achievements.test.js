@@ -52,7 +52,7 @@ describe('achievements registry', () => {
   })
 })
 
-describe('Spent QB', () => {
+describe('Quetta broke', () => {
   const lastId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
   const restageReady = (qb = 0) => {
     const base = createInitialGameState()

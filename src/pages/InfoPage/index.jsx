@@ -642,7 +642,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             {lastTierName}’ tickspeed upgrade may spend your last unit (other tiers always keep one).
-            Restage while holding 0 {lastTierName} (nothing is left producing) to earn Spent QB — then 1 is
+            Restage while holding 0 {lastTierName} (nothing is left producing) to earn Quetta broke — then 1 is
             credited regardless of balance, more often with more completed levels.
           </li>
           <li>

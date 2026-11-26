@@ -13024,7 +13024,7 @@ describe('last-tier level credit', () => {
     expect(credited(10, 20)).toBe(4)
     expect(credited(100, 20)).toBe(6)
     expect(credited(0, 10)).toBe(0)
-    expect(credited(10, 20, false)).toBe(0) // gated behind the Spent QB achievement
+    expect(credited(10, 20, false)).toBe(0) // gated behind the Quetta broke achievement
     // Whole units only, one per interval: nothing until the first interval elapses, then exactly 1.
     expect(credited(10, 4)).toBe(0)
     expect(credited(10, 5)).toBe(1)

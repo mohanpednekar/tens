@@ -1134,7 +1134,7 @@ const MainPage = ({ game }) => {
   // The last tier's XP-funded tickspeed — a separate upgrade shown below Accelerate once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
-  // Bits; still clickable while the last tier owns nothing (restageManually — the Spent QB stall; Auto
+  // Bits; still clickable while the last tier owns nothing (restageManually — the Quetta broke stall; Auto
   // Restage keeps consumeXpForLastTierTickspeed's 0-owned guard). The compounding bonus of spending N XP is
   // getLastTierXpTickspeedMultiplier(N) regardless of XP already consumed.
   const isLastTierXpUnlocked = isLastTierTickspeedXpUnlocked(state)

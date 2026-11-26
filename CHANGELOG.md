@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- Achievements with plain names got fitting ones: the five Reclamation levels (Flush with success … The Great Flushening), the ten Level power levels (High five … Perfect ten, matching each level count) and Spent QB → Quetta broke. Series and other achievement names are unchanged.
 - Buy mode options are now named **Bytes** (default, fills up to the level boundary) and **Bits** (exactly one unit per Buy and per autobuyer attempt).
 - **Firmware appears as soon as it has something usable** (e.g. an unlocked Buy max, even before the first Purge). Its tabs and sections stay hidden until their own content is reached: Automation and Purge Points after the first Purge, Prestige once Buy max is unlocked or after the first Purge. Challenges still appears with the first Purge.\n- **Stricter spoilers**: the Achievements screen lists a group only once its layer is reached (names and star totals included), and the Manual no longer mentions Reboot, Kernels, Flops, Power, Overflow mode or future layers before you reach them.
 - **Buy max is now unlocked by the Click fast, buy max achievement** instead of the 2 PP Firmware purchase (saves that already bought it keep it).
@@ -61,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Spent QB achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
+- **Quetta broke achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
 
 ### Added
 

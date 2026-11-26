@@ -47,7 +47,7 @@ describe('AchievementsPage', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ tier01Bought: true, tier02Bought: true, tier03Bought: true })} />)
     openGroup('Tier ladder')
     expect(screen.getByLabelText('First purchase achievement level 3 of 10')).toBeTruthy()
-    expect(screen.getByLabelText('Spent QB achievement not yet earned')).toBeTruthy()
+    expect(screen.getByLabelText('Quetta broke achievement not yet earned')).toBeTruthy()
   })
 
   it('collapses ordered steps into one leveled row', () => {
@@ -137,7 +137,7 @@ describe('AppMenu achievements entry', () => {
     fireEvent.click(screen.getByLabelText('Reclamation details'))
     expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Flush a pool · Disk step 2%')
     expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Flush 3 pools (0/3) · Disk step 3%')
-    expect(screen.getByLabelText('Reclamation level 5 not yet revealed').textContent).toBe('🔒 5. Reclamation V')
+    expect(screen.getByLabelText('Reclamation level 5 not yet revealed').textContent).toBe('🔒 5. The Great Flushening')
     expect(screen.getByLabelText('Reclamation achievement level 1 of 5')).toBeTruthy()
     expect(screen.getByText(/^Disk step 2%: Disk-size steps without a Flush Pool upgrade close 2% of the gap/)).toBeTruthy()
     // Rewards of still-hidden levels are not explained yet.
