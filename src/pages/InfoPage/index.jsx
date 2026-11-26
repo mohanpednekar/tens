@@ -3,6 +3,7 @@ import StatCard from 'components/StatCard'
 import {
   formatAmount,
   isAchievementConditionMet,
+  isAchievementRevealed,
   formatBitsInNearestUnit,
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
@@ -62,6 +63,7 @@ import {
   DATA_STREAM_SPEED_EXPONENT_BASE,
   DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED,
   OVERCLOCK_REQUIREMENT_STEP,
+  ACHIEVEMENT_DEFINITIONS,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -165,6 +167,7 @@ export const MANUAL_SECTION_REVEALS = {
   'tier autobuyers section': { kind: 'lifetimePurges', min: 1 },
   'compute flops section': { kind: 'computeFlopsPageUnlocked' },
   'reboot section': { kind: 'rebootReached' },
+  'achievements section': { kind: 'storageUnlocked' },
 }
 
 export const isManualSectionRevealed = (state, label) => {
@@ -828,6 +831,17 @@ const InfoPage = ({ game }) => {
             hyperscalers. Reboot <em>N</em> also unlocks the <em>N</em>th Compute tier’s autobuyer for
             free.
           </li>
+        </ul>
+      </ManualSection>
+
+      <ManualSection {...section('achievements section', 'Achievements')}>
+        <ul>
+          <li>The Achievements screen (More → Achievements) keeps requirements short. Fine print for the ones that have some is listed here, once you can see the achievement.</li>
+          {ACHIEVEMENT_DEFINITIONS.filter(def => def.details && !def.secret && isAchievementRevealed(state, def)).map(def => (
+            <li key={def.id}>
+              <strong>{def.name}:</strong> {def.trigger}. {def.details}
+            </li>
+          ))}
         </ul>
       </ManualSection>
     </RootDiv>

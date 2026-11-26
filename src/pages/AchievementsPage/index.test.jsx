@@ -221,6 +221,6 @@ describe('AppMenu achievements entry', () => {
     renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
     openGroup('Reboot')
     fireEvent.click(screen.getByLabelText('rm -rf details'))
-    expect(screen.getByText('Reformat the Byte Foundry')).toBeTruthy()
+    expect(screen.getByText('Reformat Foundry')).toBeTruthy()
   })
 })

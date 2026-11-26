@@ -251,7 +251,7 @@ export const BUY_MAX_RUSH_WINDOW_MS = 1000
 export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
-  { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
+  { id: 'pingOfDeath', details: 'Counts every Ping you have ever made, across Purges and Reboots.', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
   // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake; level 5 (the grand reward) syncs Bitrate to Capacity (one Upgrade does both). The per-pool Bitrate exponent upgrades are separate: they come
@@ -273,11 +273,11 @@ export const ACHIEVEMENT_DEFINITIONS = [
     short: `Buy ${tier.symbol}`,
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
-  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
+  { id: 'quettaSpent', details: 'You must click Restage yourself; Auto Restage does not count.', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', short: 'Accelerate 1', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', short: 'Accelerate 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, condition: { kind: 'overclocked' } },
-  { id: BUY_MAX_ACHIEVEMENT_ID, name: 'Click fast, buy max', group: 'earlyFactory', trigger: `Click the same Factory Buy button ${BUY_MAX_RUSH_CLICKS} times within 1 second`, short: `Buy ×${BUY_MAX_RUSH_CLICKS} in 1 s`, shortBonus: 'Unlocks Buy max', bonus: 'Unlocks Buy max mode on Firmware → Prestige: each purchase buys every affordable level', condition: { kind: 'counter', key: 'buyMaxRushes', min: 1 } },
+  { id: BUY_MAX_ACHIEVEMENT_ID, details: 'Manual clicks only: autobuyers do not count, a click that buys nothing does not count, and clicking any other Buy or Accelerate button in between starts the count over. Works on any Factory Buy or Accelerate button, as long as all ten are on the same one.', name: 'Click fast, buy max', group: 'earlyFactory', trigger: `Click the same Factory Buy button ${BUY_MAX_RUSH_CLICKS} times within 1 second`, short: `Buy ×${BUY_MAX_RUSH_CLICKS} in 1 s`, shortBonus: 'Unlocks Buy max', bonus: 'Unlocks Buy max mode on Firmware → Prestige: each purchase buys every affordable level', condition: { kind: 'counter', key: 'buyMaxRushes', min: 1 } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
     name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,
@@ -299,14 +299,14 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'coldFusion', name: 'Cold fusion', group: 'power', trigger: 'Build your first Fusion', short: 'First Fusion', condition: { kind: 'computeEntityBuilt', fromIndex: 9 } },
   // First Purge and after (#1051). Lifetime Purge counts survive Reboot (`purge.count` does not).
   { id: 'justGoogolIt', name: 'Just Googol it', group: 'firstPurge', trigger: 'Reach 1 Googol Bytes', short: '1 Googol Bytes', reveal: { kind: 'storageUnlocked' }, condition: { kind: 'googolReached' } },
-  { id: 'remindMeLater', name: 'Remind me later', group: 'firstPurge', trigger: `Leave a Purge available but unclaimed for ${REMIND_ME_LATER_SECONDS} seconds (pause Auto-Purge if you own it)`, short: 'Purge pending 1 min', condition: { kind: 'counter', key: 'purgeWaitSeconds', min: REMIND_ME_LATER_SECONDS } },
+  { id: 'remindMeLater', details: 'The timer only runs while a Purge is available and unclaimed, so Auto-Purge (which claims it for you) must be paused.', name: 'Remind me later', group: 'firstPurge', trigger: `Leave a Purge available but unclaimed for ${REMIND_ME_LATER_SECONDS} seconds (pause Auto-Purge if you own it)`, short: 'Purge pending 1 min', condition: { kind: 'counter', key: 'purgeWaitSeconds', min: REMIND_ME_LATER_SECONDS } },
   { id: 'startAllOver', name: 'Wait, do I start all over?', group: 'firstPurge', trigger: 'Purge for the first time', short: 'Purge', condition: { kind: 'lifetimePurges', min: 1 } },
   { id: 'tenTypes', name: 'There are 10 types of people', group: 'firstPurge', trigger: 'Purge at least 2 times', short: 'Purge ×2', condition: { kind: 'lifetimePurges', min: 2 } },
   { id: 'scriptKiddie', name: 'Script kiddie', group: 'firstPurge', trigger: 'Unlock your first autobuyer', short: 'First autobuyer', condition: { kind: 'autobuyers', mode: 'any' } },
   { id: 'hex10', name: '0x10', group: 'firstPurge', trigger: 'Purge at least 16 times', short: 'Purge ×16', condition: { kind: 'lifetimePurges', min: 16 } },
   { id: 'cronJob', name: 'Cron job', group: 'firstPurge', trigger: 'Unlock every tier autobuyer', short: 'All autobuyers', condition: { kind: 'autobuyers', mode: 'all' } },
-  { id: 'noHands', name: 'Look ma, no hands', group: 'firstPurge', trigger: 'Purge in a cycle with no manual tier purchase', short: 'Hands-free Purge', condition: { kind: 'counter', key: 'handsFreePurges', min: 1 } },
-  { id: 'stillClicker', name: "Oh, it's still a clicker game!", group: 'firstPurge', trigger: 'Ping while every tier autobuyer is unlocked', short: 'Ping, all automated', condition: { kind: 'counter', key: 'automatedPings', min: 1 } },
+  { id: 'noHands', details: 'Autobuyer purchases are fine; any manual tier Buy during the cycle spoils it. Scale Up and Overclock keep the cycle going.', name: 'Look ma, no hands', group: 'firstPurge', trigger: 'Purge in a cycle with no manual tier purchase', short: 'Hands-free Purge', condition: { kind: 'counter', key: 'handsFreePurges', min: 1 } },
+  { id: 'stillClicker', details: 'Every tier autobuyer must already be unlocked when you Ping.', name: "Oh, it's still a clicker game!", group: 'firstPurge', trigger: 'Ping while every tier autobuyer is unlocked', short: 'Ping, all automated', condition: { kind: 'counter', key: 'automatedPings', min: 1 } },
   // Late Purge layer (#1051).
   { id: 'lossless', name: 'Lossless', group: 'latePurge', trigger: 'Buy your first Compression level', short: 'Compression 1', condition: { kind: 'doublePpLevel', min: 1 } },
   { id: 'middleOut', name: 'Middle-out', group: 'latePurge', trigger: `Reach Compression level ${MIDDLE_OUT_COMPRESSION_LEVEL}`, short: `Compression ${MIDDLE_OUT_COMPRESSION_LEVEL}`, condition: { kind: 'doublePpLevel', min: MIDDLE_OUT_COMPRESSION_LEVEL } },
@@ -318,9 +318,9 @@ export const ACHIEVEMENT_DEFINITIONS = [
   // Reboot (#1051).
   { id: 'offAndOn', name: 'Have you tried turning it off and on again?', group: 'reboot', trigger: 'Reboot for the first time', short: 'Reboot', condition: { kind: 'eraCount', min: 1 } },
   { id: 'rmRf', name: 'rm -rf', group: 'reboot', trigger: 'Reformat the Byte Foundry', short: 'Reformat Foundry', condition: { kind: 'counter', key: 'reformats', min: 1 } },
-  { id: 'kernelPanic', name: 'Kernel panic', group: 'reboot', trigger: 'Reboot twice within an hour of play', short: 'Reboot ×2 in 1 h', condition: { kind: 'counter', key: 'quickReboots', min: 1 } },
+  { id: 'kernelPanic', details: 'Measured in time actually played, not time away.', name: 'Kernel panic', group: 'reboot', trigger: 'Reboot twice within an hour of play', short: 'Reboot ×2 in 1 h', condition: { kind: 'counter', key: 'quickReboots', min: 1 } },
   { id: 'popcorn', name: 'Popcorn', group: 'reboot', trigger: `Earn ${POPCORN_KERNELS} Kernels in total`, short: `${POPCORN_KERNELS} Kernels`, condition: { kind: 'kernelsEarned', min: POPCORN_KERNELS } },
-].map(def => ({ secret: false, platformDependent: false, bonus: null, short: null, shortBonus: null, reveal: undefined, ...def }))
+].map(def => ({ secret: false, platformDependent: false, details: null, bonus: null, short: null, shortBonus: null, reveal: undefined, ...def }))
 // Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [

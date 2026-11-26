@@ -245,7 +245,7 @@ const AchievementsPage = ({ game }) => {
                           return (
                             <Level key={def.id}>
                               <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`}>
-                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
+                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {getAchievementShortRequirement(def)}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
                               </Detail>
                               {!sharedBonus && getAchievementReward(def) && (
                                 <Detail aria-label={`${entry.name} level ${i + 1} reward ${lvlEarned ? 'earned' : 'pending'}`}>
@@ -282,7 +282,7 @@ const AchievementsPage = ({ game }) => {
                           <strong>{label}</strong>
                         </NameButton>
                       )}
-                      {!masked && !spoiler && openRows[def.id] && <Detail>{def.trigger}</Detail>}
+                      {!masked && !spoiler && openRows[def.id] && <Detail>{getAchievementShortRequirement(def)}</Detail>}
                       {!masked && !spoiler && openRows[def.id] && getAchievementReward(def) && (
                         <Detail aria-label={`${def.name} reward ${earned ? 'earned' : 'pending'}`}>
                           {earned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}

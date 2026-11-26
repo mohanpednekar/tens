@@ -79,3 +79,19 @@ describe('InfoPage (Manual) progressive reveal', () => {
   })
 })
 
+
+describe('InfoPage (Manual) Achievements topic', () => {
+  test('lists fine print only for revealed achievements', () => {
+    const initial = createInitialGameState()
+    const { unmount } = renderManual(initial)
+    expect(screen.queryByLabelText('achievements section')).not.toBeInTheDocument()
+    unmount()
+    renderManual({ ...initial, intro: { ...initial.intro, mainGameUnlocked: true } })
+    fireEvent.click(topic('Achievements'))
+    const section = screen.getByLabelText('achievements section')
+    expect(section).toHaveTextContent(/Click fast, buy max/)
+    expect(section).toHaveTextContent(/autobuyers do not count/i)
+    // Later-layer achievements stay hidden (no spoilers).
+    expect(section).not.toHaveTextContent(/Kernel panic|Remind me later/)
+  })
+})

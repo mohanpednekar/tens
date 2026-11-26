@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Manual → Achievements**: fine print and nuances for achievements that have some (e.g. autobuyer clicks do not count), listed only for achievements you can already see. The Achievements screen now shows the short requirement text.
 - **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other button in between; autobuyers and unaffordable clicks do not count) to unlock Buy max.
 - **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
 - **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
