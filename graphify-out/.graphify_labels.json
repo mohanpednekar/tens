@@ -1,7 +1,6 @@
 {
   "1": "MainPage/index.jsx",
   "4": "layers.js",
-  "5": "Key engine functions (`src/game/engine.js`)",
   "7": "Automation workflows",
   "12": "run-simulation.mjs",
   "16": "getTierCost",
@@ -21,7 +20,6 @@
   "40": "adaptSaveForCurrentSchema",
   "41": "env",
   "45": "steps",
-  "47": "Procedure",
   "48": "Automation workflows",
   "50": "backlog-issue-hygiene.sh",
   "52": "steps",
@@ -29,7 +27,6 @@
   "54": "file-task-issue/SKILL.md",
   "55": "orphan-branch-scan.sh",
   "57": "Package.swift",
-  "58": "CapApp-SPM/README.md",
   "60": "stryker.config.json",
   "62": "Automation workflows",
   "64": "scripts",
