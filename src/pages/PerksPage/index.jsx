@@ -504,18 +504,6 @@ const RowControls = styled.div`
 `
 
 // PP tutorial callout shown above the Prestige rows until the Speed bonus is bought.
-const LockedMoreText = styled.p`
-  color: ${props => props.theme.color.textMuted};
-  font-size: 0.8rem;
-  margin: 0;
-  padding: ${({ theme }) => theme.space.xs} 0 0;
-`
-
-// "🔒 N more" under a list whose later locked rows are hidden by progressive reveal.
-const LockedMore = ({ count, label }) => (count > 0
-  ? <LockedMoreText aria-label={`${count} more ${label} locked`}>🔒 {count} more</LockedMoreText>
-  : null)
-
 const Tutorial = styled.p`
   margin: 0;
   padding: ${({ theme }) => theme.space.md} ${({ theme }) => theme.space.lg};
@@ -772,7 +760,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const kernelBalance = state.eons?.balance ?? 0
 
   // Progressive reveal: owned automations plus the next one to unlock (lists are in prerequisite order);
-  // later locked rows stay hidden behind a "🔒 N more" line.
+  // later locked rows stay hidden.
   const revealUpToNext = (items, isOwned) => {
     const firstLocked = items.findIndex(item => !isOwned(item))
     return firstLocked === -1 ? items : items.filter((item, index) => index <= firstLocked || isOwned(item))
@@ -938,7 +926,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )
         })}
         </CellGrid>
-        <LockedMore count={GLOBAL_AUTOMATIONS.length - visibleGlobalAutomations.length} label="global automations" />
         {state.autoPurge != null && renderAutoPurgeConditions()}
       </Category>
 
@@ -1067,7 +1054,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             </TierPair>
           )
         })}
-        <LockedMore count={TIER_DEFINITIONS.length - visibleAutobuyerTiers.length} label="tier autobuyers" />
         </TierPairList>
         )}
       </Category>

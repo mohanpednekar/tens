@@ -113,7 +113,6 @@ const MilestonesPage = ({ game }) => {
   const firstUnreached = milestones.findIndex(milestone => !milestone.reached)
   // (A Reboot clears Purges, so a later milestone can be reached while an earlier one reads unreached again.)
   const shown = milestones.filter((milestone, index) => milestone.reached || index === firstUnreached)
-  const hiddenCount = milestones.length - shown.length
   const rebootRevealed = eraCount > 0 || eraEligible || isOverflowModeUnlocked(state)
 
   return (
@@ -133,7 +132,6 @@ const MilestonesPage = ({ game }) => {
               {milestone.label}
             </Event>
           ))}
-          {hiddenCount > 0 && <Event aria-label={`${hiddenCount} more milestones hidden`}>🔒 {hiddenCount} more</Event>}
         </Timeline>
         {rebootRevealed && (
         <RebootLine aria-label="reboot status">

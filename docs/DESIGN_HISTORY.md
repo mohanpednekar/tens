@@ -9714,8 +9714,11 @@ The four Factory feature cards (#1137's side-by-side pairs of tall, bottom-pinne
 Maintainer request: progressive reveal for every screen (Dev Mode excepted), a Manual that no longer
 needs long scrolling, and spoiler-masked (not secret) achievements. Superseded: Firmware's "every
 Global Automation row / all ten Tier Autobuyer rows always listed" — now owned rows plus the next one
-to unlock and a `🔒 N more` count (unlock history is still kept, since owned rows never hide). The
+to unlock (unlock history is still kept, since owned rows never hide). The
 Manual reuses the achievement condition grammar for its reveal gates instead of a second predicate
 set, so both latch on the same progress. Achievement series steps reveal one at a time (previous step
 earned) rather than all at once with their group. Challenges' Factory tab was left as is: locked tiles
 already hide the codename and rule.
+Maintainer follow-up: no "🔒 N more" counts anywhere (they were added first and removed), and spoiler
+achievements show their names everywhere — including not-yet-revealed series levels and "Next:" — with
+only the requirement, reward and progress withheld (no "???" placeholder).

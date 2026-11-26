@@ -21,7 +21,7 @@ const lateGame = () => {
 }
 
 describe('InfoPage (Manual) progressive reveal', () => {
-  test('a fresh save lists only the start-of-game topics, collapsed, with a locked-topics count', () => {
+  test('a fresh save lists only the start-of-game topics, collapsed, with no count of hidden ones', () => {
     renderManual(createInitialGameState())
     for (const name of ['Overview', 'Byte Foundry', 'Milestones', 'Sleep mode']) {
       expect(topic(name)).toHaveAttribute('aria-expanded', 'false')
@@ -29,15 +29,13 @@ describe('InfoPage (Manual) progressive reveal', () => {
     for (const label of ['storage section', 'power section', 'compute flops section', 'prestige section', 'reboot section']) {
       expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
     }
-    const lockedCount = Object.values(MANUAL_SECTION_REVEALS).filter(Boolean).length
-    expect(screen.getByLabelText('locked manual topics')).toHaveTextContent(`🔒 ${lockedCount} more topics unlock as you play`)
+    expect(screen.queryByText(/more topics/i)).not.toBeInTheDocument()
     // Collapsed: no body text until the heading is clicked.
     expect(screen.getByLabelText('byte foundry section')).not.toHaveTextContent(/forced priority/i)
   })
 
   test('every topic is revealed once its layer is reached, and only the heading toggles it', () => {
     renderManual(lateGame())
-    expect(screen.queryByLabelText('locked manual topics')).not.toBeInTheDocument()
     for (const label of Object.keys(MANUAL_SECTION_REVEALS)) {
       expect(screen.getByLabelText(label)).toBeInTheDocument()
     }

@@ -182,7 +182,6 @@ const ComputeFlopsPage = ({ game }) => {
     -1,
   )
   const visibleTiers = COMPUTE_FLOPS_TIER_DEFINITIONS.slice(0, Math.max(1, lastRelevantIndex + 2))
-  const hiddenTierCount = COMPUTE_FLOPS_TIER_DEFINITIONS.length - visibleTiers.length
 
   return (
     <RootDiv aria-label="compute flops screen">
@@ -263,7 +262,6 @@ const ComputeFlopsPage = ({ game }) => {
           )
         })}
       </TierList>
-      {hiddenTierCount > 0 && <Hint aria-label={`${hiddenTierCount} more compute tiers locked`}>🔒 {hiddenTierCount} more</Hint>}
     </RootDiv>
   )
 }

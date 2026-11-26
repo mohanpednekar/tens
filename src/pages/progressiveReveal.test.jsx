@@ -15,7 +15,7 @@ describe('progressive reveal', () => {
     expect(screen.getByLabelText('The first Kilobyte milestone reached')).toBeInTheDocument()
     expect(screen.getByLabelText('Go Googol milestone not yet reached')).toBeInTheDocument()
     expect(screen.queryByLabelText(/^First Reboot milestone/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('3 more milestones hidden')).toHaveTextContent('🔒 3 more')
+    expect(screen.queryByText(/more/)).not.toBeInTheDocument()
     expect(screen.queryByLabelText('reboot status')).not.toBeInTheDocument()
   })
 
@@ -35,6 +35,6 @@ describe('progressive reveal', () => {
     expect(screen.getByLabelText(`${second.name} · ${second.outputLabel} compute tier`)).toBeInTheDocument()
     const third = COMPUTE_FLOPS_TIER_DEFINITIONS[2]
     expect(screen.queryByLabelText(`${third.name} · ${third.outputLabel} compute tier`)).not.toBeInTheDocument()
-    expect(screen.getByLabelText(`${COMPUTE_FLOPS_TIER_DEFINITIONS.length - 2} more compute tiers locked`)).toBeInTheDocument()
+    expect(screen.queryByText(/🔒 \d+ more/)).not.toBeInTheDocument()
   })
 })

@@ -128,7 +128,7 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByLabelText('First purchase level 1 earned').textContent).toMatch(/^✅ 1\. Buy /)
     expect(screen.getByLabelText('First purchase level 2 not yet earned').textContent).toMatch(/^🔒 2\. Buy /)
     // Later steps stay spoilers until the step before them is earned.
-    expect(screen.getByLabelText('First purchase level 3 not yet revealed').textContent).toBe('🔒 3. ???')
+    expect(screen.getByLabelText('First purchase level 3 not yet revealed').textContent).toBe('🔒 3. Giga-what now')
   })
 
   it('Reclamation is a five-level series by pools compacted, each level listing its own short reward', () => {
@@ -137,7 +137,7 @@ describe('AppMenu achievements entry', () => {
     fireEvent.click(screen.getByLabelText('Reclamation details'))
     expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Flush a pool · Disk step 2%')
     expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Flush 3 pools (0/3) · Disk step 3%')
-    expect(screen.getByLabelText('Reclamation level 5 not yet revealed').textContent).toBe('🔒 5. ???')
+    expect(screen.getByLabelText('Reclamation level 5 not yet revealed').textContent).toBe('🔒 5. Reclamation V')
     expect(screen.getByLabelText('Reclamation achievement level 1 of 5')).toBeTruthy()
     expect(screen.getByText(/^Disk step 2%: Disk-size steps without a Flush Pool upgrade close 2% of the gap/)).toBeTruthy()
     // Rewards of still-hidden levels are not explained yet.
@@ -204,16 +204,18 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('spoiler achievements show their name but hide requirement, reward and progress until revealed', () => {
+    // (Name only — no "???" placeholder, no requirement text.)
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
     openGroup('Reboot')
     // The name is shown (unlike a secret achievement) …
     expect(screen.getByLabelText('rm -rf achievement not yet earned')).toBeTruthy()
-    expect(screen.getByLabelText('rm -rf requirement hidden').textContent).toBe('???')
+    expect(screen.getByLabelText('rm -rf achievement not yet earned').textContent).toBe('rm -rf🔒')
     // … but it cannot be expanded and its requirement never renders.
     expect(screen.queryByLabelText('rm -rf details')).toBeNull()
     expect(screen.queryByText('Reformat the Byte Foundry')).toBeNull()
     openGroup('Overclock step')
-    expect(screen.getByText('Next: ???')).toBeTruthy()
+    expect(screen.getByText('Next: Patient Overclock')).toBeTruthy()
+    expect(screen.queryByText(/Claim the first Overclock/)).toBeNull()
     expect(screen.queryByLabelText('Overclock step next reward')).toBeNull()
     unmount()
     renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)

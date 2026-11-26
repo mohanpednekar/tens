@@ -2142,7 +2142,7 @@ test.each([
   expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('Global Automation lists the next step with its Purge milestone and hides later locked ones', async () => {
+test('Global Automation lists the next step with its Purge milestone and hides later locked ones (no count)', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2156,11 +2156,10 @@ test('Global Automation lists the next step with its Purge milestone and hides l
   for (const name of ['Auto Scale Up', 'Auto Restage', 'Auto Overclock', 'Auto Purge']) {
     expect(screen.queryByLabelText(new RegExp(`^${name} unlocks at Purge`))).not.toBeInTheDocument()
   }
-  expect(screen.getByLabelText('4 more global automations locked')).toHaveTextContent('🔒 4 more')
+  expect(screen.queryByText(/🔒 \d+ more/)).not.toBeInTheDocument()
   // Tier autobuyers: owned tiers plus the next one to unlock are listed.
   expect(within(screen.getByLabelText('tier autobuyers category')).getByLabelText(`${TIER_DEFINITIONS[0].name} automation`)).toBeInTheDocument()
   expect(within(screen.getByLabelText('tier autobuyers category')).queryByLabelText(`${TIER_DEFINITIONS.at(-1).name} automation`)).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^\d+ more tier autobuyers locked$/)).toBeInTheDocument()
 })
 
 test('Firmware lists global automations in one order: Auto Accelerate → Scale Up → Restage → Overclock → Purge', async () => {

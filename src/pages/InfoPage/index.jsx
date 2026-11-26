@@ -190,13 +190,6 @@ const HeadingButton = styled.button`
   }
 `
 
-const LockedNote = styled.p`
-  color: ${props => props.theme.color.textMuted};
-  font-size: 0.85rem;
-  margin: 0;
-  text-align: center;
-`
-
 // A sub-topic inside an open section, collapsed by default (heading is the only toggle).
 const ManualSub = ({ title, children }) => {
   const [open, setOpen] = useState(false)
@@ -236,7 +229,6 @@ const InfoPage = ({ game }) => {
     open: !!openSections[label],
     onToggle: () => setOpenSections(prev => ({ ...prev, [label]: !prev[label] })),
   })
-  const lockedCount = Object.keys(MANUAL_SECTION_REVEALS).filter(label => !isManualSectionRevealed(state, label)).length
   const firstTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[0].id)
   const lastTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id)
   const firstTierTickspeedAutobuyerMilestone = getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)
@@ -833,8 +825,6 @@ const InfoPage = ({ game }) => {
           </li>
         </ul>
       </ManualSection>
-
-      {lockedCount > 0 && <LockedNote aria-label="locked manual topics">🔒 {lockedCount} more {lockedCount === 1 ? 'topic unlocks' : 'topics unlock'} as you play</LockedNote>}
     </RootDiv>
   )
 }

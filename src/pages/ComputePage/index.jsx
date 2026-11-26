@@ -292,13 +292,6 @@ const BoostRow = styled.div`
 // — the earlier "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
 // Megacomputer (the last tier) has no merge row at all — nothing to merge into or automate past it
 // (see issue #280's "Out of scope").
-const LockedRowsNote = styled.p`
-  color: ${props => props.theme.color.textMuted};
-  font-size: 0.8rem;
-  margin: ${props => props.theme.space.sm} 0 0;
-  text-align: center;
-`
-
 const ENTITY_ROWS = [
   {
     key: 'core',
@@ -496,7 +489,7 @@ const ComputePage = ({ game }) => {
   const boostActive = boostLanes.length > 0
   const activeBoostTierIndexes = boostLanes.map(lane => lane.queue[0])
   // Progressive reveal: rows up to the highest tier ever held or automated, plus the next one to charge
-  // into; the rest of the chain stays hidden behind a "🔒 N more" line.
+  // into; the rest of the chain stays hidden.
   const lastHeldRowIndex = ENTITY_ROWS.reduce(
     (last, row, index) => {
       if ((intro[row.countField] ?? 0) > 0) return index
@@ -749,9 +742,6 @@ const ComputePage = ({ game }) => {
                 </Fragment>
               )
             })}
-            {visibleEntityRowCount < ENTITY_ROWS.length && (
-              <LockedRowsNote aria-label={`${ENTITY_ROWS.length - visibleEntityRowCount} more compute entity tiers locked`}>🔒 {ENTITY_ROWS.length - visibleEntityRowCount} more</LockedRowsNote>
-            )}
           </TierBlocksGroup>
           )
         : (
