@@ -220,7 +220,7 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-**Buy max mode** (one-time `BUY_MAX_UNLOCK_COST` 2 PP purchase, `buyMaxUnlocked`/`isBuyMaxUnlocked`, never granted for free; toggled on Firmware → Prestige) — a per-device toggle
+**Buy max mode** (unlocked by the `buyMaxRush` achievement "Click fast, buy max" — `BUY_MAX_RUSH_CLICKS` 10 manual clicks on one Factory Buy button within `BUY_MAX_RUSH_WINDOW_MS` 1 s, nothing else clicked between, autobuyers/failed buys never count; tracked in the hook via the pure `recordManualBuyClick`, counter `buyMaxRushes`; `isBuyMaxUnlocked` also honors the legacy PP-bought `buyMaxUnlocked` flag; toggled on Firmware → Prestige) — a per-device toggle
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.

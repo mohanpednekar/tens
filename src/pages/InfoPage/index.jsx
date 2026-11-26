@@ -44,7 +44,6 @@ import {
   PRESTIGE_POWERS_PER_PP_BASE,
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
-  BUY_MAX_UNLOCK_COST,
   CACHE_WARM_UNLOCK_COST,
   SLEEP_MODE_BASE_CAP_SECONDS,
   SLEEP_MODE_CAP_STEP_SECONDS,
@@ -264,7 +263,7 @@ const InfoPage = ({ game }) => {
           </li>
           {shown({ kind: 'lifetimePurges', min: 1 }) && (
             <li>
-              Once bought ({BUY_MAX_UNLOCK_COST} PP on Firmware → ✦ Prestige), the <strong>Buy max</strong> toggle makes
+              Once you earn the <strong>Click fast, buy max</strong> achievement (click one Factory Buy button 10 times within a second), the <strong>Buy max</strong> toggle on Firmware → ✦ Prestige makes
               each purchase buy as many levels as you can afford. Tiers buy full levels only — a
               partly bought level takes its own click.
             </li>

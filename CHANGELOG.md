@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other button in between; autobuyers and unaffordable clicks do not count) to unlock Buy max.
 - **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
 - **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
 - **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, bonus multiplier) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- **Buy max is now unlocked by the Click fast, buy max achievement** instead of the 2 PP Firmware purchase (saves that already bought it keep it).
 - First-time **Disk full** screen is shorter and centered: the Purge Point reward up front, a two-column Resets / Keeps summary, and a full-width Purge button; the backdrop is lighter and blurred.
 - **Challenge balance (#1043):** retuned run-wide levers to the difficulty bands — F3 cost ×6→×3, F7 ×5→×3, F16 ×30→×20, F6 Scale Up ^3→^2 / Accelerate ^2→^1.5 (was faster than a normal run), F21 now also costs ×30 (it was inert), F24 adds costs ×40, F25 adds costs ×30.
 - **Purge Points now follow the actual powers of ten in your balance** instead of the excess over 1 Googol: 100 powers ÷ 64 = 1 PP at Googol, and each Compression halves the divisor (100 ÷ 32 = 3 PP after one Compression, then 6, 12, 25, 50, 100). The power count stays at 100 until Overflow mode, then keeps growing.

@@ -2289,7 +2289,7 @@ test('Firmware → Prestige upgrade names expand their description; values show 
 
   expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('Time away: up to 4h → 8h')
   expect(screen.getByLabelText(/^cache warm value$/i)).toHaveTextContent('Start runs with KB level 1 done')
-  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Buy every affordable level in one tap')
+  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Locked: earn the Click fast, buy max achievement')
   expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
   const toggle = screen.getByRole('button', { name: /^sleep mode details$/i })
   await user.click(toggle)
@@ -2300,7 +2300,6 @@ test('Firmware → Prestige upgrade names expand their description; values show 
 })
 
 test.each([
-  ['Buy max', /unlock buy max for 2 purge points/i, 2, /buy max mode toggle|buy max/i],
   ['Cache Warm', /unlock cache warm for 20 purge points/i, 20, /cache warm unlocked/i],
 ])('%s is bought with PP on Firmware → Prestige', async (_name, button, cost, ownedLabel) => {
   const user = userEvent.setup()

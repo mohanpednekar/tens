@@ -243,6 +243,11 @@ const describeReclamationReward = ({ arrayStepGain, lakeSpeed, syncedBitrate }) 
   }
   return { shortBonus: shorts.join(', '), bonus: fulls.join('. ') }
 }
+// Buy max mode is unlocked by an achievement: BUY_MAX_RUSH_CLICKS manual clicks on the same Factory Buy button within
+// BUY_MAX_RUSH_WINDOW_MS, nothing else clicked between (see engine.js's isBuyMaxUnlocked/recordManualBuyClick).
+export const BUY_MAX_ACHIEVEMENT_ID = 'buyMaxRush'
+export const BUY_MAX_RUSH_CLICKS = 10
+export const BUY_MAX_RUSH_WINDOW_MS = 1000
 export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
@@ -272,6 +277,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', short: 'Accelerate 1', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', short: 'Accelerate 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, condition: { kind: 'overclocked' } },
+  { id: BUY_MAX_ACHIEVEMENT_ID, name: 'Click fast, buy max', group: 'earlyFactory', trigger: `Click the same Factory Buy button ${BUY_MAX_RUSH_CLICKS} times within 1 second`, short: `Buy ×${BUY_MAX_RUSH_CLICKS} in 1 s`, shortBonus: 'Unlocks Buy max', bonus: 'Unlocks Buy max mode on Firmware → Prestige: each purchase buys every affordable level', condition: { kind: 'counter', key: 'buyMaxRushes', min: 1 } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
     name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,
@@ -874,8 +880,6 @@ export const PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER = 1.1
 // ticks only — simulated offline/background catch-up and hidden-tab ticks never count). See
 // engine.js's getPlaytimeProductionMultiplier/buyPlaytimeBonus.
 export const PLAYTIME_BONUS_UNLOCK_COST = 100
-// One-time PP unlock for Buy max mode (see engine.js's isBuyMaxUnlocked/buyBuyMaxUnlock).
-export const BUY_MAX_UNLOCK_COST = 2
 // One-time PP unlock for Cache Warm: every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 of
 // the tier of the highest Storage pool being filled (highest pool live by Capacity) already complete, free. See engine.js's
 // getCacheWarmTier/applyCacheWarm/buyCacheWarm.

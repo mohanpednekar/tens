@@ -25,7 +25,7 @@ const lateGame = () => {
       counters: {
         pings: 10000, emptyRestages: 1, maxFirstOverclock: 6, acceleratelessOverclocks: 1, overflowDeepOverclock: 1,
         reformats: 1, kernelsEarned: 100, quickReboots: 1, turboBoosts: 1, maxBoostStack: 1, purgeWaitSeconds: 60,
-        handsFreePurges: 1, automatedPings: 1, purges: 64,
+        handsFreePurges: 1, automatedPings: 1, purges: 64, buyMaxRushes: 1,
       },
     },
     resources: { ...initial.resources, [MONEY_ID]: PURGE_THRESHOLD },

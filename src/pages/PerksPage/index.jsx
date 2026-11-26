@@ -63,7 +63,6 @@ import {
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
-  BUY_MAX_UNLOCK_COST,
   CACHE_WARM_UNLOCK_COST,
   MAX_OFFLINE_SECONDS,
   OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
@@ -741,7 +740,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const canBuySpeedBonus = !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
   const speedBonusMultiplier = getPrestigeProductionMultiplier(purgeCount, true)
   const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
-  const canBuyBuyMax = !isBuyMaxUnlocked(state) && points >= BUY_MAX_UNLOCK_COST
   const sleepCapLevel = getSleepModeCapLevel(state)
   const sleepCapCost = getSleepModeCapUpgradeCost(sleepCapLevel)
   const sleepCapLabel = formatHours(getMaxOfflineSeconds(state))
@@ -1293,26 +1291,12 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </UpgradeRow>
         <UpgradeRow
           ariaLabel="buy max toggle"
-          details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. One-time purchase; the switch is per device."
+          details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. Unlocked by the Click fast, buy max achievement; the switch is per device."
           icon="⏭"
           name="Buy max"
-          value={isBuyMaxUnlocked(state) ? null : 'Buy every affordable level in one tap'}
+          value={isBuyMaxUnlocked(state) ? null : 'Locked: earn the Click fast, buy max achievement'}
         >
-          {isBuyMaxUnlocked(state) ? (
-            <BuyMaxToggle game={game} />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Unlock Buy max for ${BUY_MAX_UNLOCK_COST} Purge Points`}
-              color="#38bdf8"
-              cost={BUY_MAX_UNLOCK_COST}
-              disabled={!canBuyBuyMax}
-              icon="🔓"
-              label={`${formatAmount(BUY_MAX_UNLOCK_COST)} PP`}
-              onClick={actions.buyBuyMaxUnlock}
-              points={points}
-              progressLabel="Buy max unlock PP progress"
-            />
-          )}
+          {isBuyMaxUnlocked(state) ? <BuyMaxToggle game={game} /> : null}
         </UpgradeRow>
       </Category>
     </List>

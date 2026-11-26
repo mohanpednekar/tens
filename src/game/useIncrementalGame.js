@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { forfeitDailyRun, playDailyRun, restartDailyRun, startDailyRun, tickDailyRuns } from './dailyChallenges'
-import { addActivePlaySeconds, withManualPurchaseMark, buyBuyMaxUnlock, buyCacheWarm, buyPlaytimeBonus, buyPrestigeSpeedBonus, buySleepModeCapUpgrade, getMaxOfflineSeconds, activateComputeBoost, applyOfflineProgress, AUTOBUYER_UNIT_BATCH, applyOfflineRewardBonus, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, restageManually, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry, setAutoPurgeSetting, buyEonUpgrade, buyAutoHyperscaler, setAutoHyperscalerEnabled } from './engine'
+import { addActivePlaySeconds, withManualPurchaseMark, recordManualBuyClick, resetManualBuyRush, withBuyMaxRush, buyCacheWarm, buyPlaytimeBonus, buyPrestigeSpeedBonus, buySleepModeCapUpgrade, getMaxOfflineSeconds, activateComputeBoost, applyOfflineProgress, AUTOBUYER_UNIT_BATCH, applyOfflineRewardBonus, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, restageManually, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry, setAutoPurgeSetting, buyEonUpgrade, buyAutoHyperscaler, setAutoHyperscalerEnabled } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
 import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, loadBuyUnitPreference, saveBuyUnitPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
@@ -239,25 +239,48 @@ const computeInitialGame = () => {
       setBuyUnitModeState(Boolean(enabled))
     }, [])
 
+    // Buy-max rush (achievement): consecutive manual Factory Buy clicks on one button. Called from the manual actions
+    // only (autobuyers call the engine directly). A click that buys nothing still ends a run on another button but
+    // never counts towards one.
+    const buyRushRef = useRef(resetManualBuyRush())
+    const trackRush = (key, probeAction) => {
+      const before = stateRef.current
+      if (probeAction(before) === before) {
+        buyRushRef.current = resetManualBuyRush()
+        return
+      }
+      const { rush, hit } = recordManualBuyClick(buyRushRef.current, key, Date.now())
+      buyRushRef.current = rush
+      if (hit) setState(withBuyMaxRush)
+    }
+
     const actions = useMemo(() => {
       // Leveled manual purchases pick their Buy-max variant only while the mode is on AND unlocked
       // for the state being updated — the engine stays the source of truth for the unlock.
       const buyOneOrMax = (single, max) =>
         setState(prev => (buyMaxModeRef.current && isBuyMaxUnlocked(prev) ? max : single)(prev))
       return {
-      buyTierQuantity: tierId => (buyUnitModeRef.current
-        ? setState(prev => withManualPurchaseMark(buyTierQuantity(tierId, 1))(prev))
-        : buyOneOrMax(withManualPurchaseMark(buyTierQuantity(tierId, BUY_QUANTITY)), withManualPurchaseMark(buyTierMaxLevels(tierId)))),
-      buyTickspeedMultiplier: tierId => buyOneOrMax(buyTickspeedMultiplier(tierId), repeatPurchaseMax(buyTickspeedMultiplier(tierId))),
+      buyTierQuantity: tierId => {
+        trackRush(`tier:${tierId}`, buyTierQuantity(tierId, 1))
+        return buyUnitModeRef.current
+          ? setState(prev => withManualPurchaseMark(buyTierQuantity(tierId, 1))(prev))
+          : buyOneOrMax(withManualPurchaseMark(buyTierQuantity(tierId, BUY_QUANTITY)), withManualPurchaseMark(buyTierMaxLevels(tierId)))
+      },
+      buyTickspeedMultiplier: tierId => {
+        trackRush(`tickspeed:${tierId}`, buyTickspeedMultiplier(tierId))
+        return buyOneOrMax(buyTickspeedMultiplier(tierId), repeatPurchaseMax(buyTickspeedMultiplier(tierId)))
+      },
       buyAutobuyerIntervalUpgrade: tierId => setState(buyAutobuyerIntervalUpgrade(tierId)),
       buyAutomationIntervalUpgrade: key => setState(buyAutomationIntervalUpgrade(key)),
       buyTierTickspeedIntervalUpgrade: tierId => setState(buyTierTickspeedIntervalUpgrade(tierId)),
       setAutoOverclockEnabled: enabled => setState(setAutoOverclockEnabled(enabled)),
       startComputeCharge: boundaryIndex => setState(startComputeCharge(boundaryIndex)),
       setComputeAutoChargeEnabled: enabled => setState(setComputeAutoChargeEnabled(enabled)),
-      buyGlobalTickspeedMultiplier: () => buyOneOrMax(buyGlobalTickspeedMultiplier, repeatPurchaseMax(buyGlobalTickspeedMultiplier)),
+      buyGlobalTickspeedMultiplier: () => {
+        trackRush('globalTickspeed', buyGlobalTickspeedMultiplier)
+        return buyOneOrMax(buyGlobalTickspeedMultiplier, repeatPurchaseMax(buyGlobalTickspeedMultiplier))
+      },
       buyPlaytimeBonus: () => setState(buyPlaytimeBonus),
-      buyBuyMaxUnlock: () => setState(buyBuyMaxUnlock),
       buyCacheWarm: () => setState(buyCacheWarm),
       buySleepModeCapUpgrade: () => buyOneOrMax(buySleepModeCapUpgrade, repeatPurchaseMax(buySleepModeCapUpgrade)),
       buyPrestigeSpeedBonus: () => setState(buyPrestigeSpeedBonus),
