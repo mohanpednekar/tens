@@ -1511,7 +1511,7 @@ const buildEraIntroReset = (state, initial) => {
 const COMPUTE_LADDER_FIELDS = ['computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids', 'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers']
 // Lifetime Purges: the counter survives Reboot; `purge.count` is per-Reboot, so the larger of the two also seeds saves
 // that predate the counter.
-const getLifetimePurges = state => Math.max(state.achievements?.counters?.purges ?? 0, state.purge?.count ?? 0)
+export const getLifetimePurges = state => Math.max(state.achievements?.counters?.purges ?? 0, state.purge?.count ?? 0)
 // Adds `amount` to a lifetime counter (mode 'add'), raises it to at least `amount` ('max') or sets it ('set'), then re-detects. Same state
 // reference with the feature off.
 const bumpAchievementCounter = (state, key, amount = 1, mode = 'add') => {

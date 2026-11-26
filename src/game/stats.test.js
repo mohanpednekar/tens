@@ -37,6 +37,13 @@ describe('getStatsSections', () => {
     expect(stat(state, 'factory', 'tiers')).toMatchObject({ value: '2/10', progress: 0.2 })
     expect(stat(state, 'factory', 'levels').value).toBe('4')
     expect(stat(state, 'factory', 'highestTier').value).toBe('Megabytes')
+    // Accelerate / Scale Ups / Overclock rows stay hidden until each mechanic is reached.
+    expect(stat(state, 'factory', 'accelerate')).toBeUndefined()
+    expect(stat(state, 'factory', 'scaleUps')).toBeUndefined()
+    expect(stat(state, 'factory', 'overclock')).toBeUndefined()
+    const later = { ...state, globalTickspeedMultiplier: 3, scaleUpCount: 2, overclockLastClaimCompletedLevels: 5 }
+    expect(stat(later, 'factory', 'accelerate').value).toBe('Lv 3')
+    expect(stat(later, 'factory', 'overclock').value).toBe('Lv 5')
   })
 
   it('tallies Daily wins and attempts across dates', () => {
@@ -72,6 +79,7 @@ describe('getStatsOverview / factors', () => {
     const state = { ...base, achievements: { earned: { helloWorld: true }, counters: { pings: 0 } } }
     const factors = getProductionBonusFactors(state)
     expect(factors.total).toBeCloseTo(factors.purge * factors.playtime * factors.stars)
-    expect(getStatsOverview(state).map(t => t.id)).toEqual(['playTime', 'purges', 'stars', 'bonus'])
+    expect(getStatsOverview(state).map(t => t.id)).toEqual(['playTime', 'pings', 'stars', 'bonus'])
+    expect(getStatsOverview({ ...state, purge: { ...state.purge, count: 1 } }).map(t => t.id)).toEqual(['playTime', 'purges', 'stars', 'bonus'])
   })
 })

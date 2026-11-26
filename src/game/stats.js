@@ -11,6 +11,8 @@ import {
   getAchievementProductionMultiplier,
   getAchievementStars,
   getCompactedPoolCount,
+  getLifetimePurges,
+  getPurgeGoalBits,
   getComputeFlopsTotal,
   getMaxOfflineSeconds,
   getMemoryUnit,
@@ -31,9 +33,10 @@ const ratio = (current, target) => (target > 0 ? Math.min(1, num(current) / targ
 const percent = multiplier => `+${formatAmount(Math.round((num(multiplier) - 1) * 1000) / 10)}%`
 const times = multiplier => `×${formatAmount(Math.round(num(multiplier) * 100) / 100)}`
 
-export const getLifetimePurgeCount = state => Math.max(num(state.achievements?.counters?.purges), num(state.purge?.count))
+export const getLifetimePurgeCount = state => getLifetimePurges(state)
 
-// Product of the global production factors tickGameCore multiplies together.
+// Product of the global bonus factors tickGameCore folds into `multiplier` (Purge × playtime × stars) — not
+// total production (Accelerate, levels, Scale Up and Flops multiply on top).
 export const getProductionBonusFactors = state => {
   const purge = getPrestigeProductionMultiplier(num(state.purge?.count), Boolean(state.prestigeSpeedBonusUnlocked))
   const playtime = getPlaytimeProductionMultiplier(state)
@@ -63,9 +66,11 @@ const getDailyStats = state => {
 
 export const getStatsOverview = state => [
   { id: 'playTime', icon: '⏱️', label: 'Play time', value: formatOfflineDuration(state.activePlaySeconds) },
-  { id: 'purges', icon: '🧹', label: 'Purges', value: count(getLifetimePurgeCount(state)) },
+  getLifetimePurgeCount(state) > 0
+    ? { id: 'purges', icon: '🧹', label: 'Purges', value: count(getLifetimePurgeCount(state)) }
+    : { id: 'pings', icon: '📡', label: 'Pings', value: count(state.achievements?.counters?.pings) },
   { id: 'stars', icon: '⭐', label: 'Stars', value: count(getAchievementStars(state)) },
-  { id: 'bonus', icon: '🚀', label: 'Production', value: times(getProductionBonusFactors(state).total) },
+  { id: 'bonus', icon: '🚀', label: 'Bonus', value: times(getProductionBonusFactors(state).total) },
 ]
 
 export const getStatsSections = state => {
@@ -90,17 +95,18 @@ export const getStatsSections = state => {
     const money = num(state.resources?.[MONEY_ID])
     const highest = reached[reached.length - 1]
     const overclock = getOverclockLevel(state)
+    const goalPercent = getPurgePercent(money, getPurgeGoalBits(state))
     sections.push({
       id: 'factory', name: 'Factory', icon: '🏭', tone: 'accent',
       stats: [
         { id: 'balance', label: 'Balance', value: formatCurrency(money) },
-        { id: 'googol', label: 'To Googol', value: `${formatAmount(Math.floor(getPurgePercent(money)))}%`, progress: getPurgePercent(money) / 100 },
+        { id: 'googol', label: state.challenges?.active ? 'To goal' : 'To Googol', value: `${formatAmount(goalPercent)}%`, progress: goalPercent / 100 },
         { id: 'tiers', label: 'Tiers reached', value: `${reached.length}/${TIER_DEFINITIONS.length}`, progress: ratio(reached.length, TIER_DEFINITIONS.length) },
         { id: 'highestTier', label: 'Top tier', value: highest ? highest.name : '—' },
         { id: 'levels', label: 'Levels completed', value: count(completedLevels) },
-        { id: 'accelerate', label: 'Accelerate', value: `Lv ${count(state.globalTickspeedMultiplier ?? 0)}` },
-        { id: 'scaleUps', label: 'Scale Ups', value: count(state.scaleUpCount) },
-        { id: 'overclock', label: 'Overclock', value: overclock === null ? '—' : `Lv ${count(overclock)}` },
+        ...(state.globalTickspeedMultiplier !== null && state.globalTickspeedMultiplier !== undefined ? [{ id: 'accelerate', label: 'Accelerate', value: `Lv ${count(state.globalTickspeedMultiplier)}` }] : []),
+        ...(num(state.scaleUpCount) > 0 ? [{ id: 'scaleUps', label: 'Scale Ups', value: count(state.scaleUpCount) }] : []),
+        ...(overclock !== null ? [{ id: 'overclock', label: 'Overclock', value: `Lv ${count(overclock)}` }] : []),
       ],
     })
   }
@@ -181,7 +187,7 @@ export const getStatsSections = state => {
       { id: 'stars', label: 'Star bonus', value: percent(factors.stars) },
       ...(state.prestigeSpeedBonusUnlocked ? [{ id: 'purgeBonus', label: 'Purge bonus', value: times(factors.purge) }] : []),
       ...(state.playtimeBonusUnlocked ? [{ id: 'playtimeBonus', label: 'Playtime bonus', value: percent(factors.playtime) }] : []),
-      { id: 'total', label: 'Total production', value: times(factors.total), wide: true },
+      { id: 'total', label: 'Bonus multiplier', value: times(factors.total), wide: true },
     ],
   })
 

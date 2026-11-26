@@ -1,17 +1,17 @@
 # Graph Report - tens  (2026-11-26)
 
 ## Corpus Check
-- 251 files · ~629,594 words
+- 251 files · ~629,755 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 33 file(s) not represented in the graph (top: (none) 11, .xml 9, .properties 2)
 
 ## Summary
-- 3667 nodes · 11388 edges · 185 communities (147 shown, 38 thin omitted)
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 2393 edges (avg confidence: 0.95)
+- 3667 nodes · 11392 edges · 189 communities (151 shown, 38 thin omitted)
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 2394 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `06f075b2`
+- Built from commit: `3323858e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,7 +22,7 @@
 - ComputePage/index.jsx
 - layers.js
 - Key engine functions (`src/game/engine.js`)
-- buyTickspeedMultiplier
+- scaleUpGame
 - Automation workflows
 - dailyChallenges.js
 - engine.test.js
@@ -127,11 +127,15 @@
 - Android release (Google Play)
 - Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04
 - programmer.md
+- Achievements (epic #1046, basic slice)
+- src/index.jsx
 - BoostTimerBar/index.jsx
 - getComputeBoostLanes
 - claude-deny-settings.sh
+- getAutobuyerIntervalMaxLevel
 - sync-release-milestones.sh
 - model
+- getAutobuyerIntervalUpgradeCost
 - adversarialReviewMarker.js
 - inputs
 - Daily challenges (epic #1062)
@@ -139,7 +143,7 @@
 - theme/index.jsx
 - dailyChallenges.test.js
 - ChallengesPage/index.jsx
-- OfflineProgressNotice/index.jsx
+- getPrestigePowersPerPp
 - End-to-end specs (Playwright)
 - pull_request_template.md
 - jsconfig.json
@@ -216,7 +220,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (185 total, 38 thin omitted)
+## Communities (189 total, 38 thin omitted)
 
 ### Community 0 - "DataLakePanel/index.jsx"
 Cohesion: 0.06
@@ -242,13 +246,13 @@ Nodes (110): areAllTierAutobuyersUnlocked(), AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOL
 Cohesion: 0.07
 Nodes (86): Fixed, actFoundry(), A fifth Codex round: three doc/UI-text stragglers left by the earlier fix rounds, A fourth Codex round: the "absolute ceiling" clamp itself was too high, A live tap bonus could survive into the pool gauge's mode switch, breaking the "clean transition at 50%" claim, A seventh finding: the pool gauge could display a nonzero incoming-overflow rate on an already-full lake, A sixth Codex round: the player-facing Guide and the pacing simulator hadn't caught up either, A third Codex round: invisible cache activity, a stale Fill tooltip, a Buy button hidden behind Scale Out, and an unclamped legacy-save buffer (+78 more)
 
-### Community 6 - "buyTickspeedMultiplier"
-Cohesion: 0.20
-Nodes (17): actTickspeed(), `consumeXpForLastTierTickspeed` gained an owned-count guard after a real softlock report, The last tier's XP-funded tickspeed, Tickspeed multiplier, buyTickspeedMultiplier(), consumeXpForLastTierTickspeed(), consumeXpForLastTierTickspeedCore(), getLastTierId() (+9 more)
+### Community 6 - "scaleUpGame"
+Cohesion: 0.09
+Nodes (41): actSoftResets(), isOverclockHeld(), `prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09, `scaleUpGame`'s `highestMilestone` passthrough was a real bug, not a harmless asymmetry, Speed Up renamed to Scale Up and redesigned from a last-tier-only gate to a per-tier unlock ladder — 2026-09-09, The Byte Foundry becomes a per-Prestige-cycle mechanic, not a one-time gate, The Byte generator becomes permanent — only "Memory" and the gate reset each Prestige, Why Scale Up exists, and why its requirement escalates (+33 more)
 
 ### Community 7 - "Automation workflows"
 Cohesion: 0.06
-Nodes (69): Bits subline under MoneyHero; `+n/8` dropped from tier Buy buttons — 2026-11-09, Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework, Whole-Byte tier costs converted from an arbitrary-looking bit count to Bytes in scientific notation, progressFill(), formatAsCleanBytesIfExactMultiple(), formatBytes(), formatCurrency(), formatMoneyBalance() (+61 more)
+Nodes (62): progressFill(), getGlobalTickspeedMultiplierCost(), getGlobalTickspeedMultiplierCostBits(), getNextBytePowerProgressFraction(), isGlobalTickspeedAffordable(), isPrestigeSpeedBonusUnlocked(), BalancesSentinel, BitsBalance (+54 more)
 
 ### Community 8 - "dailyChallenges.js"
 Cohesion: 0.08
@@ -267,8 +271,8 @@ Cohesion: 0.14
 Nodes (26): Settings + Milestones (#1143), buildClearSlotConfirmMessage(), Body, buildSparklinePath(), Caption, Chevron, Group, HeadButton (+18 more)
 
 ### Community 12 - "run-simulation.mjs"
-Cohesion: 0.05
-Nodes (92): Perks regrouped by feature: Unlocks / Upgrades / Toggles → Automation / Prestige — 2026-11-03, VisuallyHidden, BuyMaxToggle(), Switch, getChallengeTitle(), buyAutomationIntervalUpgrade(), buyTierTickspeedIntervalUpgrade(), canBuyAutoHyperscaler() (+84 more)
+Cohesion: 0.06
+Nodes (74): VisuallyHidden, BuyMaxToggle(), Switch, getAutomationIntervalMaxLevel(), getAutomationIntervalUpgradeCost(), getAutoPurgeSettings(), getCacheWarmTier(), getGlobalAutomationUnlockMilestone() (+66 more)
 
 ### Community 13 - "App.foundry.test.jsx"
 Cohesion: 0.07
@@ -279,11 +283,11 @@ Cohesion: 0.38
 Nodes (9): Banner, ChallengeBanner(), Rule, Text, Title, formatChallengeGoal(), formatChallengeTime(), getChallengeReadouts() (+1 more)
 
 ### Community 15 - "clampNonNegative"
-Cohesion: 0.12
-Nodes (39): actSpendPP(), Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), PP Compute (Flops), Reboot and Kernels (#407), 2024-09-20 - Replace O(N) Compute Flops autobuyer with O(1) mathematical formulation, addActivePlaySeconds(), applyFlopsAutobuyerMilestones(), buyAutobuyerIntervalUpgrade() (+31 more)
+Cohesion: 0.13
+Nodes (37): actSpendPP(), Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), PP Compute (Flops), Reboot and Kernels (#407), 2024-09-20 - Replace O(N) Compute Flops autobuyer with O(1) mathematical formulation, addActivePlaySeconds(), applyFlopsAutobuyerMilestones(), buyAutobuyerIntervalUpgrade() (+29 more)
 
 ### Community 16 - "getTierCost"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (48): Changed, actMainBuys(), countUnlockedAutobuyers(), simulateCycle(), totalDisksBuilt(), TRUE_HARD_CAP_BITS, wouldAutobuyerStall(), Architecture / MainPage UI decisions (+40 more)
 
 ### Community 17 - "storage.js"
@@ -303,8 +307,8 @@ Cohesion: 0.15
 Nodes (25): launchOptions(), NAVIGATION, args, captureScene(), filtered, main(), out(), PORT (+17 more)
 
 ### Community 21 - "ButtonContent"
-Cohesion: 0.25
-Nodes (15): ButtonContent(), CloudSaveSection(), DELETE_STEP_MESSAGES, errorStatus(), IMPORT_ERRORS, ManualSaveSection(), SaveText, PURCHASE_MESSAGES (+7 more)
+Cohesion: 0.23
+Nodes (16): ButtonContent(), CloudSaveSection(), DELETE_STEP_MESSAGES, errorStatus(), IMPORT_ERRORS, ManualSaveSection(), SaveText, renderInTheme() (+8 more)
 
 ### Community 22 - "mergeState"
 Cohesion: 0.22
@@ -319,16 +323,16 @@ Cohesion: 0.06
 Nodes (39): runs-on, steps, runs-on, steps, concurrency, cancel-in-progress, group, runs-on (+31 more)
 
 ### Community 25 - "FactoryTab.jsx"
-Cohesion: 0.17
-Nodes (20): getChallengeUnlockCondition(), getChallengeUnlockPurges(), isAutomationIntervalChainAvailable(), isChallengeUnlocked(), ChallengesTab(), getChallengeStatus(), getChallengeTag(), GLOBAL_GLYPH (+12 more)
+Cohesion: 0.16
+Nodes (23): getChallengeTitle(), getChallengeUnlockCondition(), getChallengeUnlockPurges(), isAutomationIntervalChainAvailable(), isChallengeCompleted(), isChallengeUnlocked(), ChallengesTab(), ChallengeStartDialog() (+15 more)
 
 ### Community 26 - "navAttention.js"
-Cohesion: 0.09
-Nodes (41): Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31, The global tickspeed multiplier, buyGlobalTickspeedMultiplier(), getAutobuyerIntervalSeconds(), getAutobuyerIntervalSecondsAtLevel(), getGlobalTickspeedMultiplierCostBits(), getOverclockRequirement(), isAutoMergeCloudsIntoDatacenterUnlockAvailable() (+33 more)
+Cohesion: 0.10
+Nodes (34): Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31, isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable(), isAutoMergeCoresIntoNodeUnlockAvailable(), isAutoMergeDatacentersIntoSupercomputerUnlockAvailable(), isAutoMergeFabricsIntoCloudUnlockAvailable(), isAutoMergeGridsIntoFabricUnlockAvailable(), isAutoMergeNetworksIntoGridUnlockAvailable() (+26 more)
 
 ### Community 27 - "scaleUpGame"
-Cohesion: 0.05
-Nodes (68): actSoftResets(), isOverclockHeld(), Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Boost: tier funds breadth, not strength (reverses the 4× power / 2× duration scaling), Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), Economy model, Last tier's XP-funded tickspeed: from additive to multiplicative, Multiplier overflow safety: the switch to compounding needed a floor (+60 more)
+Cohesion: 0.06
+Nodes (55): Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Boost: tier funds breadth, not strength (reverses the 4× power / 2× duration scaling), Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), Economy model, Last tier's XP-funded tickspeed: from additive to multiplicative, Multiplier overflow safety: the switch to compounding needed a floor, Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework, Overclock: from a standalone multiplier to a Tickscale-upgrade step boost (+47 more)
 
 ### Community 28 - "DiskArrayRow/index.jsx"
 Cohesion: 0.08
@@ -403,7 +407,7 @@ Cohesion: 0.08
 Nodes (24): runs-on, steps, timeout-minutes, concurrency, cancel-in-progress, group, FAIL_MARKER, GH_TOKEN (+16 more)
 
 ### Community 46 - "formatAmount"
-Cohesion: 0.31
+Cohesion: 0.30
 Nodes (17): formatAmount(), formatComputeFlopsTotal(), getCompactedPoolCount(), count(), getDailyStats(), getLifetimePurgeCount(), getProductionBonusFactors(), getStatsOverview() (+9 more)
 
 ### Community 47 - "Procedure"
@@ -436,23 +440,23 @@ Nodes (20): AI-instruction file cost hygiene, Automation workflows, Changelog co
 
 ### Community 54 - "file-task-issue/SKILL.md"
 Cohesion: 0.17
-Nodes (9): createPrefixedStorage(), installStoragePrefix(), rootElement, reportWebVitals(), createMonetizationService(), getMonetizationService(), createNoopMonetizationService(), NO_ENTITLEMENTS (+1 more)
+Nodes (12): NoticeActions, NoticeText, OfflineNoticeCard, OfflineNoticeOverlay, OfflineProgressNotice(), renderNotice(), summary, createMonetizationService() (+4 more)
 
 ### Community 55 - "orphan-branch-scan.sh"
 Cohesion: 0.15
 Nodes (15): ADS_PLUGIN, BASE_PLUGINS, buildIncludePlugins(), config, IAP_PLUGIN, root, srcPath, buildFeaturesModule() (+7 more)
 
 ### Community 56 - "run-simulation.mjs"
-Cohesion: 0.20
-Nodes (10): DEFAULT_CAPACITY_CAPS_BITS, formatCapacityLabel(), MAX_TICKS, defaultCareerPurges, defaultPPValues, emit(), formatDuration(), outputLines (+2 more)
+Cohesion: 0.15
+Nodes (19): DEFAULT_CAPACITY_CAPS_BITS, formatCapacityLabel(), MAX_TICKS, defaultCareerPurges, defaultPPValues, emit(), formatDuration(), outputLines (+11 more)
 
 ### Community 57 - "Package.swift"
 Cohesion: 0.10
 Nodes (18): Adding a new tier, AI-instruction file cost hygiene, Architecture, Automation design principles, Automation engine, Budget discipline, Changelog convention, Code review tooling (+10 more)
 
 ### Community 58 - "CapApp-SPM/README.md"
-Cohesion: 0.09
-Nodes (23): dependencies, @capacitor/android@^8.6.2, @capacitor-community/admob@^8.2.1, @capacitor/ios@^8.6.2, @capacitor/splash-screen@^8.0.2, firebase@^13.2.0, @fontsource/inter@^5.3.0, @fontsource/space-grotesk@^5.3.0 (+15 more)
+Cohesion: 0.12
+Nodes (17): dependencies, @capacitor/android@^8.6.2, @capacitor-community/admob@^8.2.1, @capacitor/ios@^8.6.2, @capacitor/splash-screen@^8.0.2, firebase@^13.2.0, react@^19.3.1, react-is@^19.3.1 (+9 more)
 
 ### Community 59 - "tickGame"
 Cohesion: 0.07
@@ -479,8 +483,8 @@ Cohesion: 0.09
 Nodes (22): scripts, android:aab, android:apk:release, audit, build, build:capacitor, build:dev, bump-version (+14 more)
 
 ### Community 65 - "capacitor.build.gradle"
-Cohesion: 0.13
-Nodes (12): deleteAccountAndData(), app, auth, db, deleteAccount(), downloadSave(), requireUser(), saveDocFor() (+4 more)
+Cohesion: 0.14
+Nodes (11): deleteAccountAndData(), app, auth, db, deleteAccount(), downloadSave(), requireUser(), saveDocFor() (+3 more)
 
 ### Community 66 - "palette.md"
 Cohesion: 0.12
@@ -492,7 +496,7 @@ Nodes (13): workflow, workflowPath, match, yml, script, zeroWork, bashSyntaxErro
 
 ### Community 68 - "config.js"
 Cohesion: 0.11
-Nodes (18): @capacitor/core@^8.6.2, @capacitor/core, LegalSection(), LinkRow, ADMOB_TEST_REWARDED_IDS, getRewardedAdUnit(), IAP_PRODUCTS, PRIVACY_POLICY_URL (+10 more)
+Nodes (19): @capacitor/core@^8.6.2, @capacitor/core, LegalSection(), LinkRow, ADMOB_TEST_REWARDED_IDS, FIREBASE_CONFIG, getRewardedAdUnit(), IAP_PRODUCTS (+11 more)
 
 ### Community 69 - "StatsPage/index.jsx"
 Cohesion: 0.26
@@ -603,8 +607,8 @@ Cohesion: 0.18
 Nodes (10): `AchievementToasts/index.jsx`, `AppMenu/index.jsx`, `AppNav/index.jsx`, `BuyMaxToggle/index.jsx`, `BuyModeToggle/index.jsx`, `ConfirmDialog/index.jsx`, `Money/index.js`, Shared components reference (+2 more)
 
 ### Community 97 - "tickGameCore"
-Cohesion: 0.09
-Nodes (54): 2. Load the repo's invariants, `prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09, Purge code rename: reboot → purge (2026-11, #987), Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number, Achievements (epic #1046, basic slice), Adding a new tier, Challenge mode (epic #1037, engine slice #1038), Pause/resume for the global automations (+46 more)
+Cohesion: 0.15
+Nodes (32): 2. Load the repo's invariants, actTickspeed(), Purge code rename: reboot → purge (2026-11, #987), Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number, Pause/resume for per-tier automations, Pause/resume for the global automations, Prestige and the Googol freeze, Prestige Points, autobuyer unlock, and the tickspeed multiplier (+24 more)
 
 ### Community 98 - "epic-407-issue-hygiene.sh"
 Cohesion: 0.53
@@ -627,16 +631,16 @@ Cohesion: 0.17
 Nodes (18): 1. Re-verify store rules (they change several times a year), 2. Assets, 3. Copy and privacy, 4. Ship, APP_STORE_LIMIT, changelogSection(), firstSentence(), formatNotes() (+10 more)
 
 ### Community 103 - "browserslist"
-Cohesion: 0.67
-Nodes (3): browserslist, development, production
+Cohesion: 0.21
+Nodes (7): browserslist, development, production, @fontsource/inter@^5.3.0, @fontsource/space-grotesk@^5.3.0, @fontsource/inter, @fontsource/space-grotesk
 
 ### Community 104 - "getReclamationLevel"
 Cohesion: 0.67
 Nodes (3): getCompactedPoolCountFromIntro(), getReclamationLakeSpeedBonus(), getReclamationLevel()
 
 ### Community 105 - "AchievementToasts/index.jsx"
-Cohesion: 0.18
-Nodes (14): ACHIEVEMENT_TOAST_MAX_VISIBLE, ACHIEVEMENT_TOAST_STAGGER_MS, ACHIEVEMENT_TOAST_VISIBLE_MS, AchievementToasts(), createScheduler(), pump(), getEarnedIds(), isTabHidden() (+6 more)
+Cohesion: 0.13
+Nodes (19): renderDiskArrayRow(), ACHIEVEMENT_TOAST_MAX_VISIBLE, ACHIEVEMENT_TOAST_STAGGER_MS, ACHIEVEMENT_TOAST_VISIBLE_MS, AchievementToasts(), createScheduler(), pump(), getEarnedIds() (+11 more)
 
 ### Community 106 - "resolutions"
 Cohesion: 0.25
@@ -658,6 +662,14 @@ Nodes (22): Boosters: timer bar with Pop / Forfeit / Stack; preset switch refund
 Cohesion: 0.29
 Nodes (6): interval, updates, directory, package-ecosystem, schedule, version
 
+### Community 111 - "Achievements (epic #1046, basic slice)"
+Cohesion: 0.26
+Nodes (17): Achievements (epic #1046, basic slice), applyCacheWarm(), applyChallengeStepEffects(), bumpAchievementCounter(), createChallengeRun(), eraGame(), eraGameCore(), exitChallenge() (+9 more)
+
+### Community 112 - "src/index.jsx"
+Cohesion: 0.19
+Nodes (8): react-dom@^19.3.1, web-vitals@^6.2.3, react-dom, web-vitals, createPrefixedStorage(), installStoragePrefix(), rootElement, reportWebVitals()
+
 ### Community 113 - "BoostTimerBar/index.jsx"
 Cohesion: 0.20
 Nodes (18): BoostLane, BoostLaneRow(), BoostTimerBar(), BoostTimerRow, BoostTimerStack, CompactButton, describeCoveredTiers(), formatPresetDuration() (+10 more)
@@ -670,6 +682,10 @@ Nodes (14): Compute Boost lanes (parallel multipliers + same-multiplier queue), 
 Cohesion: 0.33
 Nodes (5): App Store submission, iOS release (App Store), One-time setup, Prepare the project, TestFlight
 
+### Community 116 - "getAutobuyerIntervalMaxLevel"
+Cohesion: 0.29
+Nodes (7): getAutobuyerBaseIntervalSeconds(), getAutobuyerBulkExtraLevels(), getAutobuyerBulkLevels(), getAutobuyerIntervalMaxLevel(), getAutobuyerIntervalSeconds(), getAutobuyerIntervalSecondsAtLevel(), getAutobuyerSpeedUpgradeMaxLevel()
+
 ### Community 117 - "sync-release-milestones.sh"
 Cohesion: 0.67
 Nodes (5): assign_milestone(), ensure_milestone(), milestone_number(), run(), sync-release-milestones.sh script
@@ -677,6 +693,10 @@ Nodes (5): assign_milestone(), ensure_milestone(), milestone_number(), run(), sy
 ### Community 118 - "model"
 Cohesion: 0.40
 Nodes (5): model, default, description, options, type
+
+### Community 119 - "getAutobuyerIntervalUpgradeCost"
+Cohesion: 0.60
+Nodes (5): Perks regrouped by feature: Unlocks / Upgrades / Toggles → Automation / Prestige — 2026-11-03, getAutobuyerIntervalUpgradeCost(), getSiCleanDoublingFactor(), getTierTickspeedIntervalUpgradeCost(), siCleanSeriesCost()
 
 ### Community 120 - "adversarialReviewMarker.js"
 Cohesion: 0.80
@@ -706,9 +726,9 @@ Nodes (21): Daily challenges (epic #1062), Economy model, canRestartDailyRun(), 
 Cohesion: 0.26
 Nodes (9): isDailyChallengesAvailable(), DAILY_CHALLENGES_FEATURE, base(), CHALLENGE_TABS, ChallengesPage(), Header, RootDiv, TabBar (+1 more)
 
-### Community 128 - "OfflineProgressNotice/index.jsx"
-Cohesion: 0.18
-Nodes (13): renderDiskArrayRow(), renderButton(), NoticeActions, NoticeText, OfflineNoticeCard, OfflineNoticeOverlay, OfflineProgressNotice(), renderNotice() (+5 more)
+### Community 128 - "getPrestigePowersPerPp"
+Cohesion: 0.67
+Nodes (4): getPrestigeDoublePpHalvingLevels(), getPrestigePowersPerPp(), getPrestigePpPerPower(), compressionStep()
 
 ### Community 129 - "End-to-end specs (Playwright)"
 Cohesion: 0.50
@@ -771,8 +791,8 @@ Cohesion: 0.25
 Nodes (8): env, UPLOAD_LISTING, VITE_FIREBASE_API_KEY, VITE_FIREBASE_APP_ID, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, VITE_TENS_ADS_ENABLED, VITE_TENS_IAP_ENABLED
 
 ### Community 184 - "SpeedDetailsPopover/index.jsx"
-Cohesion: 0.39
-Nodes (7): react-dom@^19.3.1, react-dom, Heading, Note, Panel, Rows, SpeedDetailsPopover()
+Cohesion: 0.60
+Nodes (5): Heading, Note, Panel, Rows, SpeedDetailsPopover()
 
 ### Community 186 - "play_status"
 Cohesion: 0.40
@@ -814,7 +834,7 @@ Nodes (8): Native apps (Capacitor — #70), Native apps (Capacitor) reference, @
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `vitest` connect `createInitialGameState` to `OfflineProgressNotice/index.jsx`, `layers.js`, `engine.test.js`, `App.foundry.test.jsx`, `storage.js`, `ButtonContent`, `gradlew`, `adaptSaveForCurrentSchema`, `formatAmount`, `file-task-issue/SKILL.md`, `orphan-branch-scan.sh`, `capacitor.build.gradle`, `ref_node_fs`, `config.js`, `@testing-library/react`, `adversarialReviewMarker.js`, `AchievementsPage/index.jsx`, `AchievementsPage/index.test.jsx`, `navAttention.test.js`, `dailyChallenges.test.js`, `ChallengesPage/index.jsx`?**
+- **Why does `vitest` connect `createInitialGameState` to `layers.js`, `engine.test.js`, `App.foundry.test.jsx`, `storage.js`, `ButtonContent`, `gradlew`, `adaptSaveForCurrentSchema`, `formatAmount`, `file-task-issue/SKILL.md`, `orphan-branch-scan.sh`, `capacitor.build.gradle`, `ref_node_fs`, `config.js`, `@testing-library/react`, `adversarialReviewMarker.js`, `AchievementsPage/index.jsx`, `AchievementsPage/index.test.jsx`, `navAttention.test.js`, `dailyChallenges.test.js`, `ChallengesPage/index.jsx`?**
   _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Are the 278 inferred relationships involving `Key engine functions (`src/game/engine.js`)` (e.g. with `activateComputeBoost()` and `applyAutobuyerMilestones()`) actually correct?**
   _`Key engine functions (`src/game/engine.js`)` has 278 INFERRED edges - model-reasoned connections that need verification._
@@ -822,7 +842,7 @@ _Questions this graph is uniquely positioned to answer:_
   _7 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DataLakePanel/index.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.057838179519595447 - nodes in this community are weakly interconnected._
-- **Why does `createInitialGameState()` connect `createInitialGameState` to `DataLakePanel/index.jsx`, `layers.js`, `Key engine functions (`src/game/engine.js`)`, `buyTickspeedMultiplier`, `dailyChallenges.js`, `engine.test.js`, `useIncrementalGame.js`, `run-simulation.mjs`, `App.foundry.test.jsx`, `getTierCost`, `storage.js`, `DevModePage/index.jsx`, `mergeState`, `scaleUpGame`, `Dev Mode Reference`, `formatAmount`, `seeds.mjs`, `Procedure`, `manifest.mjs`, `tickGame`, `@testing-library/react`, `AchievementsPage/index.jsx`, `AchievementsPage/index.test.jsx`, `normalizePoolMemoryCapacity`, `tickGameCore`, `navAttention.test.js`, `dailyChallenges.test.js`, `ChallengesPage/index.jsx`?**
+- **Why does `createInitialGameState()` connect `createInitialGameState` to `DataLakePanel/index.jsx`, `layers.js`, `Key engine functions (`src/game/engine.js`)`, `scaleUpGame`, `dailyChallenges.js`, `engine.test.js`, `useIncrementalGame.js`, `run-simulation.mjs`, `App.foundry.test.jsx`, `getTierCost`, `storage.js`, `DevModePage/index.jsx`, `mergeState`, `scaleUpGame`, `Dev Mode Reference`, `formatAmount`, `seeds.mjs`, `Procedure`, `manifest.mjs`, `tickGame`, `@testing-library/react`, `AchievementsPage/index.jsx`, `AchievementsPage/index.test.jsx`, `normalizePoolMemoryCapacity`, `tickGameCore`, `navAttention.test.js`, `Achievements (epic #1046, basic slice)`, `dailyChallenges.test.js`, `ChallengesPage/index.jsx`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `MainPage()` (e.g. with `Byte Foundry` and `Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework`) actually correct?**
   _`MainPage()` has 3 INFERRED edges - model-reasoned connections that need verification._
