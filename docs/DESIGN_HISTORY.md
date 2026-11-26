@@ -9533,13 +9533,13 @@ The basic slice drew only a start and a target exponent from fixed per-format ra
 
 The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`LAST_TIER_TICKSPEED_SPEND_FRACTION`); it now spends the full power-of-ten cost like every tier (requirement `cost + 1`). To offset, `tickGame` credits the last tier 1 unit per completed purchase level every 10 s (`lastTierLevelCreditAccumulator`), regardless of balance. Side effect: F20 Burn Rate ("spends its full requirement") is now a no-op rule and needs a redesign.
 
-## Spent QB gates last-tier credit; last tier may spend to 0 (2026-11)
+## Quetta broke gates last-tier credit; last tier may spend to 0 (2026-11)
 
-The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Spent QB achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
+The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Quetta broke achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
 
-## Spent QB keys off a Restage clicked at 0 QB, not a 0 QB balance (2026-11)
+## Quetta broke keys off a Restage clicked at 0 QB, not a 0 QB balance (2026-11)
 
-`lastTierSpent` (QB held this run + 0 balance, run-scoped `lastTierEarnedThisRun`) rewarded a state that is never a stall on its own: QB rebuilds through normal play. The real stall is a Restage at 0 owned QB, which wipes every tier and Bits with nothing left producing. Manual Restage (`restageManually`) now allows that and counts `achievements.counters.emptyRestages`, earning Spent QB; Auto Restage keeps the 0-owned guard so automation never self-stalls. Rejected: a state predicate "Restage ready but 0 QB" (`isRestageStalledByEmptyLastTier`) — it fired for free about a second after the 10th Scale Up (which empties QB and unlocks Restage, and 1 XP returns at once), with no player choice; the maintainer asked for the click. `lastTierEarnedThisRun` was removed (stale copies in old saves are inert).
+`lastTierSpent` (QB held this run + 0 balance, run-scoped `lastTierEarnedThisRun`) rewarded a state that is never a stall on its own: QB rebuilds through normal play. The real stall is a Restage at 0 owned QB, which wipes every tier and Bits with nothing left producing. Manual Restage (`restageManually`) now allows that and counts `achievements.counters.emptyRestages`, earning Quetta broke; Auto Restage keeps the 0-owned guard so automation never self-stalls. Rejected: a state predicate "Restage ready but 0 QB" (`isRestageStalledByEmptyLastTier`) — it fired for free about a second after the 10th Scale Up (which empties QB and unlocks Restage, and 1 XP returns at once), with no player choice; the maintainer asked for the click. `lastTierEarnedThisRun` was removed (stale copies in old saves are inert).
 
 ## Single-line tier rows; exponential notation from 10,000 (2026-11)
 
@@ -9708,3 +9708,22 @@ The four Factory feature cards (#1137's side-by-side pairs of tall, bottom-pinne
 ## Level power off-by-one fix (2026-11-24)
 
 - The achievements fired at `purchaseLevels ≥ N` (N−1 completed levels) while the UI shows completed levels, so "level 5" unlocked at 4. The condition is now `purchaseLevels ≥ N+1` and progress counts completed levels. The bot's isolated daily games earn these achievements, so `DAILY_GENERATOR_VERSION` was bumped 8 → 9 (sampled definitions changed). Not re-simulated for first-Purge pacing.
+
+## Progressive reveal on every screen (2026-11-26)
+
+Maintainer request: progressive reveal for every screen (Dev Mode excepted), a Manual that no longer
+needs long scrolling, and spoiler-masked (not secret) achievements. Superseded: Firmware's "every
+Global Automation row / all ten Tier Autobuyer rows always listed" — now owned rows plus the next one
+to unlock (unlock history is still kept, since owned rows never hide). The
+Manual reuses the achievement condition grammar for its reveal gates instead of a second predicate
+set, so both latch on the same progress. Achievement series steps reveal one at a time (previous step
+earned) rather than all at once with their group. Challenges' Factory tab was left as is: locked tiles
+already hide the codename and rule.
+Maintainer follow-up: no "🔒 N more" counts anywhere (they were added first and removed), and spoiler
+achievements show their names everywhere — including not-yet-revealed series levels and "Next:" — with
+only the requirement, reward and progress withheld (no "???" placeholder).
+Review follow-up: the Overclock step group reveals when the last tier is bought (the Overclock card is visible
+before any claim), not on the first claim — Patient Overclock counts only the first claim of a Purge, so
+revealing it after that claim would be too late. Always-visible Manual topics (Overview, Sleep mode) hold
+back bullets about later mechanics (Buy max, Overflow mode, PP Sleep upgrades); the Milestones topic is
+Purge-gated.

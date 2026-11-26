@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, test } from 'vitest'
 import {
   getAchievementProductionMultiplier, getAchievementStars,
   getAchievementProgress,
@@ -7,7 +7,7 @@ import {
   getAchievementShortReward,
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
   getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, consumeXpForLastTierTickspeed, restageManually, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
-  activateComputeBoost, buyTierQuantity, getPurgeGoalBits, stackComputeBoost, withManualPurchaseMark,
+  activateComputeBoost, buyTierQuantity, getPurgeGoalBits, isAchievementRevealed, stackComputeBoost, withManualPurchaseMark,
 } from './engine'
 import { loadGameState } from './storage'
 import { getLevelPowerAchievementLevel, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, CHALLENGE_DEFINITIONS, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_TIER_FIELDS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
@@ -25,7 +25,7 @@ const lateGame = () => {
       counters: {
         pings: 10000, emptyRestages: 1, maxFirstOverclock: 6, acceleratelessOverclocks: 1, overflowDeepOverclock: 1,
         reformats: 1, kernelsEarned: 100, quickReboots: 1, turboBoosts: 1, maxBoostStack: 1, purgeWaitSeconds: 60,
-        handsFreePurges: 1, automatedPings: 1, purges: 64,
+        handsFreePurges: 1, automatedPings: 1, purges: 64, buyMaxRushes: 1,
       },
     },
     resources: { ...initial.resources, [MONEY_ID]: PURGE_THRESHOLD },
@@ -52,7 +52,7 @@ describe('achievements registry', () => {
   })
 })
 
-describe('Spent QB', () => {
+describe('Quetta broke', () => {
   const lastId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
   const restageReady = (qb = 0) => {
     const base = createInitialGameState()
@@ -114,6 +114,11 @@ describe('Spent QB', () => {
 })
 
 describe('detectAchievements', () => {
+  it('credits the Buy-max achievement to saves that bought Buy max with PP', () => {
+    const next = detectAchievements({ ...createInitialGameState(), buyMaxUnlocked: true })
+    expect(next.achievements.earned.buyMaxRush).toBe(true)
+  })
+
   it('is inert with the feature off', () => {
     ACHIEVEMENTS_FEATURE.enabled = false
     const state = lateGame()
@@ -548,5 +553,57 @@ describe('star production bonus in tickGame', () => {
     // Compare after the earned set is stable (tick may detect more achievements); the ratio must be at least the bonus.
     expect(gain(boosted)).toBeGreaterThanOrEqual(Math.floor(gain(base) * (1 + 0.01 * stars)) - 1)
     expect(gain(boosted)).toBeGreaterThan(gain(base))
+  })
+})
+
+describe('isAchievementRevealed (spoiler gate)', () => {
+  const def = id => ACHIEVEMENT_DEFINITIONS.find(entry => entry.id === id)
+  const fresh = () => createInitialGameState()
+
+  test('first-session achievements are revealed from the start; later groups wait for their layer', () => {
+    expect(isAchievementRevealed(fresh(), def('helloWorld'))).toBe(true)
+    expect(isAchievementRevealed(fresh(), def('powerUser'))).toBe(false)
+    expect(isAchievementRevealed(fresh(), def('offAndOn'))).toBe(false)
+    expect(isAchievementRevealed({ ...fresh(), era: { count: 1 } }, def('offAndOn'))).toBe(true)
+  })
+
+  test('an earned achievement is always revealed', () => {
+    const state = { ...fresh(), achievements: { earned: { offAndOn: true }, counters: {} } }
+    expect(isAchievementRevealed(state, def('offAndOn'))).toBe(true)
+  })
+
+  test('a definition reveal overrides its group, and later series steps wait for the previous step', () => {
+    const main = { ...fresh(), intro: { ...fresh().intro, mainGameUnlocked: true } }
+    expect(isAchievementRevealed(main, def('justGoogolIt'))).toBe(true)
+    expect(isAchievementRevealed(main, def('remindMeLater'))).toBe(false)
+    expect(isAchievementRevealed(main, def('tier01Bought'))).toBe(true)
+    expect(isAchievementRevealed(main, def('tier02Bought'))).toBe(false)
+    const withFirst = { ...main, achievements: { earned: { tier01Bought: true }, counters: {} } }
+    expect(isAchievementRevealed(withFirst, def('tier02Bought'))).toBe(true)
+  })
+
+  test('reveal never affects detection', () => {
+    const state = { ...fresh(), era: { count: 0 }, achievements: { earned: {}, counters: { reformats: 1 } } }
+    expect(isAchievementRevealed(state, def('rmRf'))).toBe(false)
+    expect(detectAchievements(state).achievements.earned.rmRf).toBe(true)
+  })
+
+  test('Patient Overclock is revealed once the last tier is bought, before any Overclock claim', () => {
+    const main = { ...fresh(), intro: { ...fresh().intro, mainGameUnlocked: true } }
+    expect(isAchievementRevealed(main, def('overclockStep1'))).toBe(false)
+    expect(isAchievementRevealed({ ...main, purchased: { tier10: 1 } }, def('overclockStep1'))).toBe(true)
+  })
+
+  test('reveals latch: a Purge or Reformat never turns a revealed achievement back into ???', () => {
+    const main = { ...fresh(), intro: { ...fresh().intro, mainGameUnlocked: true } }
+    // Last tier bought this cycle (earned tier10Bought), then the cycle resets those per-cycle facts.
+    const afterPurge = { ...main, achievements: { earned: { tier10Bought: true, warrantyVoid: true }, counters: {} } }
+    expect(isAchievementRevealed(afterPurge, def('quettaSpent'))).toBe(true)
+    expect(isAchievementRevealed(afterPurge, def('overclockStep1'))).toBe(true)
+    // Reformat wipes intro (Power page facts) — the earned Power user achievement keeps the group revealed.
+    const afterReformat = { ...main, achievements: { earned: { powerUser: true }, counters: {} } }
+    expect(isAchievementRevealed(afterReformat, def('coldFusion'))).toBe(true)
+    // Overflow mode (a permanent latch) keeps Reboot revealed after unspent PP drops below the threshold.
+    expect(isAchievementRevealed({ ...main, purge: { ...main.purge, unboundedUnlocked: true } }, def('offAndOn'))).toBe(true)
   })
 })

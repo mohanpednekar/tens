@@ -14,8 +14,8 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
-item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Playtime bonus (100 PP), Overflow mode, Buy max (2 PP), Buy mode Level/Single). More (Manual, Milestones, Achievements, Settings) is always available — even
+item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige, or earlier once Buy max is unlocked) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
+unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Playtime bonus (100 PP), Overflow mode, Buy max (achievement-unlocked), Buy mode Bytes/Bits). More (Manual, Milestones, Stats, Achievements, Settings) is always available — even
 during the Byte Foundry gate. A further More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -83,7 +83,7 @@ src/
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → Challenges → More) + More sheet (Manual / Milestones / Settings)
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → Challenges → More) + More sheet (Manual / Milestones / Stats / Achievements / Settings)
     Button/, BuyMaxToggle/, Switch/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/, BoostBadge/, SpeedDetailsPopover/, LeadIcon/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
@@ -97,11 +97,12 @@ src/
     ComputePage/index.jsx  ← Foundry Power (Cells/charge chain/Boost); nav Power, page id `'boosters'`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
-    InfoPage/index.jsx     ← Manual; static mechanic explanations; reads no game state
-    PerksPage/index.jsx    ← Firmware: Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
+    InfoPage/index.jsx     ← Manual; evergreen mechanic explanations as collapsed topics, revealed by progress
+    PerksPage/index.jsx    ← Firmware: Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige or once Buy max is unlocked
     ChallengesPage/        ← page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily
     AchievementsPage/      ← page id `'achievements'`; via AppNav → More
     MilestonesPage/index.jsx ← Milestones timeline / Reboot status; via AppNav → More
+    StatsPage/index.jsx    ← page id `'stats'`; pure renderer of `game/stats.js` selectors; via AppNav → More
     SettingsPage/index.jsx ← Supporter / Cloud save / Store / saves / System log / Reboot / Task Manager /
                               Legal / Reset; via AppNav → More
     DevModePage/index.jsx  ← dev-build-only sandbox; isolated save toggle, quick-seed presets, a
@@ -129,7 +130,7 @@ viteConfigFactory.js       ← real Vite config: path aliases (below) + dev/test
 no side effects. `useIncrementalGame.js` is the only place holding React state (tick timer, localStorage
 persistence), called once in `App.jsx` and shared by every page via a `game` prop.
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
-`InfoPage/index.jsx` is a static page (evergreen mechanic explanations only, reads no game state);
+`InfoPage/index.jsx` is the Manual (evergreen explanations; reads only progress, to reveal topics — `MANUAL_SECTION_REVEALS`);
 `StoragePage`/`ComputePage`/`ComputeFlopsPage`/`MilestonesPage`/`SettingsPage`/`DevModePage` are pure
 renderers. `App.jsx` switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry →
 Power → Compute → Factory → Firmware → Challenges → More), with `ByteFoundryPage` additionally forced onto screen —

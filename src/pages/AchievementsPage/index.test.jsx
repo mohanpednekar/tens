@@ -9,7 +9,13 @@ import AchievementsPage from '.'
 
 const renderWithTheme = ui => render(<ThemeProvider theme={buildTheme('dark')}>{ui}</ThemeProvider>)
 const openGroup = name => fireEvent.click(screen.getByLabelText(`${name} group toggle`))
-const gameWith = earned => ({ state: { ...createInitialGameState(), achievements: { earned, counters: { pings: 0 } } } })
+const gameWith = (earned, patch = {}) => ({ state: { ...createInitialGameState(), achievements: { earned, counters: { pings: 0 } }, ...patch } })
+// A save past the Foundry gate, so the Factory/Foundry groups are no longer spoilers.
+const mainGame = initial => ({ intro: { ...initial.intro, mainGameUnlocked: true } })
+const gameInMain = (earned, patch = {}) => {
+  const initial = createInitialGameState()
+  return gameWith(earned, { ...mainGame(initial), ...patch })
+}
 
 beforeEach(() => { ACHIEVEMENTS_FEATURE.enabled = true })
 afterEach(() => { ACHIEVEMENTS_FEATURE.enabled = false })
@@ -41,7 +47,7 @@ describe('AchievementsPage', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ tier01Bought: true, tier02Bought: true, tier03Bought: true })} />)
     openGroup('Tier ladder')
     expect(screen.getByLabelText('First purchase achievement level 3 of 10')).toBeTruthy()
-    expect(screen.getByLabelText('Spent QB achievement not yet earned')).toBeTruthy()
+    expect(screen.getByLabelText('Quetta broke achievement not yet earned')).toBeTruthy()
   })
 
   it('collapses ordered steps into one leveled row', () => {
@@ -104,40 +110,49 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('shows the real bonus reward before and after earning (full text for short series)', () => {
-    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameInMain({}, { purchased: { tier10: 1 } })} />)
     openGroup('Overclock step')
     fireEvent.click(screen.getByLabelText('Overclock step details'))
     expect(screen.getByLabelText('Overclock step level 1 reward pending').textContent).toMatch(/^Reward: Each later Overclock needs 1 fewer/)
     unmount()
-    renderWithTheme(<AchievementsPage game={gameWith({ overclockStep1: true })} />)
+    renderWithTheme(<AchievementsPage game={gameInMain({ overclockStep1: true }, { purchased: { tier10: 1 } })} />)
     openGroup('Overclock step')
     fireEvent.click(screen.getByLabelText('Overclock step details'))
     expect(screen.getByLabelText('Overclock step level 1 reward earned').textContent).toMatch(/^Reward earned: Each later Overclock needs 1 fewer/)
   })
 
   it('long series list one short line per level', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({ tier01Bought: true })} />)
+    renderWithTheme(<AchievementsPage game={gameInMain({ tier01Bought: true })} />)
     openGroup('Tier ladder')
     fireEvent.click(screen.getByLabelText('First purchase details'))
     expect(screen.getByLabelText('First purchase level 1 earned').textContent).toMatch(/^✅ 1\. Buy /)
     expect(screen.getByLabelText('First purchase level 2 not yet earned').textContent).toMatch(/^🔒 2\. Buy /)
+    // Later steps stay spoilers until the step before them is earned.
+    expect(screen.getByLabelText('First purchase level 3 not yet revealed').textContent).toBe('🔒 3. Giga-what now')
   })
 
   it('Reclamation is a five-level series by pools compacted, each level listing its own short reward', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({ reclaim1: true })} />)
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameInMain({ reclaim1: true })} />)
     openGroup('Foundry')
     fireEvent.click(screen.getByLabelText('Reclamation details'))
     expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Flush a pool · Disk step 2%')
     expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Flush 3 pools (0/3) · Disk step 3%')
-    expect(screen.getByLabelText('Reclamation level 5 not yet earned').textContent).toBe('🔒 5. Flush every pool (0/10) · One Upgrade does both')
+    expect(screen.getByLabelText('Reclamation level 5 not yet revealed').textContent).toBe('🔒 5. The Great Flushening')
     expect(screen.getByLabelText('Reclamation achievement level 1 of 5')).toBeTruthy()
     expect(screen.getByText(/^Disk step 2%: Disk-size steps without a Flush Pool upgrade close 2% of the gap/)).toBeTruthy()
+    // Rewards of still-hidden levels are not explained yet.
+    expect(screen.queryByText(/^One Upgrade does both:/)).toBeNull()
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameInMain({ reclaim1: true, reclaim2: true, reclaim3: true, reclaim4: true })} />)
+    openGroup('Foundry')
+    fireEvent.click(screen.getByLabelText('Reclamation details'))
+    expect(screen.getByLabelText('Reclamation level 5 not yet earned').textContent).toBe('🔒 5. Flush every pool (0/10) · One Upgrade does both')
     expect(screen.getByText("Lake speed +5%: Every Data Lake fills at +5% more of its pool's Bandwidth")).toBeTruthy()
     expect(screen.getByText(/^One Upgrade does both: Bitrate always matches Capacity/)).toBeTruthy()
   })
 
   it('collapsed series show the next requirement and reward until every level is done', () => {
-    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ reclaim1: true })} />)
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameInMain({ reclaim1: true })} />)
     openGroup('Foundry')
     expect(screen.getByText('Next: Flush 3 pools (0/3)')).toBeTruthy()
     expect(screen.getByLabelText('Reclamation next reward').textContent).toBe('Reward: Disk step 3%')
@@ -151,7 +166,7 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('states a bonus shared by every level once', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    renderWithTheme(<AchievementsPage game={gameInMain({})} />)
     openGroup('Level power')
     fireEvent.click(screen.getByLabelText('Level power details'))
     expect(screen.getByText(/Reward each level: The per-level production multiplier/)).toBeTruthy()
@@ -166,7 +181,7 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('shows a lock on series with no level reached and on unearned levels', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    renderWithTheme(<AchievementsPage game={gameInMain({})} />)
     openGroup('Level power')
     expect(screen.getByLabelText('Level power achievement level 0 of 10').textContent).toContain('🔒')
     expect(screen.getByText(/Next: KB level 5/)).toBeTruthy()
@@ -174,7 +189,7 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('shows no (0/1) on level-1 one-shot steps', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    renderWithTheme(<AchievementsPage game={gameInMain({})} />)
     openGroup('Foundry')
     expect(screen.getByText('Next: Flush a pool')).toBeTruthy()
     openGroup('Early Factory')
@@ -182,9 +197,35 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('a compact series with no rewards shows no reward explanations', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    renderWithTheme(<AchievementsPage game={gameWith({}, mainGame(createInitialGameState()))} />)
     openGroup('Tier ladder')
     fireEvent.click(screen.getByLabelText('First purchase details'))
     expect(screen.queryByText(/↑:/)).toBeNull()
+  })
+
+  it('groups from layers not reached yet are not listed at all, names included', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    for (const name of ['Reboot', 'Overclock step', 'Power', 'First Purge and after']) {
+      expect(screen.queryByLabelText(`${name} group toggle`)).toBeNull()
+    }
+    expect(screen.queryByText(/Kernel panic|Popcorn/)).toBeNull()
+    expect(screen.getByLabelText(/^total stars \d+ of \d+$/).textContent).not.toMatch(/\/(\d{3})/)
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
+    openGroup('Reboot')
+    // Collapsed: the short requirement; expanded: the full one.
+    expect(screen.getByText('Reformat Foundry')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('rm -rf details'))
+    expect(screen.getByText('Reformat the Byte Foundry')).toBeTruthy()
+  })
+
+  it('a revealed row shows its requirement, then its reward once earned, without expanding', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
+    openGroup('Reboot')
+    expect(screen.getByLabelText('Kernel panic summary').textContent).toBe('Reboot ×2 in 1 h')
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({ quettaSpent: true, tier10Bought: true }, { purchased: { tier10: 1 } })} />)
+    openGroup('Tier ladder')
+    expect(screen.getByLabelText('Quetta broke summary').textContent).toMatch(/^Reward earned: /)
   })
 })

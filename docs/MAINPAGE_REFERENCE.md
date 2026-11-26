@@ -584,8 +584,7 @@ live inside the selected tier):
   the threshold so it isn't a duplicate of the Bits headline. Visibility is
   `formatMoneyBalance !== formatCurrency`, not a hardcoded 8000, so it stays in lockstep with the
   headline switch. Every other `formatCurrency` call on this page —
-  tier costs/production, the global tickspeed cost, the `FullScreenOverlay`'s "You've reached…"
-  line, the Buy button's cost label — is unaffected and still shows raw Bits, its actual
+  tier costs/production, the global tickspeed cost, the Buy button's cost label — is unaffected and still shows raw Bits, its actual
   priced/spent denomination. Beneath the hero (`BytePowerSegments` `margin-top: 0.5rem`; the Bits
   overlay sits in that gap plus StatCard's uncompressed `0.6rem` gap and does not push the bar
   down; suppressed while `balancesCompressed`, since the compact sticky bar has no room for it),
@@ -623,7 +622,7 @@ live inside the selected tier):
   and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
   by `handleResetClick`, same convention as `openTierDetailIds`) — via `MoneyHeroToggle` (wrapping only the balance figure; carries `aria-label="money display"`, cursor/hover and a
   `theme.color.accent` focus-visible outline) — the rest of the card is not a trigger. Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override
-  `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
+  `CenteredCard`'s own `text-align: center`, overriding the card's centering;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
   `!isFirstRun`), Scale Up, Tickspeed, and Overclock — each gated on the same
@@ -690,9 +689,9 @@ automation pause toggle live on the separate **Firmware** page (below). Mileston
 
 **Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
 between Factory and More), shown once `isPerksPageRevealed` (first Prestige or
-Reboot, or any Auto-charge bought) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
-attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
-tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
+Reboot, any Auto-charge bought, or an unlocked Buy max) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
+attention). Header shows the spendable PP (`aria-label="purge points display"`) once the first Purge/Reboot has happened. **Icon-only**
+tabs (Automation after a Purge or with a Power automation, Prestige after a Purge or with Buy max; the first visible one is the fallback; Purge Points / Global Automation / Tier Autobuyers categories wait for the first Purge) (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
 `aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
 Rows are grouped **by feature, not by purchase kind** — an automation's unlock, pause toggle and speed
 chain are one row (they used to be split across Unlocks / Upgrades / Toggles tabs; see
@@ -724,15 +723,15 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   permanent and always flush right (tier cells use the same order) — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
   ellipsizing the name. Categories: *Global Automation* (cells
-  `"<name> row"`, Auto Accelerate → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage
+  `"<name> row"`, owned + next only, Auto Accelerate → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Accelerate, Overclock needs both, Purge needs Overclock — engine-enforced),
-  *Tier Autobuyers* (all ten tiers always listed; halves
+  *Tier Autobuyers* (progressive reveal: owned tiers plus the next to unlock, no hidden-count line; Global Automation likewise lists owned rows + the next one; halves
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (once any tier's Auto-charge is bought on Power: an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — plus an `auto boost row` Switch and the full-width Boost preset picker), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
   *Purge Points* (Speed bonus 1 PP, Sleep mode 4 h → 24 h ladder, Compression leveled upgrade, Cache Warm 20 PP,
   Playtime bonus 100 PP, Overflow mode — locked until Auto Purge's interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`)
-  and *Purchasing* (Buy mode: Level default / Single, `components/BuyModeToggle`; Buy max: 2 PP unlock button, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
+  and *Purchasing* (Buy mode: Bytes (code `level`, default) / Bits (code `single`), `components/BuyModeToggle`; Buy max: locked until the Click fast, buy max achievement, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
   the name is a button (`"<name> details"`, `aria-expanded`) toggling a full-width description
   (`"<name> description"`); under the name one short, plain value line (`"<name> value"`) — usually
   `now → after` while buyable (e.g. "Time away: up to 4h → 8h"), the current effect once owned/maxed, or a plain
@@ -1046,9 +1045,11 @@ Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving t
 `dismissOfflineProgress` removes it.
 
 **Prestige surfaces (#139).** The first-run freeze uses `FullScreenOverlay` (`role="dialog"`
-`aria-modal="true"` `aria-label="Purge required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
-token-driven `FullScreenCard` (`surfaceRaised` panel, `warn` heading via `font.display`/`type.scale.xl`,
-`PurgeMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopPurgeBar`
+`aria-modal="true"` `aria-label="Purge required"`) with a blurred scrim (`rgba(0,0,0,0.78)`) and a
+token-driven `FullScreenCard` (`surfaceRaised` panel with a `warn` top border, max 24rem): 💾 icon, "Disk full"
+`warn` heading, "Production stopped" (`PurgeMutedText`), a `DiskFullReward` line ("+N Purge Point(s)" from
+`purgeAwardPreview`, `warn`), a `DiskFullEffects` `<dl>` of two equal centered columns (Resets: Bits, tiers,
+Accelerate / Keeps: Purge Points, Foundry) and a full-width "✦ Purge now" button — everything on one center axis. Repeat-run reminders use `TopPurgeBar`
 (`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `PurgeMutedText` + a
 `variant="prestige"` `$pulse` button. Both prestige buttons keep their existing `aria-label`s; the
 full-screen button still auto-focuses on mount. Presentation gates (`showFullScreenPrompt` /
@@ -1134,6 +1135,19 @@ save / Store rows appear only when their feature is on. Theme is an inline Syste
 **Milestones** (`MilestonesPage`, More → `open milestones`, renamed back from Releases): one card with a
 vertical timeline (`milestones category`), one dot per milestone (aria-label `"<name> milestone reached|not yet
 reached"`, no version numbers), then one `reboot status` line: `⏻ N Reboots · N Kernels ·` eligibility badge.
+
+### Stats page
+
+`StatsPage` (page id `'stats'`, More → 📊 Stats; gate-exempt). Title, then a 2-column (4 at ≥640px) grid of raised hero
+tiles (icon, big display-font value, muted label: Play time, Purges (lifetime; Pings before the first Purge), Stars,
+Bonus = Purge × playtime × star factors only — not total production). Below, one `StatCard` per `getStatsSections` entry with a 3px left border in the section's `tone`
+colour, an uppercase name button (▾/▸ + icon; the only toggle, open by default) and a 2-column (3 at ≥640px) `dl` grid
+of sunken tiles; tiles with `progress` (0–1) add a 4px bar in the tone colour; `wide` tiles span the row as a
+label-left / value-right line (Bonus multiplier). Visibility: Time, Foundry, Bonuses always; Factory once
+`intro.mainGameUnlocked` (its Accelerate / Scale Ups / Overclock rows only once each is reached; To Googol reads
+To goal inside a challenge, via `getPurgeGoalBits`); Purge and Challenges after the first Purge; Compute once `computeFlops.pageUnlocked`; Reboot
+after the first Reboot. Optional rows (This Purge, Challenge run, Last award, Hands-free Purges, Purge/Playtime bonus)
+appear only when meaningful.
 
 ### Foundry open pool (#1142)
 

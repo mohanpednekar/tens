@@ -8,7 +8,7 @@
 //     --max-seconds  wall-clock budget (default 240)
 //     --no-hold      Purge the tick Googol is reached (baseline; default holds for excess powers)
 //
-// PP policy (greedy, fixed order): one-offs (speed bonus, Buy max, Cache Warm, Playtime bonus),
+// PP policy (greedy, fixed order): one-offs (speed bonus, Cache Warm, Playtime bonus; Buy max is an achievement now),
 // Compression (Double PP, up to level 97 = cost 1e98 so 1e100 stays reachable), automation interval
 // upgrades, then Compute (Flops) tiers cheapest-first; nothing priced above 1e90 except Compression.
 // Purge timing (once Overflow mode lets production continue past Googol): optimal-stopping rule —
@@ -23,7 +23,7 @@ const layers = await import('../../../src/game/layers.js')
 const bot = await import('./bot.mjs')
 
 const {
-  buyAutomationIntervalUpgrade, buyBuyMaxUnlock, buyCacheWarm, buyComputeFlopsTier, buyPlaytimeBonus,
+  buyAutomationIntervalUpgrade, buyCacheWarm, buyComputeFlopsTier, buyPlaytimeBonus,
   buyPrestigeDoublePp, getPrestigePointsAwarded, isEraEligible, purgeGame, tickGame,
 } = engine
 const { AUTOMATION_INTERVAL_CONFIG, COMPUTE_FLOPS_TIER_DEFINITIONS, MONEY_ID, PURGE_THRESHOLD } = layers
@@ -68,7 +68,6 @@ const buyCapped = (state, buy, cap, limit = 500) => {
 const actSpendPP = state => {
   let s = state
   s = buyWhilePossible(s, engine.buyPrestigeSpeedBonus, 1)
-  s = buyWhilePossible(s, buyBuyMaxUnlock, 1)
   s = buyWhilePossible(s, buyCacheWarm, 1)
   s = buyWhilePossible(s, buyPlaytimeBonus, 1)
   const level = s.prestigeDoublePpLevel ?? 0

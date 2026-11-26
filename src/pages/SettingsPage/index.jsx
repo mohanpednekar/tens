@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
-import { formatAmount, formatCurrency, formatMoneyBalance, getEonsAwarded, isEraEligible, isProductionFrozen } from 'game/engine'
+import { formatAmount, formatCurrency, formatMoneyBalance, getEonsAwarded, isAchievementConditionMet, isEraEligible, isProductionFrozen } from 'game/engine'
 import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import styled, { css } from 'styled-components'
@@ -309,6 +309,10 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   const eonsAwarded = getEonsAwarded(game.state)
   const unspentPp = game.state.purge?.points ?? 0
   const eonWord = count => (count === 1 ? 'Kernel' : 'Kernels')
+  // Progressive reveal: rows for layers the save hasn't reached stay hidden (no spoilers).
+  const rebootRevealed = isAchievementConditionMet(game.state, { kind: 'rebootReached' })
+  const systemLogRevealed = isAchievementConditionMet(game.state, { kind: 'googolReached' })
+  const taskManagerRevealed = isAchievementConditionMet(game.state, { kind: 'storageUnlocked' })
 
   const museum = game.state.prestigeMuseum ?? { history: [], pinnedIds: [] }
   const pinnedSet = new Set(museum.pinnedIds ?? [])
@@ -488,138 +492,144 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             ))}
           </Section>
         </SettingsItem>
-        <SettingsItem icon="⏻" label="Reboot" value={`${eonsBalance} ${eonWord(eonsBalance)}`}>
-          <Section aria-label="reboot section">
-            <h2>Reboot</h2>
-            <p>
-              Voluntary meta-prestige when you hold enough unspent Purge Points — no production
-              freeze. Awards Kernels for future upgrades.
-            </p>
-            <Row>
-              <span>Reboots</span>
-              <strong>{eraCount}</strong>
-            </Row>
-            <Row>
-              <span>Kernels</span>
-              <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
-            </Row>
-            <p>
-              {eraEligible
-                ? `Ready — next Reboot awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
-                : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
-            </p>
-            <Button
-              aria-label={
-                eraEligible
-                  ? 'Reboot — open confirmation'
-                  : 'Reboot — requires 1 Googol unspent Purge Points'
-              }
-              disabled={!eraEligible}
-              onClick={() => setEraConfirmOpen(true)}
-              type="button"
-              variant="prestige"
-            >
-              <ButtonContent>⏻ Reboot…</ButtonContent>
-            </Button>
-          </Section>
-        </SettingsItem>
-        <SettingsItem icon="📜" label="System log" value={supporter ? `${history.length}` : '🔒'}>
-          <Section aria-label="system log section">
-            <h2>System log</h2>
-            {!supporter ? (
-              <LockedNote>
-                History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
-                {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
-              </LockedNote>
-            ) : (
-              <>
-                <p>Pin standout runs — display only, no bonuses. Cap {MUSEUM_PIN_CAP} pins.</p>
-                {pinnedEntries.length > 0 && (
-                  <>
-                    <LockedNote>Pinned</LockedNote>
-                    <MuseumList aria-label="pinned purge entries">
-                      {pinnedEntries.map(entry => (
-                        <MuseumItem key={`pin-${entry.id}`}>
+        {rebootRevealed && (
+          <SettingsItem icon="⏻" label="Reboot" value={`${eonsBalance} ${eonWord(eonsBalance)}`}>
+            <Section aria-label="reboot section">
+              <h2>Reboot</h2>
+              <p>
+                Voluntary meta-prestige when you hold enough unspent Purge Points — no production
+                freeze. Awards Kernels for future upgrades.
+              </p>
+              <Row>
+                <span>Reboots</span>
+                <strong>{eraCount}</strong>
+              </Row>
+              <Row>
+                <span>Kernels</span>
+                <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
+              </Row>
+              <p>
+                {eraEligible
+                  ? `Ready — next Reboot awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
+                  : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
+              </p>
+              <Button
+                aria-label={
+                  eraEligible
+                    ? 'Reboot — open confirmation'
+                    : 'Reboot — requires 1 Googol unspent Purge Points'
+                }
+                disabled={!eraEligible}
+                onClick={() => setEraConfirmOpen(true)}
+                type="button"
+                variant="prestige"
+              >
+                <ButtonContent>⏻ Reboot…</ButtonContent>
+              </Button>
+            </Section>
+          </SettingsItem>
+        )}
+        {systemLogRevealed && (
+          <SettingsItem icon="📜" label="System log" value={supporter ? `${history.length}` : '🔒'}>
+            <Section aria-label="system log section">
+              <h2>System log</h2>
+              {!supporter ? (
+                <LockedNote>
+                  History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
+                  {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
+                </LockedNote>
+              ) : (
+                <>
+                  <p>Pin standout runs — display only, no bonuses. Cap {MUSEUM_PIN_CAP} pins.</p>
+                  {pinnedEntries.length > 0 && (
+                    <>
+                      <LockedNote>Pinned</LockedNote>
+                      <MuseumList aria-label="pinned purge entries">
+                        {pinnedEntries.map(entry => (
+                          <MuseumItem key={`pin-${entry.id}`}>
+                            <div>
+                              <strong>Purge #{entry.purgeNumber}</strong>
+                              <div>
+                                <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
+                              </div>
+                            </div>
+                            <Button
+                              aria-label={`unpin purge ${entry.purgeNumber}`}
+                              onClick={() => game.actions.unpinMuseumEntry(entry.id)}
+                              type="button"
+                              variant="neutral"
+                            >
+                              <ButtonContent>Unpin</ButtonContent>
+                            </Button>
+                          </MuseumItem>
+                        ))}
+                      </MuseumList>
+                    </>
+                  )}
+                  <LockedNote>Recent history</LockedNote>
+                  {visibleHistory.length === 0 ? (
+                    <LockedNote>No purges recorded yet.</LockedNote>
+                  ) : (
+                    <MuseumList aria-label="system log history">
+                      {visibleHistory.map(entry => (
+                        <MuseumItem key={entry.id}>
                           <div>
                             <strong>Purge #{entry.purgeNumber}</strong>
                             <div>
-                              <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
+                              <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
                             </div>
                           </div>
-                          <Button
-                            aria-label={`unpin purge ${entry.purgeNumber}`}
-                            onClick={() => game.actions.unpinMuseumEntry(entry.id)}
-                            type="button"
-                            variant="neutral"
-                          >
-                            <ButtonContent>Unpin</ButtonContent>
-                          </Button>
+                          {pinnedSet.has(entry.id) ? (
+                            <Button
+                              aria-label={`unpin purge ${entry.purgeNumber}`}
+                              onClick={() => game.actions.unpinMuseumEntry(entry.id)}
+                              type="button"
+                              variant="neutral"
+                            >
+                              <ButtonContent>Unpin</ButtonContent>
+                            </Button>
+                          ) : (
+                            <Button
+                              aria-label={`pin purge ${entry.purgeNumber}`}
+                              disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
+                              onClick={() => game.actions.pinMuseumEntry(entry.id)}
+                              type="button"
+                              variant="neutral"
+                            >
+                              <ButtonContent>Pin</ButtonContent>
+                            </Button>
+                          )}
                         </MuseumItem>
                       ))}
                     </MuseumList>
-                  </>
-                )}
-                <LockedNote>Recent history</LockedNote>
-                {visibleHistory.length === 0 ? (
-                  <LockedNote>No purges recorded yet.</LockedNote>
-                ) : (
-                  <MuseumList aria-label="system log history">
-                    {visibleHistory.map(entry => (
-                      <MuseumItem key={entry.id}>
-                        <div>
-                          <strong>Purge #{entry.purgeNumber}</strong>
-                          <div>
-                            <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
-                          </div>
-                        </div>
-                        {pinnedSet.has(entry.id) ? (
-                          <Button
-                            aria-label={`unpin purge ${entry.purgeNumber}`}
-                            onClick={() => game.actions.unpinMuseumEntry(entry.id)}
-                            type="button"
-                            variant="neutral"
-                          >
-                            <ButtonContent>Unpin</ButtonContent>
-                          </Button>
-                        ) : (
-                          <Button
-                            aria-label={`pin purge ${entry.purgeNumber}`}
-                            disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
-                            onClick={() => game.actions.pinMuseumEntry(entry.id)}
-                            type="button"
-                            variant="neutral"
-                          >
-                            <ButtonContent>Pin</ButtonContent>
-                          </Button>
-                        )}
-                      </MuseumItem>
-                    ))}
-                  </MuseumList>
-                )}
-              </>
-            )}
-          </Section>
-        </SettingsItem>
-        <SettingsItem icon="📈" label="Task Manager" value={supporter ? null : '🔒'}>
-          <Section aria-label="task manager section">
-            <h2>Task Manager</h2>
-            {!supporter ? (
-              <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
-            ) : (
-              <>
-                <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
-                <LockedNote>Bits</LockedNote>
-                <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
-                  <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
-                </SparklineSvg>
-                <LockedNote>Purge Points</LockedNote>
-                <SparklineSvg aria-label="purge points sparkline" role="img" viewBox="0 0 100 40">
-                  <path d={ppPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
-                </SparklineSvg>
-              </>
-            )}
-          </Section>
-        </SettingsItem>
+                  )}
+                </>
+              )}
+            </Section>
+          </SettingsItem>
+        )}
+        {taskManagerRevealed && (
+          <SettingsItem icon="📈" label="Task Manager" value={supporter ? null : '🔒'}>
+            <Section aria-label="task manager section">
+              <h2>Task Manager</h2>
+              {!supporter ? (
+                <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
+              ) : (
+                <>
+                  <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
+                  <LockedNote>Bits</LockedNote>
+                  <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
+                    <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  </SparklineSvg>
+                  <LockedNote>Purge Points</LockedNote>
+                  <SparklineSvg aria-label="purge points sparkline" role="img" viewBox="0 0 100 40">
+                    <path d={ppPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  </SparklineSvg>
+                </>
+              )}
+            </Section>
+          </SettingsItem>
+        )}
       </SettingsGroup>
 
       <SettingsGroup label="Data">
