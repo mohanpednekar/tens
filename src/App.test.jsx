@@ -1168,7 +1168,9 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   })
   render(<App />)
 
-  expect(screen.getByRole('dialog', { name: /purge required/i })).toBeInTheDocument()
+  const overlay = screen.getByRole('dialog', { name: /purge required/i })
+  expect(within(overlay).getByRole('heading', { name: /disk full/i })).toBeInTheDocument()
+  expect(within(overlay).getByLabelText(/^purge reward$/i)).toHaveTextContent(/\+1\s*Purge Point · spend in Firmware/)
   const purgeButton = screen.getByRole('button', { name: /purge now/i })
   expect(purgeButton).toBeEnabled()
 
