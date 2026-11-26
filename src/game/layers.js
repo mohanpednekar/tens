@@ -196,17 +196,20 @@ export const PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL = 6
 export const OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL = 12
 export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
+// `reveal` (a condition in the same grammar as an achievement's `condition`; null = from the start) gates when
+// a group's requirements/rewards stop being spoilers: before it, rows show only the name with "???" details
+// (engine.js `isAchievementRevealed`). A definition's own `reveal` overrides its group's.
 export const ACHIEVEMENT_GROUPS = [
-  { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
-  { id: 'foundry', name: 'Foundry', boostArea: 'foundry' },
-  { id: 'power', name: 'Power', boostArea: 'power' },
-  { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
-  { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
-  { id: 'levelPower', name: 'Level power', boostArea: 'factory' },
-  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory' },
-  { id: 'firstPurge', name: 'First Purge and after', boostArea: 'purgePoints' },
-  { id: 'latePurge', name: 'Late Purge layer', boostArea: 'purgePoints' },
-  { id: 'reboot', name: 'Reboot', boostArea: 'kernels' },
+  { id: 'firstSession', name: 'First session', boostArea: 'foundry', reveal: null },
+  { id: 'foundry', name: 'Foundry', boostArea: 'foundry', reveal: { kind: 'storageUnlocked' } },
+  { id: 'power', name: 'Power', boostArea: 'power', reveal: { kind: 'powerPageUnlocked' } },
+  { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
+  { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
+  { id: 'levelPower', name: 'Level power', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
+  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory', reveal: { kind: 'overclocked' } },
+  { id: 'firstPurge', name: 'First Purge and after', boostArea: 'purgePoints', reveal: { kind: 'googolReached' } },
+  { id: 'latePurge', name: 'Late Purge layer', boostArea: 'purgePoints', reveal: { kind: 'lifetimePurges', min: 1 } },
+  { id: 'reboot', name: 'Reboot', boostArea: 'kernels', reveal: { kind: 'rebootReached' } },
 ]
 // `condition` is evaluated by engine.js `isAchievementConditionMet` against CURRENT state ("at least"
 // thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
@@ -263,10 +266,10 @@ export const ACHIEVEMENT_DEFINITIONS = [
     short: `Buy ${tier.symbol}`,
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
-  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
+  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', reveal: { kind: 'tierPurchased', tierId: 'tier10' }, shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', short: 'Accelerate 1', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', short: 'Accelerate 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
-  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', condition: { kind: 'overclocked' } },
+  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', reveal: { kind: 'tierPurchased', tierId: 'tier10' }, condition: { kind: 'overclocked' } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
     name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,
@@ -287,7 +290,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'stackOverflow', name: 'Stack Overflow', group: 'power', trigger: 'Stack a Boost to its maximum', short: 'Max Boost stack', condition: { kind: 'counter', key: 'maxBoostStack', min: 1 } },
   { id: 'coldFusion', name: 'Cold fusion', group: 'power', trigger: 'Build your first Fusion', short: 'First Fusion', condition: { kind: 'computeEntityBuilt', fromIndex: 9 } },
   // First Purge and after (#1051). Lifetime Purge counts survive Reboot (`purge.count` does not).
-  { id: 'justGoogolIt', name: 'Just Googol it', group: 'firstPurge', trigger: 'Reach 1 Googol Bytes', short: '1 Googol Bytes', condition: { kind: 'googolReached' } },
+  { id: 'justGoogolIt', name: 'Just Googol it', group: 'firstPurge', trigger: 'Reach 1 Googol Bytes', short: '1 Googol Bytes', reveal: { kind: 'storageUnlocked' }, condition: { kind: 'googolReached' } },
   { id: 'remindMeLater', name: 'Remind me later', group: 'firstPurge', trigger: `Leave a Purge available but unclaimed for ${REMIND_ME_LATER_SECONDS} seconds (pause Auto-Purge if you own it)`, short: 'Purge pending 1 min', condition: { kind: 'counter', key: 'purgeWaitSeconds', min: REMIND_ME_LATER_SECONDS } },
   { id: 'startAllOver', name: 'Wait, do I start all over?', group: 'firstPurge', trigger: 'Purge for the first time', short: 'Purge', condition: { kind: 'lifetimePurges', min: 1 } },
   { id: 'tenTypes', name: 'There are 10 types of people', group: 'firstPurge', trigger: 'Purge at least 2 times', short: 'Purge ×2', condition: { kind: 'lifetimePurges', min: 2 } },
@@ -301,15 +304,15 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'middleOut', name: 'Middle-out', group: 'latePurge', trigger: `Reach Compression level ${MIDDLE_OUT_COMPRESSION_LEVEL}`, short: `Compression ${MIDDLE_OUT_COMPRESSION_LEVEL}`, condition: { kind: 'doublePpLevel', min: MIDDLE_OUT_COMPRESSION_LEVEL } },
   { id: 'zipBomb', name: 'Zip bomb', group: 'latePurge', trigger: 'Compress until 1 power earns 1 PP', short: '1 power per PP', condition: { kind: 'onePowerPerPp' } },
   { id: 'whileTrue', name: 'while (true)', group: 'latePurge', trigger: 'Run Auto-Purge at a 1 second interval', short: 'Auto-Purge 1 s', condition: { kind: 'fastAutoPurge' } },
-  { id: 'notABug', name: "It's not a bug, it's a feature", group: 'latePurge', trigger: 'Pass 1 Googol Bytes in Overflow mode', short: 'Googol in Overflow', condition: { kind: 'overflowPastGoogol' } },
+  { id: 'notABug', name: "It's not a bug, it's a feature", group: 'latePurge', trigger: 'Pass 1 Googol Bytes in Overflow mode', short: 'Googol in Overflow', reveal: { kind: 'fastAutoPurge' }, condition: { kind: 'overflowPastGoogol' } },
   { id: 'bit64', name: '64-bit upgrade', group: 'latePurge', trigger: 'Purge at least 64 times', short: 'Purge ×64', condition: { kind: 'lifetimePurges', min: 64 } },
-  { id: 'someoneElsesComputer', name: "The cloud is just someone else's computer", group: 'latePurge', trigger: 'Buy your first Supercloud', short: 'First Supercloud', condition: { kind: 'superCloudOwned' } },
+  { id: 'someoneElsesComputer', name: "The cloud is just someone else's computer", group: 'latePurge', trigger: 'Buy your first Supercloud', short: 'First Supercloud', reveal: { kind: 'computeFlopsPageUnlocked' }, condition: { kind: 'superCloudOwned' } },
   // Reboot (#1051).
   { id: 'offAndOn', name: 'Have you tried turning it off and on again?', group: 'reboot', trigger: 'Reboot for the first time', short: 'Reboot', condition: { kind: 'eraCount', min: 1 } },
   { id: 'rmRf', name: 'rm -rf', group: 'reboot', trigger: 'Reformat the Byte Foundry', short: 'Reformat Foundry', condition: { kind: 'counter', key: 'reformats', min: 1 } },
   { id: 'kernelPanic', name: 'Kernel panic', group: 'reboot', trigger: 'Reboot twice within an hour of play', short: 'Reboot ×2 in 1 h', condition: { kind: 'counter', key: 'quickReboots', min: 1 } },
   { id: 'popcorn', name: 'Popcorn', group: 'reboot', trigger: `Earn ${POPCORN_KERNELS} Kernels in total`, short: `${POPCORN_KERNELS} Kernels`, condition: { kind: 'kernelsEarned', min: POPCORN_KERNELS } },
-].map(def => ({ secret: false, platformDependent: false, bonus: null, short: null, shortBonus: null, ...def }))
+].map(def => ({ secret: false, platformDependent: false, bonus: null, short: null, shortBonus: null, reveal: undefined, ...def }))
 // Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [

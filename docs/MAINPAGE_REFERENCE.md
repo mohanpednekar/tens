@@ -723,9 +723,9 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   permanent and always flush right (tier cells use the same order) — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
   ellipsizing the name. Categories: *Global Automation* (cells
-  `"<name> row"`, Auto Accelerate → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage
+  `"<name> row"`, owned + next only, Auto Accelerate → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Accelerate, Overclock needs both, Purge needs Overclock — engine-enforced),
-  *Tier Autobuyers* (all ten tiers always listed; halves
+  *Tier Autobuyers* (progressive reveal: owned tiers plus the next to unlock, then `🔒 N more` — `LockedMore`; Global Automation likewise lists owned rows + the next one; halves
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (once any tier's Auto-charge is bought on Power: an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — plus an `auto boost row` Switch and the full-width Boost preset picker), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:

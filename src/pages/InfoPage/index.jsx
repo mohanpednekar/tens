@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import StatCard from 'components/StatCard'
 import {
   formatAmount,
+  isAchievementConditionMet,
   formatBitsInNearestUnit,
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
@@ -65,8 +67,10 @@ import {
 import { version } from '../../../package.json'
 import styled from 'styled-components'
 
-// Everything on this page is static, evergreen prose about how the game's mechanics work — no
-// game state is read here. It exists so MainPage (the actual game) doesn't have to carry this
+// Everything on this page is static, evergreen prose about how the game's mechanics work. The only
+// game state read is progress, for progressive reveal: a section appears once its mechanic is reached
+// (`MANUAL_SECTION_REVEALS`, the achievement condition grammar), and every section starts collapsed —
+// its heading is the only toggle — so the page reads as a short index. It exists so MainPage (the actual game) doesn't have to carry this
 // explanatory text inline; see CLAUDE.md's Architecture section for the split. The handful of
 // numbers below (milestone/requirement thresholds) are derived from the same engine.js/layers.js
 // constants the game itself uses rather than hardcoded, so they can't drift out of sync with the
@@ -144,7 +148,94 @@ const Section = styled(StatCard)`
   }
 `
 
-const InfoPage = () => {
+// When each Manual section appears (null = from the start). Conditions use engine.js
+// `isAchievementConditionMet`, so they latch on the same progress the game itself latches on.
+export const MANUAL_SECTION_REVEALS = {
+  'overview section': null,
+  'byte foundry section': null,
+  'sleep mode section': null,
+  'milestones section': null,
+  'storage section': { kind: 'storageUnlocked' },
+  'scale up section': { kind: 'storageUnlocked' },
+  'accelerate section': { kind: 'tierPurchased', tierId: TIER_DEFINITIONS[0].id },
+  'overclock section': { kind: 'tierPurchased', tierId: TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id },
+  'power section': { kind: 'powerPageUnlocked' },
+  'prestige section': { kind: 'googolReached' },
+  'prestige ladder section': { kind: 'googolReached' },
+  'tier autobuyers section': { kind: 'lifetimePurges', min: 1 },
+  'compute flops section': { kind: 'computeFlopsPageUnlocked' },
+  'reboot section': { kind: 'rebootReached' },
+}
+
+export const isManualSectionRevealed = (state, label) => {
+  const reveal = MANUAL_SECTION_REVEALS[label]
+  return !reveal || isAchievementConditionMet(state ?? {}, reveal)
+}
+
+// Only the heading toggles (expand/collapse convention); no link styling.
+const HeadingButton = styled.button`
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const LockedNote = styled.p`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.85rem;
+  margin: 0;
+  text-align: center;
+`
+
+// A sub-topic inside an open section, collapsed by default (heading is the only toggle).
+const ManualSub = ({ title, children }) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <h3>
+        <HeadingButton aria-expanded={open} aria-label={`${title} subtopic`} onClick={() => setOpen(prev => !prev)} type="button">
+          {open ? '▾' : '▸'} {title}
+        </HeadingButton>
+      </h3>
+      {open && children}
+    </>
+  )
+}
+
+const ManualSection = ({ label, title, revealed, open, onToggle, children }) => {
+  if (!revealed) return null
+  return (
+    <Section aria-label={label}>
+      <h2 style={{ marginBottom: open ? undefined : 0 }}>
+        <HeadingButton aria-expanded={open} aria-label={`${title} topic`} onClick={onToggle} type="button">
+          {open ? '▾' : '▸'} {title}
+        </HeadingButton>
+      </h2>
+      {open && children}
+    </Section>
+  )
+}
+
+const InfoPage = ({ game }) => {
+  const state = game?.state ?? {}
+  const [openSections, setOpenSections] = useState({})
+  const section = (label, title) => ({
+    label,
+    title,
+    revealed: isManualSectionRevealed(state, label),
+    open: !!openSections[label],
+    onToggle: () => setOpenSections(prev => ({ ...prev, [label]: !prev[label] })),
+  })
+  const lockedCount = Object.keys(MANUAL_SECTION_REVEALS).filter(label => !isManualSectionRevealed(state, label)).length
   const firstTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[0].id)
   const lastTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id)
   const firstTierTickspeedAutobuyerMilestone = getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)
@@ -160,8 +251,7 @@ const InfoPage = () => {
         <VersionText>v{version}</VersionText>
       </Header>
 
-      <Section aria-label="overview section">
-        <h2>Overview</h2>
+      <ManualSection {...section('overview section', 'Overview')}>
         <ul>
           <li>Everything scales by powers of ten — costs, production, and most upgrades.</li>
           <li>Buy every tier with <strong>Bits</strong> (the base currency; 8 Bits = 1 Byte).</li>
@@ -183,10 +273,9 @@ const InfoPage = () => {
             partly bought level takes its own click.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="prestige ladder section">
-        <h2>Prestige ladder</h2>
+      <ManualSection {...section('prestige ladder section', 'Prestige ladder')}>
         <p>
           Each layer resets everything the layer below it resets, plus more — so a higher layer keeps
           less, but awards a longer-lasting currency.
@@ -210,10 +299,9 @@ const InfoPage = () => {
             <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="byte foundry section">
-        <h2>Byte Foundry</h2>
+      <ManualSection {...section('byte foundry section', 'Byte Foundry')}>
         <p>
           Every new save starts here, before any {firstTierName} exist. Unlocking the main game is
           permanent — no Purge or Reboot sends you back through this gate. Reopen the
@@ -222,7 +310,7 @@ const InfoPage = () => {
           MB, …; 1 KB = 1,000 Bytes).
         </p>
 
-        <h3>The loop</h3>
+        <ManualSub title="The loop">
         <ul>
           <li>
             <strong>Ping</strong> the Data Stream to add one second of its production. Once Storage
@@ -272,7 +360,9 @@ const InfoPage = () => {
           </li>
         </ul>
 
-        <h3>What resets vs. what stays</h3>
+        </ManualSub>
+
+        <ManualSub title="What resets vs. what stays">
         <ul>
           <li>
             <strong>Resets each Purge:</strong> any partly bought{' '}
@@ -286,7 +376,9 @@ const InfoPage = () => {
           <li>Later cycles are a quick pit stop, not a full replay.</li>
         </ul>
 
-        <h3>Forced priority</h3>
+        </ManualSub>
+
+        <ManualSub title="Forced priority">
         <p>When more than one of these is available, only the highest-ranked one can be used:</p>
         <ul>
           <li>Disk Fill → Provision Disk → Compute Boost</li>
@@ -295,10 +387,11 @@ const InfoPage = () => {
             upgrades are outside this order — they are never blocked by it.
           </li>
         </ul>
-      </Section>
 
-      <Section aria-label="storage section">
-        <h2>Storage</h2>
+        </ManualSub>
+      </ManualSection>
+
+      <ManualSection {...section('storage section', 'Storage')}>
         <p>
           Appears on the Foundry screen once the Data Stream’s Capacity reaches{' '}
           {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}. There are ten pools (KB … QB), all fed
@@ -307,7 +400,7 @@ const InfoPage = () => {
           have built.
         </p>
 
-        <h3>Provisioning Disks</h3>
+        <ManualSub title="Provisioning Disks">
         <ul>
           <li>
             Click Provision Disk once to start a build; it draws its cost from the pool’s Staging at
@@ -322,7 +415,9 @@ const InfoPage = () => {
           </li>
         </ul>
 
-        <h3>Cache and automatic pulling</h3>
+        </ManualSub>
+
+        <ManualSub title="Cache and automatic pulling">
         <ul>
           <li>
             Each pool’s smallest array keeps a read Cache of {DISK_CACHE_BLOCK_COUNT} blocks that
@@ -357,7 +452,9 @@ const InfoPage = () => {
           <li>Disks are permanent across Purges; a full disk stays full.</li>
         </ul>
 
-        <h3>Data Lakes</h3>
+        </ManualSub>
+
+        <ManualSub title="Data Lakes">
         <ul>
           <li>
             Each pool has its own Data Lake (KB … QB), shown in its pool card. A lake unlocks once its
@@ -392,7 +489,9 @@ const InfoPage = () => {
           </li>
         </ul>
 
-        <h3>Flushing</h3>
+        </ManualSub>
+
+        <ManualSub title="Flushing">
         <ul>
           <li>
             When a pool has every disk built, its lake is completely full, and the next Cell costs
@@ -412,17 +511,18 @@ const InfoPage = () => {
             is complete again, later pools can’t start new disk builds.
           </li>
         </ul>
-      </Section>
 
-      <Section aria-label="power section">
-        <h2>Power</h2>
+        </ManualSub>
+      </ManualSection>
+
+      <ManualSection {...section('power section', 'Power')}>
         <p>
           Unlocks once the Data Stream’s Capacity reaches{' '}
           {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
           nav’s Power item. Cells come from the Data Lakes described under Storage.
         </p>
 
-        <h3>Cells and the charge chain</h3>
+        <ManualSub title="Cells and the charge chain">
         <ul>
           <li>
             Chain: Cell → Battery → Pack → Bank → Generator → Turbine → Plant → Grid →
@@ -451,7 +551,9 @@ const InfoPage = () => {
           </li>
         </ul>
 
-        <h3>Compute Boost</h3>
+        </ManualSub>
+
+        <ManualSub title="Compute Boost">
         <ul>
           <li>
             Select a tier on Power to show its Turbo / Balanced / Eco presets; activating one
@@ -493,10 +595,11 @@ const InfoPage = () => {
           </li>
           <li>Fusions are used only to fund Boosts.</li>
         </ul>
-      </Section>
 
-      <Section aria-label="compute flops section">
-        <h2>Compute</h2>
+        </ManualSub>
+      </ManualSection>
+
+      <ManualSection {...section('compute flops section', 'Compute')}>
         <p>
           A separate screen (nav <strong>Compute</strong>) with ten tiers,{' '}
           <strong>Cores → Superclouds</strong> (outputting KFlops → QFlops), bought with Purge Points;
@@ -521,10 +624,9 @@ const InfoPage = () => {
             Boosts reset each Purge; owned units are kept.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="accelerate section">
-        <h2>Accelerate</h2>
+      <ManualSection {...section('accelerate section', 'Accelerate')}>
         <ul>
           <li>
             Spend Bytes to make every tier’s production ticks 1% faster per level, compounding — more
@@ -550,10 +652,9 @@ const InfoPage = () => {
             faster with its speed upgrades.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="scale up section">
-        <h2>Scale Up</h2>
+      <ManualSection {...section('scale up section', 'Scale Up')}>
         <ul>
           <li>
             Reach 3 completed levels on the tier Scale Up is currently working through — starting
@@ -574,10 +675,9 @@ const InfoPage = () => {
           </li>
           <li>Byte Foundry progress is untouched.</li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="overclock section">
-        <h2>Overclock</h2>
+      <ManualSection {...section('overclock section', 'Overclock')}>
         <ul>
           <li>
             Reach the required number of completed {lastTierName} levels to claim an Overclock.
@@ -601,10 +701,9 @@ const InfoPage = () => {
             bigger boost.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="tier autobuyers section">
-        <h2>Tier Autobuyers</h2>
+      <ManualSection {...section('tier autobuyers section', 'Tier Autobuyers')}>
         <ul>
           <li>
             Each tier’s autobuyer and its tickspeed autobuyer unlock automatically as your Purge
@@ -622,10 +721,9 @@ const InfoPage = () => {
             upgrades start at {AUTOBUYER_INTERVAL_UPGRADE_BASE_COST} PP × the tier’s number (10, 20, 30 …); its tickspeed autobuyer’s at {TIER_TICKSPEED_INTERVAL_CONFIG.baseCost} PP × the same.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="milestones section">
-        <h2>Milestones</h2>
+      <ManualSection {...section('milestones section', 'Milestones')}>
         <ul>
           <li>
             <strong>Tier autobuyers:</strong> one tier every{' '}
@@ -640,10 +738,9 @@ const InfoPage = () => {
           </li>
           <li>More → Milestones tracks your story milestones and Reboot progress.</li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="prestige section">
-        <h2>Purge</h2>
+      <ManualSection {...section('prestige section', 'Purge')}>
         <ul>
           <li>
             <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Reboot,
@@ -690,10 +787,9 @@ const InfoPage = () => {
             of the Factory or tap the PP display.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="sleep mode section">
-        <h2>Sleep mode</h2>
+      <ManualSection {...section('sleep mode section', 'Sleep mode')}>
         <ul>
           <li>
             Time away is simulated when you come back, up to{' '}
@@ -704,10 +800,9 @@ const InfoPage = () => {
             {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Resumed from sleep” summary.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
 
-      <Section aria-label="reboot section">
-        <h2>Reboot</h2>
+      <ManualSection {...section('reboot section', 'Reboot')}>
         <ul>
           <li>
             An optional deeper reset once you hold{' '}
@@ -736,7 +831,9 @@ const InfoPage = () => {
             free.
           </li>
         </ul>
-      </Section>
+      </ManualSection>
+
+      {lockedCount > 0 && <LockedNote aria-label="locked manual topics">🔒 {lockedCount} more {lockedCount === 1 ? 'topic unlocks' : 'topics unlock'} as you play</LockedNote>}
     </RootDiv>
   )
 }

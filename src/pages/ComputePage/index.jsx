@@ -292,6 +292,13 @@ const BoostRow = styled.div`
 // — the earlier "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
 // Megacomputer (the last tier) has no merge row at all — nothing to merge into or automate past it
 // (see issue #280's "Out of scope").
+const LockedRowsNote = styled.p`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.8rem;
+  margin: 0;
+  text-align: center;
+`
+
 const ENTITY_ROWS = [
   {
     key: 'core',
@@ -488,6 +495,19 @@ const ComputePage = ({ game }) => {
   const boostLanes = getComputeBoostLanes(intro)
   const boostActive = boostLanes.length > 0
   const activeBoostTierIndexes = boostLanes.map(lane => lane.queue[0])
+  // Progressive reveal: rows up to the highest tier ever held or automated, plus the next one to charge
+  // into; the rest of the chain stays hidden behind a "🔒 N more" line.
+  const lastHeldRowIndex = ENTITY_ROWS.reduce(
+    (last, row, index) => {
+      if ((intro[row.countField] ?? 0) > 0) return index
+      // A boundary that was ever charged across (Charger progress, or Auto-charge) reveals its output row,
+      // so spending that output on a Boost never hides it again.
+      if (row.autoFlagField && (intro[row.autoFlagField] || getChargerUnlockProgress(state, row.autoFlagField) > 0)) return Math.max(last, index + 1)
+      return last
+    },
+    0,
+  )
+  const visibleEntityRowCount = Math.min(ENTITY_ROWS.length, lastHeldRowIndex + 2)
   // A tier row the player clicks always arms the presets — even mid-boost (the new boost queues or runs in parallel).
   const armedTierIndex = intro.computeMergePageUnlocked ? selectedBoostTierIndex : 1
   const armedRow = armedTierIndex ? ENTITY_ROWS[armedTierIndex - 1] : null
@@ -565,7 +585,7 @@ const ComputePage = ({ game }) => {
       {intro.computeMergePageUnlocked
         ? (
           <TierBlocksGroup aria-label="compute entities">
-            {ENTITY_ROWS.map((row, rowIndex) => {
+            {ENTITY_ROWS.slice(0, visibleEntityRowCount).map((row, rowIndex) => {
               const tierIndex = rowIndex + 1
               const count = intro[row.countField] ?? 0
               const hasMergeRow = Boolean(row.autoFlagField)
@@ -729,6 +749,9 @@ const ComputePage = ({ game }) => {
                 </Fragment>
               )
             })}
+            {visibleEntityRowCount < ENTITY_ROWS.length && (
+              <LockedRowsNote aria-label={`${ENTITY_ROWS.length - visibleEntityRowCount} more compute entity tiers locked`}>🔒 {ENTITY_ROWS.length - visibleEntityRowCount} more</LockedRowsNote>
+            )}
           </TierBlocksGroup>
           )
         : (

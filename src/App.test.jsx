@@ -262,8 +262,10 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/supporter pack section/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/save slots section/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/system log section/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/task manager section/i)).toBeInTheDocument()
+  // Progressive reveal: rows for layers a fresh save hasn't reached stay hidden.
+  expect(screen.queryByLabelText(/system log section/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/task manager section/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^reboot section$/i)).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /dummy supporter checkout/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
@@ -416,22 +418,13 @@ test('the Manual nav item opens the Info page and Factory returns, preserving ga
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open manual/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — manual/i })).toBeInTheDocument()
-  // Manual sections covering the Byte Foundry pre-game (Data Stream/tapping/Speed, Storage,
-  // and Compute — including the full merge chain) render alongside the pre-existing main-game
-  // sections (Tickspeed, Scale Up, …) plus Prestige.
-  expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^power$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^purge$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^prestige ladder$/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/prestige ladder section/i)).not.toHaveTextContent(
-    /the Production speed bonus/i,
-  )
+  // Progressive reveal: topics this save has reached are listed collapsed; later ones stay hidden
+  // (full coverage in pages/InfoPage/index.test.jsx).
+  expect(screen.getByRole('button', { name: /^byte foundry topic$/i })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByRole('button', { name: /^storage topic$/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^reboot topic$/i })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /^byte foundry topic$/i }))
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
-  expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
-  expect(screen.getByLabelText(/power section/i)).toHaveTextContent(/queue/i)
-  expect(screen.getByLabelText(/compute flops section/i)).toHaveTextContent(/kflops/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open byte factory/i }))
@@ -2149,7 +2142,7 @@ test.each([
   expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('Global Automation lists every step with its Purge milestone while locked', async () => {
+test('Global Automation lists the next step with its Purge milestone and hides later locked ones', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2159,9 +2152,15 @@ test('Global Automation lists every step with its Purge milestone while locked',
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  for (const [name, milestone] of [['Auto Accelerate', 8], ['Auto Scale Up', 16], ['Auto Restage', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
-    expect(screen.getByLabelText(`${name} unlocks at Purge ${milestone}`)).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Accelerate unlocks at Purge 8')).toBeInTheDocument()
+  for (const name of ['Auto Scale Up', 'Auto Restage', 'Auto Overclock', 'Auto Purge']) {
+    expect(screen.queryByLabelText(new RegExp(`^${name} unlocks at Purge`))).not.toBeInTheDocument()
   }
+  expect(screen.getByLabelText('4 more global automations locked')).toHaveTextContent('🔒 4 more')
+  // Tier autobuyers: owned tiers plus the next one to unlock are listed.
+  expect(within(screen.getByLabelText('tier autobuyers category')).getByLabelText(`${TIER_DEFINITIONS[0].name} automation`)).toBeInTheDocument()
+  expect(within(screen.getByLabelText('tier autobuyers category')).queryByLabelText(`${TIER_DEFINITIONS.at(-1).name} automation`)).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^\d+ more tier autobuyers locked$/)).toBeInTheDocument()
 })
 
 test('Firmware lists global automations in one order: Auto Accelerate → Scale Up → Restage → Overclock → Purge', async () => {
@@ -2192,6 +2191,10 @@ test('Auto Purge offers no speed upgrade or interval until it is bought', async 
   seedMainGameState({
     resources: { base: 10 },
     purge: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+    autoGlobalTickspeed: true,
+    autoScaleUp: true,
+    autoXpTickspeed: true,
+    autoOverclock: true,
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)

@@ -97,7 +97,7 @@ src/
     ComputePage/index.jsx  ← Foundry Power (Cells/charge chain/Boost); nav Power, page id `'boosters'`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
-    InfoPage/index.jsx     ← Manual; static mechanic explanations; reads no game state
+    InfoPage/index.jsx     ← Manual; evergreen mechanic explanations as collapsed topics, revealed by progress
     PerksPage/index.jsx    ← Firmware: Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
     ChallengesPage/        ← page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily
     AchievementsPage/      ← page id `'achievements'`; via AppNav → More
@@ -130,7 +130,7 @@ viteConfigFactory.js       ← real Vite config: path aliases (below) + dev/test
 no side effects. `useIncrementalGame.js` is the only place holding React state (tick timer, localStorage
 persistence), called once in `App.jsx` and shared by every page via a `game` prop.
 `MainPage/index.jsx` is a pure renderer driven entirely by `TIER_DEFINITIONS` and hook state;
-`InfoPage/index.jsx` is a static page (evergreen mechanic explanations only, reads no game state);
+`InfoPage/index.jsx` is the Manual (evergreen explanations; reads only progress, to reveal topics — `MANUAL_SECTION_REVEALS`);
 `StoragePage`/`ComputePage`/`ComputeFlopsPage`/`MilestonesPage`/`SettingsPage`/`DevModePage` are pure
 renderers. `App.jsx` switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry →
 Power → Compute → Factory → Firmware → Challenges → More), with `ByteFoundryPage` additionally forced onto screen —

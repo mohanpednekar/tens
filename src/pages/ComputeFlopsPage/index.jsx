@@ -176,6 +176,14 @@ const ComputeFlopsPage = ({ game }) => {
     return next
   })
 
+  // Progressive reveal: every owned or affordable tier plus one more; higher tiers stay hidden.
+  const lastRelevantIndex = COMPUTE_FLOPS_TIER_DEFINITIONS.reduce(
+    (last, flopTier, index) => ((state.computeFlops?.owned?.[flopTier.id] ?? 0) > 0 || canBuyComputeFlopsTier(state, flopTier.id) ? index : last),
+    -1,
+  )
+  const visibleTiers = COMPUTE_FLOPS_TIER_DEFINITIONS.slice(0, Math.max(1, lastRelevantIndex + 2))
+  const hiddenTierCount = COMPUTE_FLOPS_TIER_DEFINITIONS.length - visibleTiers.length
+
   return (
     <RootDiv aria-label="compute flops screen">
       <Header>
@@ -191,7 +199,7 @@ const ComputeFlopsPage = ({ game }) => {
       )}
 
       <TierList aria-label="compute flops tiers">
-        {COMPUTE_FLOPS_TIER_DEFINITIONS.map((flopTier, index) => {
+        {visibleTiers.map((flopTier, index) => {
           const owned = state.computeFlops?.owned?.[flopTier.id] ?? 0
           const liveMultiplier = getComputeFlopsTierProductionMultiplier(state, flopTier.boostsTierId)
           const cost = getComputeFlopsTierCost(flopTier, owned)
@@ -255,6 +263,7 @@ const ComputeFlopsPage = ({ game }) => {
           )
         })}
       </TierList>
+      {hiddenTierCount > 0 && <Hint aria-label={`${hiddenTierCount} more compute tiers locked`}>🔒 {hiddenTierCount} more</Hint>}
     </RootDiv>
   )
 }

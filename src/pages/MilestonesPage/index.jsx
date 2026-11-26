@@ -109,6 +109,12 @@ const MilestonesPage = ({ game }) => {
     { label: 'DeGoogoled', reached: isOverflowModeUnlocked(state) },
     { label: 'First Reboot', reached: eraCount > 0 },
   ]
+  // Progressive reveal: reached milestones plus the next one; later ones stay hidden (no spoilers).
+  const firstUnreached = milestones.findIndex(milestone => !milestone.reached)
+  // (A Reboot clears Purges, so a later milestone can be reached while an earlier one reads unreached again.)
+  const shown = milestones.filter((milestone, index) => milestone.reached || index === firstUnreached)
+  const hiddenCount = milestones.length - shown.length
+  const rebootRevealed = eraCount > 0 || eraEligible || isOverflowModeUnlocked(state)
 
   return (
     <RootDiv>
@@ -118,7 +124,7 @@ const MilestonesPage = ({ game }) => {
 
       <Category aria-label="milestones page">
         <Timeline aria-label="milestones category">
-          {milestones.map(milestone => (
+          {shown.map(milestone => (
             <Event
               $reached={milestone.reached}
               aria-label={`${milestone.label} milestone ${milestone.reached ? 'reached' : 'not yet reached'}`}
@@ -127,7 +133,9 @@ const MilestonesPage = ({ game }) => {
               {milestone.label}
             </Event>
           ))}
+          {hiddenCount > 0 && <Event aria-label={`${hiddenCount} more milestones hidden`}>🔒 {hiddenCount} more</Event>}
         </Timeline>
+        {rebootRevealed && (
         <RebootLine aria-label="reboot status">
           <span aria-hidden="true">⏻</span>
           <span aria-label={`${eraCount} reboots`}><strong>{eraCount}</strong> Reboots</span>
@@ -146,6 +154,7 @@ const MilestonesPage = ({ game }) => {
             </Badge>
           )}
         </RebootLine>
+        )}
       </Category>
     </RootDiv>
   )
