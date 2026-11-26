@@ -454,7 +454,7 @@ Strict three-layer separation:
    up from MainPage so `ByteFoundryPage` shares the save/tick loop). Owns the `setInterval` tick timer
    and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
    resetByteFoundry, offlineProgress, dismissOfflineProgress, incompatibleSaveReason,
-   dismissIncompatibleSaveNotice, achievementBaseline, buyMaxMode, setBuyMaxMode, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
+   dismissIncompatibleSaveNotice, achievementBaseline, buyMaxMode, setBuyMaxMode, buyUnitMode, setBuyUnitMode, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
    redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress,
    exportSaveJson, applyCloudSave, claimOfflineAdReward, devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five back
    Dev Mode; always present on the return value (not gated by `import.meta.env.DEV`) but consumed only
