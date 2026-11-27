@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getChallengeProductionMultiplier, getScaleUpStepMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
-  isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
+  applyOfflineProgress, isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
 import { ADDRESS_SPACE_TIER_COUNT, HALF_DUPLEX_PRODUCTION_MULTIPLIER, BIT_ROT_DISK_RELIEF, BIT_ROT_GRACE_SECONDS, DISK_LADDER_BASE_SIZE_BITS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
@@ -411,5 +411,36 @@ describe('lever behaviour through the engine', () => {
     const reset = { ...grown, intro: { ...grown.intro, disksBuiltTotal: {} } }
     expect(getBitRotCorruption(grown)).toBeCloseTo(getBitRotCorruption(rotting) / BIT_ROT_DISK_RELIEF ** 2)
     expect(getBitRotCorruption(reset)).toBeCloseTo(getBitRotCorruption(grown))
+  })
+})
+
+describe('offline replay equals one long tick for time-based rules', () => {
+  const seedOf = (tierIndex, tickLevel = 0) => state => ({
+    owned: { ...state.owned, [T(tierIndex)]: 50 },
+    resources: { ...state.resources, [T(tierIndex)]: 50 },
+    tickspeedLevels: { ...state.tickspeedLevels, [T(tierIndex)]: tickLevel || state.tickspeedLevels?.[T(tierIndex)] },
+  })
+  // 600 s is within the full-speed window, so the replay simulates exactly 600 s.
+  it.each([
+    ['F5', 4, 0],
+    ['F15', 4, 5],
+    ['F19', 8, 5],
+  ])('%s: applyOfflineProgress(600) matches tickGame(600)', (id, tierIndex, level) => {
+    const start = runOf(id, seedOf(tierIndex, level))
+    const offline = applyOfflineProgress(600)(start)
+    const long = tickGame(600)(start)
+    expect(offline.challenges.activeSeconds).toBeCloseTo(600)
+    expect(offline.challenges.activeSeconds).toBeCloseTo(long.challenges.activeSeconds)
+    expect(offline.challenges.run.refreshes).toBe(long.challenges.run.refreshes)
+    expect(offline.tickspeedLevels[T(tierIndex)]).toBe(long.tickspeedLevels[T(tierIndex)])
+    expect(offline.owned[T(tierIndex)]).toBeCloseTo(long.owned[T(tierIndex)], 3)
+  })
+
+  it('F9: a Bit Rot restart during the gap is counted and the challenge stays active', () => {
+    const start = withRun(runOf('F9'), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const offline = applyOfflineProgress(600)(start)
+    expect(offline.challenges.active).toBe('F9')
+    expect(offline.challenges.bitRotLosses).toBeGreaterThanOrEqual(1)
+    expect(offline.challenges.bitRotLosses).toBe(tickGame(600)(start).challenges.bitRotLosses)
   })
 })
