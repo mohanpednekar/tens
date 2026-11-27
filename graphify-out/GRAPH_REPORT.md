@@ -1,4 +1,4 @@
-# Graph Report - tens-1245-graph-iZUcv8  (2026-11-27)
+# Graph Report - tens  (2026-11-27)
 
 ## Corpus Check
 - 256 files · ~642,182 words
