@@ -276,8 +276,8 @@ engine (`devin-autonomous-maintenance.yml`; `workflow_dispatch` only since 2026-
 `devin-workflow-health.yml`) consumes the same `claude-task` backlog on `devin/auto-*` branches (auth:
 `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). Both engines share one 5-open-PR ceiling
 (`claude/auto-*` + `devin/auto-*` together) and the same merge path. No workflow follows up on, refreshes or merges
-PRs: a daily Claude Code scheduled routine (the "PR babysitter", `docs/AUTOMATION.md`) does that, merging
-in ascending PR-number order.
+PRs: a daily Claude Code scheduled routine (the "PR babysitter", `docs/AUTOMATION.md`) does that, processing
+PRs in ascending PR-number order (it may arm auto-merge, so a PR can land out of order).
 The Devin prompt has no file-scope restriction (it may edit `.github/workflows/`, its own file
 included), but every change lands via PR and workflow-file changes stay human-gated. On your own PR,
 loop check feedback → address → resolve threads until mergeable before the run ends (post-run feedback
@@ -314,13 +314,14 @@ check at draft creation, multiple adversarial-review rounds once ready. Full det
 
 **After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
 `<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, and mark the PR ready on
-`APPROVE`. Only the PR babysitter routine enables GitHub auto-merge (on a current-head `APPROVE`, no
-conflicts, no unresolved threads); every other agent/workflow never does. Never force-merge,
+`APPROVE`. Only the PR babysitter routine enables GitHub auto-merge, and only on a PR it could merge
+directly (all direct-merge exclusions apply) with a current-head `APPROVE` (for `release/next`: a passing
+`verify-pr`), no conflicts and no unresolved threads; every other agent/workflow never does. Never force-merge,
 never push to `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.
 
 **Direct merge (maintainer standing rule):** in maintainer-driven interactive sessions and the PR
-babysitter routine (which merges in ascending PR-number order), for every PR in this repo: once the PR is
+babysitter routine (which processes PRs in ascending PR-number order), for every PR in this repo: once the PR is
 green — mergeable (no conflicts; update a "behind" branch first, then re-run the reviewer for the new head), every required check complete and
 passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
 current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). Never for workflow-control diffs (`.github/workflows/**`, `.github/actions/**`,

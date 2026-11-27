@@ -116,11 +116,15 @@ SHA before considering the session done. Post its machine-readable marker as a P
 
 Then: **`APPROVE`** → mark ready; **`NEEDS CHANGES` / `BLOCK`** → fix (or stop) and re-run the reviewer
 after the next final commit so the marker matches the new HEAD. **Only the PR babysitter routine
-enables GitHub auto-merge** (maintainer standing rule; merge method `merge`): it arms it, in
-ascending PR-number order, on a PR with an `APPROVE` marker for the current head, no conflicts and no
-unresolved threads, and re-checks if the head changes. Workflows, autonomous runs and other agents
-never enable it; maintainer-driven interactive sessions merge directly (below). Never force-merge,
-push to `main`, or GitHub-approve your own PR.
+enables GitHub auto-merge** (maintainer standing rule, reversing the 2026-11-21 "nobody arms it"
+decision; merge method `merge`, repo setting "Allow auto-merge" must stay on). It arms it only on a PR it
+could also merge directly ("Direct merge" below — every exclusion applies: workflow-control fail-closed
+rule, `revert-deploy/*`, hold labels, drafts) that has an `APPROVE` marker for the current head (for
+`release/next`: a passing `verify-pr`), no conflicts and no unresolved threads. Accepted trade-offs
+(`docs/AUTOMATION.md` "Auto-merge"): an armed PR lands when *required* checks pass (not every check),
+possibly out of PR-number order, and a later push by a write-access agent doesn't disarm it before the
+next daily run. Workflows, autonomous runs and other agents never enable it; maintainer-driven
+interactive sessions merge directly (below). Never force-merge, push to `main`, or GitHub-approve your own PR.
 
 **Direct merge (maintainer standing rule):** in
 maintainer-driven interactive sessions and the PR babysitter routine, for every PR in this repo: once the PR is
@@ -132,7 +136,8 @@ run with the automation token, `.claude/agents/code-reviewer.md`) — no workflo
 without human approval; the babysitter routine may merge one only when it is positively attributable to a human or interactive
 session (fails closed; `docs/AUTOMATION.md` "PR babysitter") — never for `revert-deploy/*` PRs,
 never over a failing/pending check. Autonomous workflow runs (`autonomous-maintenance.yml`, Devin, dev-team
-roles) keep their never-self-merge rule. The babysitter merges in ascending PR-number order.
+roles) keep their never-self-merge rule. The babysitter processes PRs in ascending PR-number order (armed
+auto-merges can land out of order — "Auto-merge" trade-off above).
 
 **Merge-when-met rule (maintainer standing rule):** whenever the requested behavior is delivered and the green-and-`APPROVE` conditions above hold, proceed to merge rather than holding for further polish — anything left over becomes a follow-up PR, not a reason to wait.
 
