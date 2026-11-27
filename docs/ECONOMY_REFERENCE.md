@@ -136,7 +136,7 @@ interval (a block of `getPurchaseBlockSize` units takes that many attempts) and 
 
 ### Buy max mode
 
-`isBuyMaxUnlocked(state)` — true once the `buyMaxRush` achievement is earned, or the legacy permanent `buyMaxUnlocked` flag is set. Unlocked by the `buyMaxRush` achievement (`BUY_MAX_RUSH_CLICKS` 10 same-button manual clicks within `BUY_MAX_RUSH_WINDOW_MS`; `recordManualBuyClick`); legacy `buyMaxUnlocked` saves keep it.
+`isBuyMaxUnlocked(state)` — true once the `buyMaxRush` achievement is earned, or the legacy permanent `buyMaxUnlocked` flag is set. Unlocked by the `buyMaxRush` achievement (`BUY_MAX_RUSH_CLICKS` 10 same-button clicks on any screen within `BUY_MAX_RUSH_WINDOW_MS`; `recordRapidClick` fed by `App.jsx`'s click listener via `actions.recordButtonClick`); legacy `buyMaxUnlocked` saves keep it.
 Saves that bought it with PP under the old rule keep it. Firmware's reveal (`isPerksPageRevealed`) now also opens for an unlocked Buy max (Challenges keeps the narrower `isChallengesPageRevealed`). The toggle itself is a per-device UI preference
 (`storage.js`'s `loadBuyMaxPreference`/`saveBuyMaxPreference`, key `tens_buy_max_mode`), not game
 state, so no reset path needs to carry it; `useIncrementalGame` exposes `buyMaxMode`/`setBuyMaxMode`

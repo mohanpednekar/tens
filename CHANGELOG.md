@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Manual → Achievements**: fine print and nuances for achievements that have some (e.g. autobuyer clicks do not count), listed only for achievements you can already see. The Achievements screen now shows the short requirement text.
-- **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other Factory Buy or Accelerate button clicked in between; autobuyers do not count, and a click that buys nothing starts the count over) to unlock Buy max.
+- **Click fast, buy max** achievement (Early Factory): click the same button 10 times within one second, on any screen (clicking a different button in between starts over; automation does not count) to unlock Buy max.
 - **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
 - **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
 - **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, bonus multiplier) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- **Click fast, buy max** now counts clicks on any button on any screen, not just Factory Buy buttons.
 - **Faster first load**: the Manual, Settings, Milestones, Stats and Achievements screens now load on demand, trimming first-load JavaScript by about 11% (entry chunk 687 kB → 609 kB).
 - Achievements you can see now show a one-line summary without expanding: the requirement until earned, then the reward. Expanding shows both; fine print lives only in the Manual. Self-explanatory titles skip the requirement line.
 - Achievements with plain names got fitting ones: the five Reclamation levels (Flush with success … The Great Flushening), the ten Level power levels (High five … Perfect ten, matching each level count) and Spent QB → Quetta broke. Series and other achievement names are unchanged.

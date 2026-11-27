@@ -199,8 +199,8 @@ import {
   buyPrestigeSpeedBonus,
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
-  recordManualBuyClick,
-  resetManualBuyRush,
+  recordRapidClick,
+  resetRapidClicks,
   withBuyMaxRush,
   buyCacheWarm,
   applyCacheWarm,
@@ -11863,11 +11863,11 @@ describe('Buy max mode', () => {
     expect(isBuyMaxUnlocked(after)).toBe(true)
   })
 
-  describe('recordManualBuyClick', () => {
+  describe('recordRapidClick', () => {
     const run = (keys, step = 50) => {
-      let rush = resetManualBuyRush()
+      let rush = resetRapidClicks()
       let hit = false
-      keys.forEach((key, i) => { ({ rush, hit } = recordManualBuyClick(rush, key, i * step)) })
+      keys.forEach((key, i) => { ({ rush, hit } = recordRapidClick(rush, key, i * step)) })
       return hit
     }
     it('hits on 10 clicks of one button within the window', () => {

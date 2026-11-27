@@ -90,7 +90,7 @@ describe('InfoPage (Manual) Achievements topic', () => {
     fireEvent.click(topic('Achievements'))
     const section = screen.getByLabelText('achievements section')
     expect(section).toHaveTextContent(/Click fast, buy max/)
-    expect(section).toHaveTextContent(/autobuyers do not count/i)
+    expect(section).toHaveTextContent(/automation does not count/i)
     // Later-layer achievements stay hidden (no spoilers).
     expect(section).not.toHaveTextContent(/Kernel panic|Remind me later/)
   })

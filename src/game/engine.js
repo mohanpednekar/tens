@@ -8806,17 +8806,17 @@ export const activateComputeBoost = (boostType, tierIndex) => state => {
     : withTurbo
 }
 
-// Pure tracker for the Buy-max rush: `rush` = { key, times } of the current run of manual Factory Buy clicks. A click on a
-// different button (`key`) restarts the run; a click older than BUY_MAX_RUSH_WINDOW_MS drops off. `hit` once the run holds
-// BUY_MAX_RUSH_CLICKS clicks inside the window. The hook calls it only for successful MANUAL buys (never autobuyers).
-export const recordManualBuyClick = (rush, key, nowMs) => {
+// Pure tracker for the click-fast achievement: `rush` = { key, times } of the current run of clicks on one button. A click
+// on a different button (`key`) restarts the run; a click older than BUY_MAX_RUSH_WINDOW_MS drops off. `hit` once the run
+// holds BUY_MAX_RUSH_CLICKS clicks inside the window. App.jsx feeds it every real button click on any screen.
+export const recordRapidClick = (rush, key, nowMs) => {
   const sameButton = rush?.key === key
   const times = [...(sameButton ? rush.times : []), nowMs].filter(t => nowMs - t <= BUY_MAX_RUSH_WINDOW_MS)
   const hit = times.length >= BUY_MAX_RUSH_CLICKS
   return { rush: { key, times: hit ? [] : times }, hit }
 }
-// A different Factory button was clicked (even unaffordably): ends the current run.
-export const resetManualBuyRush = () => ({ key: null, times: [] })
+// Fresh tracker (no run in progress).
+export const resetRapidClicks = () => ({ key: null, times: [] })
 export const withBuyMaxRush = state => bumpAchievementCounter(state, 'buyMaxRushes', 1, 'max')
 
 // Marks a successful MANUAL tier purchase for the cycle (the hook wraps its Buy actions with this; autobuyers

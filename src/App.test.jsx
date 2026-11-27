@@ -2315,6 +2315,19 @@ test.each([
   expect(screen.getAllByLabelText(ownedLabel).length).toBeGreaterThan(0)
 })
 
+test('clicking the same button 10 times in a second (any screen) unlocks Buy max; a different button in between does not', () => {
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  const factory = screen.getByRole('button', { name: /^open byte factory$/i })
+  const foundry = screen.getByRole('button', { name: /^open byte foundry$/i })
+  for (let i = 0; i < 5; i += 1) fireEvent.click(factory)
+  fireEvent.click(foundry)
+  for (let i = 0; i < 5; i += 1) fireEvent.click(factory)
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+  for (let i = 0; i < 10; i += 1) fireEvent.click(factory)
+  expect(screen.getByRole('button', { name: /^open firmware$/i })).toBeInTheDocument()
+})
+
 test('Firmware appears with an unlocked Buy max before any Purge, showing only what is unlocked', async () => {
   const user = userEvent.setup()
   seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 }, achievements: { earned: { buyMaxRush: true }, counters: { pings: 0 } } })

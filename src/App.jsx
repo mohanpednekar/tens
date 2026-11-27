@@ -136,6 +136,18 @@ function App() {
     if (page === 'boosters') setPage('foundry')
   }
 
+  // Click-fast achievement: every real click on a button, on any screen, feeds the same-button counter. Autobuyers and
+  // other automation never click, so they cannot count. Non-button clicks are ignored.
+  const { recordButtonClick } = game.actions
+  useEffect(() => {
+    const onClick = event => {
+      const button = event.target?.closest?.('button, [role="button"]')
+      if (button) recordButtonClick(button.getAttribute('aria-label') || button)
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [recordButtonClick])
+
   useEffect(() => {
     if (!menuOpen) return undefined
     const onKey = event => {
