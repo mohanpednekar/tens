@@ -10,7 +10,7 @@ import ManualSaveSection from './ManualSaveSection'
 import LegalSection from './LegalSection'
 import StoreSection from './StoreSection'
 import { CodeForm, CodeInput, Row, Section, StatusText } from './styles'
-import { CLOUD_SAVE_ENABLED } from 'services/config'
+import { CLOUD_SAVE_ENABLED, IS_NATIVE_BUILD } from 'services/config'
 import { getMonetizationService } from 'services/monetization'
 
 // Always-reachable Settings screen (via AppNav → More). Holds Supporter pack
@@ -298,9 +298,11 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   // at build time instead of leaving inert-but-textually-present strings in the shipped bundle, the
   // same "absent from yarn build" guarantee the rest of Dev Mode gets. See CLAUDE.md's "Dev Mode".
   const devModeActive = import.meta.env.DEV && Boolean(game.devModeActive)
-  const supporter = Boolean(game.savesMeta?.supporterUnlocked)
+  const supporter = game.supporterUnlocked
+  const canRedeemSupporterCode = !IS_NATIVE_BUILD && !devModeActive
   const [code, setCode] = useState('')
   const [codeStatus, setCodeStatus] = useState(null)
+  const [dummyPurchaseFailed, setDummyPurchaseFailed] = useState(false)
   const [eraConfirmOpen, setEraConfirmOpen] = useState(false)
 
   const eraCount = game.state.era?.count ?? 0
@@ -331,16 +333,6 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
     setCodeStatus({
       error: false,
       text: result.already ? 'Supporter pack already unlocked.' : 'Supporter pack unlocked.',
-    })
-  }
-
-  const handleDummyPurchase = () => {
-    const result = game.purchaseSupporterDummy()
-    setCodeStatus({
-      error: false,
-      text: result.already
-        ? 'Supporter pack already unlocked.'
-        : 'Dummy checkout complete — Supporter pack unlocked (no real charge).',
     })
   }
 
@@ -379,50 +371,58 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       </Header>
 
       <SettingsGroup label="Game">
-        <SettingsItem icon="💛" label="Supporter" value={supporter ? 'Unlocked' : 'Free'}>
-          <Section aria-label="supporter pack section">
-            <h2>Supporter pack</h2>
-            <p>
-              Optional meta extras only — extra save slots, System log pins, and the Task
-              Manager. Never changes Bits, PP, Disks, Compute, or unlock order. Real payment comes
-              later; for now use a code or the dummy checkout.
-            </p>
-            {supporter ? (
-              <StatusText>
-                Unlocked
-                {game.savesMeta?.supporterSource === 'dummy_purchase' ? ' (dummy checkout)' : ' (unlock code)'}.
-                {' '}{SUPPORTER_SLOT_COUNT} save slots · System log · Task Manager.
-              </StatusText>
-            ) : (
-              <>
-                <LockedNote>
-                  Free: {FREE_SLOT_COUNT} save slot. Unlock code (placeholder): <code>{UNLOCK_CODE}</code>
-                </LockedNote>
-                <CodeForm onSubmit={handleRedeem}>
-                  <CodeInput
-                    aria-label="supporter unlock code"
-                    autoComplete="off"
-                    onChange={event => setCode(event.target.value)}
-                    placeholder="Enter unlock code"
-                    value={code}
-                  />
-                  <Button aria-label="redeem supporter unlock code" type="submit" variant="primary">
-                    <ButtonContent>Redeem code</ButtonContent>
-                  </Button>
-                </CodeForm>
+        {devModeActive && (
+          <SettingsItem icon="💛" label="Test Supporter" value={supporter ? 'Unlocked' : null}>
+            <Section aria-label="test supporter section">
+              <h2>Test Supporter</h2>
+              {supporter ? (
+                <StatusText>Unlocked for the Dev Mode save.</StatusText>
+              ) : (
                 <Button
                   aria-label="dummy supporter checkout"
-                  onClick={handleDummyPurchase}
+                  onClick={() => setDummyPurchaseFailed(!game.purchaseSupporterDummy().ok)}
                   type="button"
                   variant="neutral"
                 >
                   <ButtonContent>Dummy checkout (free)</ButtonContent>
                 </Button>
-              </>
-            )}
-            {codeStatus && <StatusText $error={codeStatus.error}>{codeStatus.text}</StatusText>}
-          </Section>
-        </SettingsItem>
+              )}
+              {dummyPurchaseFailed && (
+                <StatusText $error role="alert">Couldn’t save the test unlock. Try again.</StatusText>
+              )}
+            </Section>
+          </SettingsItem>
+        )}
+        {canRedeemSupporterCode && (
+          <SettingsItem icon="💛" label="Supporter" value={supporter ? 'Unlocked' : 'Free'}>
+            <Section aria-label="supporter pack section">
+              <h2>Supporter pack</h2>
+              <p>Optional extras for save slots, the System log, and Task Manager.</p>
+              {supporter ? (
+                <StatusText>Unlocked. {SUPPORTER_SLOT_COUNT} save slots · System log · Task Manager.</StatusText>
+              ) : (
+                <>
+                  <LockedNote>
+                    Free: {FREE_SLOT_COUNT} save slot. Unlock code (placeholder): <code>{UNLOCK_CODE}</code>
+                  </LockedNote>
+                  <CodeForm onSubmit={handleRedeem}>
+                    <CodeInput
+                      aria-label="supporter unlock code"
+                      autoComplete="off"
+                      onChange={event => setCode(event.target.value)}
+                      placeholder="Enter unlock code"
+                      value={code}
+                    />
+                    <Button aria-label="redeem supporter unlock code" type="submit" variant="primary">
+                      <ButtonContent>Redeem code</ButtonContent>
+                    </Button>
+                  </CodeForm>
+                </>
+              )}
+              {codeStatus && <StatusText $error={codeStatus.error}>{codeStatus.text}</StatusText>}
+            </Section>
+          </SettingsItem>
+        )}
         <SettingsItem icon="💾" label="Save slots" value={game.saveSlots?.find(slot => slot.isActive)?.name}>
           <Section aria-label="save slots section">
             <h2>Save slots</h2>
@@ -442,7 +442,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                   <strong>{slot.name}{slot.isActive ? ' · active' : ''}</strong>
                   <span>
                     {!slot.unlocked
-                      ? 'Locked — unlock Supporter pack'
+                      ? (canRedeemSupporterCode ? 'Locked — unlock Supporter pack' : 'Locked')
                       : slot.isEmpty
                         ? 'Empty (starts at Byte Foundry)'
                         : 'Has saved progress'}
@@ -535,7 +535,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
               <h2>System log</h2>
               {!supporter ? (
                 <LockedNote>
-                  History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
+                  History still records in the background.
+                  {canRedeemSupporterCode && ` Unlock Supporter to browse past purges and pin up to ${MUSEUM_PIN_CAP}.`}
                   {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
                 </LockedNote>
               ) : (
@@ -613,7 +614,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             <Section aria-label="task manager section">
               <h2>Task Manager</h2>
               {!supporter ? (
-                <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
+                <LockedNote>{canRedeemSupporterCode ? 'Unlock Supporter for live Bits and Purge Point sparklines.' : 'Live Bits and Purge Point sparklines are locked.'}</LockedNote>
               ) : (
                 <>
                   <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>

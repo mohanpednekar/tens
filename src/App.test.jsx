@@ -272,7 +272,8 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.queryByLabelText(/system log section/i)).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/task manager section/i)).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/^reboot section$/i)).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /dummy supporter checkout/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /dummy supporter checkout/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /redeem supporter unlock code/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open manual/i }))

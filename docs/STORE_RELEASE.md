@@ -103,12 +103,11 @@ One-time, in the consoles — answers to copy are in `docs/STORE_LISTING.md`:
 After those, each later release is: merge the version-bump PR → (auto) internal + TestFlight →
 dispatch `play_promote_from: internal` + `play_track: production` and `ios_action: submit` when happy.
 
-## Known release blocker
+## Supporter pack in store builds
 
-- **Supporter pack in store builds**: Settings offers an unlock code and a "Dummy checkout (free)"
-  that unlock extra save slots / System log / Task Manager. Apple 3.1.1 forbids unlocking features
-  outside In-App Purchase, and the dummy checkout reads as unfinished to reviewers. Hide it in native
-  builds unless IAP is on, or wire it to IAP, before the first App Store submission (#1192).
+The legacy Supporter unlock code is available in normal web play. The dummy checkout is available
+only while Dev Mode is active in the separate dev build or local development. Store builds omit
+both placeholder flows. The real Store section is controlled by the IAP feature flag.
 
 ## Maintainer prerequisites (in order)
 

@@ -374,10 +374,10 @@ src/
                             by Firmware and the Factory banner
     useIncrementalGame.js ← React hook: engine ↔ useState + localStorage + tick timer
     storage.js            ← localStorage read/write; every load goes through save-migration/, then forward field
-                            merge (`mergeState`); multi-slot saves + Supporter entitlement (unlock code / dummy
-                            checkout), clearSaveSlot / clearAllSaveProgress (never revokes unlock), separately keyed
+                            merge (`mergeState`); multi-slot saves + regular Supporter entitlement (web unlock
+                            code), clearSaveSlot / clearAllSaveProgress (never revokes unlock), separately keyed
                             last-save timestamp for offline progress (slot 0 keeps legacy `tens_game_state` keys).
-                            Owns Dev Mode's isolated `'dev'` slot ("Dev Mode").
+                            Owns Dev Mode's isolated `'dev'` slot and test Supporter entitlement ("Dev Mode").
     storagePrefix.js      ← `createPrefixedStorage`: `dev:` key namespace so the dev build's saves never mix with
                             production's on the shared origin (no-op prefix elsewhere)
     save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on every
@@ -459,7 +459,7 @@ Strict three-layer separation:
    and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
    resetByteFoundry, offlineProgress, dismissOfflineProgress, incompatibleSaveReason,
    dismissIncompatibleSaveNotice, achievementBaseline, buyMaxMode, setBuyMaxMode, buyUnitMode, setBuyUnitMode, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
-   redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress,
+   redeemUnlockCode, purchaseSupporterDummy, supporterUnlocked, opsSamples, clearSlot, eraseAllSaveProgress,
    exportSaveJson, applyCloudSave, claimOfflineAdReward, devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five back
    Dev Mode; always present on the return value (not gated by `import.meta.env.DEV`) but consumed only
    by `DevModePage`, whose rendering *is* dev-build-gated, so unreachable from any shipped UI. Every

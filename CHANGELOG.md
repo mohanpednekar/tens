@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Removed
 
+- **Breaking:** Remove the dummy Supporter checkout from normal play. Dev Mode retains an isolated test checkout, and the unlock code remains available in normal web play.
+
 ### Fixed
 
 ### Security
