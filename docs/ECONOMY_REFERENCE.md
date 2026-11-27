@@ -1973,7 +1973,8 @@ its one purpose.
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
 - `restageManually(amount)` — the player's Restage (MainPage button via the hook's `consumeXpForLastTierTickspeed`
-  action, and the Daily-run `restage` action): the same consumption with the 0-owned guard lifted. Restaging at 0
+  action, and the Daily-run `restage` action): requires a last-tier purchase since the last reset
+  (`hasPurchasedRestageTier`), then allows the same consumption at any owned balance. Restaging at 0
   owned QB wipes every tier and Bits with nothing left producing — the real stall — and increments the lifetime
   `achievements.counters.emptyRestages` (only while `ACHIEVEMENTS_FEATURE.enabled`), earning **Quetta broke**
   (`quettaSpent`, `condition: { kind: 'counter', key: 'emptyRestages', min: 1 }`), whose regardless-of-balance credit
@@ -1988,9 +1989,10 @@ its one purpose.
   and always drives the ordinary `buyTickspeedMultiplier`.
 - **MainPage**: the Restage card (`aria-label="restage panel"`) shows the current XP multiplier,
   XP consumed and the next minimum, plus a `🧬 {XP} XP` button (`variant="smart"`, behind a
-  `window.confirm`) that spends the entire unspent XP balance via `restageManually`. Disabled while XP is below
-  the minimum, Restage is challenge-disabled, or production is frozen; at 0 owned last-tier units it stays enabled and
-  its `title` and confirm text warn that nothing will be left producing.
+  `window.confirm`) that spends the entire unspent XP balance via `restageManually`. Disabled until the first
+  last-tier purchase since the last reset, while XP is below the minimum, when the active challenge blocks
+  Restage, or while production is frozen. After the purchase, the tooltip and confirmation warn if the current
+  last-tier balance is 0.
 
 #### Multiplier overflow safety
 

@@ -642,7 +642,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             {lastTierName}’ tickspeed upgrade may spend your last unit (other tiers always keep one).
-            Restage while holding 0 {lastTierName} (nothing is left producing) to earn Quetta broke — then 1 is
+            Buy {lastTierName}, spend them down to 0, then Restage to earn Quetta broke. After that, 1 is
             credited regardless of balance, more often with more completed levels.
           </li>
           <li>

@@ -62,6 +62,7 @@ describe('Quetta broke', () => {
       purge: { ...base.purge, xp: 5 },
       resources: { ...base.resources, [MONEY_ID]: 100, [lastId]: qb },
       owned: { ...base.owned, [TIER_DEFINITIONS[0].id]: 7, [lastId]: qb },
+      purchased: { ...base.purchased, [lastId]: 10 },
     }
   }
 
@@ -71,7 +72,13 @@ describe('Quetta broke', () => {
     expect(isAchievementEarned(tickGame(1)(ready), 'quettaSpent')).toBe(false)
   })
 
-  it('a manual Restage clicked at 0 QB runs (wiping every tier and Bits) and earns it', () => {
+  it('blocks manual Restage before the first purchase', () => {
+    const ready = restageReady()
+    const state = { ...ready, purchased: { ...ready.purchased, [lastId]: 0 } }
+    expect(restageManually(5)(state)).toBe(state)
+  })
+
+  it('a manual Restage after buying QB and spending to 0 runs and earns it', () => {
     const after = restageManually(5)(restageReady())
     expect(after.purge.xp).toBe(0)
     expect(after.owned[TIER_DEFINITIONS[0].id]).toBe(0)
