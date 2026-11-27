@@ -122,7 +122,9 @@ const expandSettingsSections = () => {
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
-  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
 }
 
@@ -257,7 +259,9 @@ test('More menu reaches Milestones and Settings from any screen without progress
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
-  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
@@ -461,7 +465,9 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
-  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()

@@ -157,7 +157,7 @@ jobs:
             if [ "$tag_target" != "$head_sha" ]; then
               tagged_version=$(git show "${tag_target}:package.json" 2>/dev/null \
                 | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).version)}catch{console.log('')}})" || true)
-              if [ "$tagged_version" != "$version" ] || ! git merge-base --is-ancestor "$tag_target" HEAD; then
+              if [ "$tagged_version" != "$version" ] || ! git rev-list --first-parent HEAD | grep -x "$tag_target" >/dev/null; then
                 echo "ERROR: tag ${tag} already exists at ${tag_target} (package.json ${tagged_version:-unknown}), not at release commit ${head_sha} — refusing to release another commit's tag."
                 exit 1
               fi
