@@ -674,7 +674,8 @@ download the `mutation-report` artifact and open `index.html` to see them. Local
 ### Release (`release.yml`)
 
 **Versioning is automatic (#1236)** — no one picks or asks for a version number. Deterministic (no
-agent); fires on `push` to `main` filtered to `paths: ['package.json', 'CHANGELOG.md']`. Three jobs:
+agent); fires on **every** `push` to `main` (a docs-only merge must still refresh `release/next`) and on
+`workflow_dispatch`. Three jobs:
 
 - **`release-pr`** — if main's `## [Unreleased]` has entries, resets branch `release/next` to main,
   runs `scripts/bump-version.mjs` (semver rules: CLAUDE.md "Changelog convention"), force-pushes it
@@ -687,8 +688,9 @@ agent); fires on `push` to `main` filtered to `paths: ['package.json', 'CHANGELO
   PR (e.g. `git worktree add ../tens-base origin/main`), so the checker isn't the code under review;
   the script reads both sides via `git show`, never the working tree. Promoting to `1.0.0` at the
   first public release: set repository variable `RELEASE_MAJOR=true` (the job then runs
-  `bump-version --major`, and `verify-pr` accepts the major result); unset it after that release
-  merges. Section dates are stamped in IST (`--date`).
+  `bump-version --major`; run the Release workflow by hand (`workflow_dispatch`) to refresh an
+  already-open release PR, and pass `--allow-major` to `verify-pr` only while the variable is set);
+  unset it after that release merges. Section dates are stamped in IST (`--date`).
 - **`backfill`** (after `tag-and-release`) — `node scripts/release-automation.mjs missing-tags` lists
   every CHANGELOG version without a tag and its commit: the first main commit whose `package.json`
   has that version, else (retro versions that never were in `package.json`) the last first-parent

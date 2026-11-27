@@ -52,7 +52,10 @@ describe('release-automation', () => {
     });
     it('accepts the --major result (RELEASE_MAJOR promotion to 1.0.0)', () => {
       const major = planChangelogBump(base, '0.6.0', '2026-11-27', { forceMajor: true });
-      expect(verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: pkg('1.0.0') })).toEqual({ ok: true, version: '1.0.0' });
+      expect(verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: pkg('1.0.0'), allowMajor: true })).toEqual({ ok: true, version: '1.0.0' });
+      const denied = verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: pkg('1.0.0') });
+      expect(denied.ok).toBe(false);
+      expect(denied.reason).toMatch(/--allow-major/);
     });
     it.each([
       ['wrong version', { headPackage: pkg('0.6.1') }, /expected 0.7.0/],

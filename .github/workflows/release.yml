@@ -9,7 +9,8 @@ name: Release
 # 2. tag-and-release: when a push to main changes package.json's "version", tag it and create
 #    a GitHub Release. This job only ever *reads* main and pushes a tag + Release.
 # 3. backfill: any CHANGELOG version still lacking a tag/Release (the retroactive per-day split of
-#    #1236, or a missed run) is tagged at the last main commit on or before its date. Uses
+#    #1236, or a missed run — including the current version) is tagged at the commit where
+#    package.json became that version, else the last main commit on or before its date. Uses
 #    GITHUB_TOKEN on purpose: refs it creates trigger no workflows, so store-release.yml never
 #    ships an old tag.
 # Deterministic shell only, no agent — matching the repo's deterministic-shell rationale
@@ -19,13 +20,14 @@ name: Release
 # pushed SHA, so serializing with a single-slot queue could drop a middle
 # version bump entirely. Runs are idempotent instead.
 
+# Every main push (no paths filter): a docs-only merge must still refresh release/next so it is
+# never left behind main. workflow_dispatch re-runs release-pr + backfill by hand — e.g. right
+# after setting RELEASE_MAJOR, so an already-open release PR picks up the major bump.
 on:
   push:
     branches:
       - main
-    paths:
-      - package.json
-      - CHANGELOG.md
+  workflow_dispatch:
 
 # GITHUB_TOKEN is read-only by default; release-pr and tag-and-release write through
 # GH_AUTOMATION_PAT. Only backfill raises GITHUB_TOKEN to contents: write, on purpose (see top).
@@ -82,7 +84,9 @@ jobs:
               "Automatic release PR (release.yml). Merge once CI is green and " +
               "`node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes.\n\n" + s.body.trim() + "\n");'
           git push --force origin release/next
-          pr=$(gh pr list --head release/next --base main --state open --json number --jq '.[0].number // empty')
+          # Same-repo PRs only: a fork PR whose branch is also named release/next must never be edited.
+          pr=$(gh pr list --head release/next --base main --state open --json number,isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
           if [ -n "$pr" ]; then
             gh pr edit "$pr" --title "Release v${version}" --body-file release-notes.md
           else
@@ -90,6 +94,7 @@ jobs:
           fi
 
   tag-and-release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -201,6 +206,8 @@ jobs:
 
   backfill:
     needs: tag-and-release
+    # Runs after a successful tag-and-release, or on a manual dispatch (tag-and-release skipped).
+    if: always() && (needs.tag-and-release.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -218,8 +225,18 @@ jobs:
       - name: Tag and release every untagged CHANGELOG version
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          # On push, only when this push touched the versioning files (keeps docs-only merges cheap).
+          if [ "$EVENT_NAME" = "push" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            if ! git diff --name-only "$BEFORE_SHA" "$HEAD_SHA" | grep -qxE 'CHANGELOG.md|package.json'; then
+              echo "Push did not touch CHANGELOG.md/package.json — nothing to backfill."
+              exit 0
+            fi
+          fi
           git fetch --tags --force origin
           # Writes release-notes.md; returns 1 (with a warning) when the version has no section.
           notes() {

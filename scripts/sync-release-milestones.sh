@@ -72,6 +72,19 @@ rename_milestone() {
   fi
 }
 
+# Close a milestone once all its issues are closed (shipped feature tracks).
+close_if_done() {
+  local title=$1
+  local num open state
+  num=$(milestone_number "$title")
+  [ -n "$num" ] || return 0
+  read -r open state < <(gh api "repos/{owner}/{repo}/milestones/$num" --jq '"\(.open_issues) \(.state)"')
+  if [ "$state" = 'open' ] && [ "$open" = '0' ]; then
+    run gh api "repos/{owner}/{repo}/milestones/$num" -X PATCH -f state=closed >/dev/null
+    echo "Closed milestone '$title' (#$num): no open issues."
+  fi
+}
+
 assign_milestone() {
   local issue=$1
   local milestone_title=$2
@@ -124,5 +137,8 @@ done
 for issue in 1231 1232; do
   assign_milestone "$issue" "$GUIDES_POLISH_TITLE"
 done
+
+close_if_done "$UI_TITLE"
+close_if_done "$ERA_TITLE"
 
 echo "sync-release-milestones: done."

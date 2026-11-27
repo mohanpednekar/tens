@@ -10,7 +10,8 @@
  *
  * CLI (git refs only — never the working tree):
  *   node scripts/release-automation.mjs missing-tags   → prints "<version> <sha>" lines
- *   node scripts/release-automation.mjs verify-pr <baseRef> [headRef=HEAD]  → exit 1 unless pure bump
+ *   node scripts/release-automation.mjs verify-pr <baseRef> [headRef=HEAD] [--allow-major]  → exit 1 unless pure bump
+ *   (--allow-major only while repo variable RELEASE_MAJOR is true)
  * Run verify-pr from a checkout of the BASE branch (e.g. a `git worktree` of origin/main) so the
  * code doing the checking is not the code under review.
  */
@@ -57,7 +58,7 @@ export function planMissingTags(changelogText, commits, existingTags, skipVersio
 /**
  * @returns {{ ok: true, version: string } | { ok: false, reason: string }}
  */
-export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, headPackage }) {
+export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, headPackage, allowMajor = false }) {
   const base = JSON.parse(basePackage);
   const headVersion = JSON.parse(headPackage).version;
   const baseVersion = base.version;
@@ -67,9 +68,10 @@ export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, hea
   const plan = planChangelogBump(baseChangelog, baseVersion, released.date);
   if (plan.noop) return { ok: false, reason: 'base Unreleased is empty — nothing to release' };
   const major = planChangelogBump(baseChangelog, baseVersion, released.date, { forceMajor: true });
-  const match = [plan, major].find((p) => p.nextVersion === headVersion);
+  const match = [plan, ...(allowMajor ? [major] : [])].find((p) => p.nextVersion === headVersion);
   if (!match) {
-    return { ok: false, reason: `package.json is ${headVersion}, expected ${plan.nextVersion} (or ${major.nextVersion} with --major)` };
+    const alt = allowMajor ? ` (or ${major.nextVersion})` : headVersion === major.nextVersion ? ' (a major bump needs --allow-major, i.e. RELEASE_MAJOR set)' : '';
+    return { ok: false, reason: `package.json is ${headVersion}, expected ${plan.nextVersion}${alt}` };
   }
   if (match.nextText !== headChangelog) {
     return { ok: false, reason: 'CHANGELOG.md differs from the yarn bump-version result' };
@@ -83,12 +85,13 @@ export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, hea
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
 
-function main([cmd, baseRef, headRef = 'HEAD']) {
+function main(argv) {
+  const allowMajor = argv.includes('--allow-major');
+  const [cmd, baseRef, headRef = 'HEAD'] = argv.filter((a) => a !== '--allow-major');
   if (cmd === 'missing-tags') {
     const commits = git('log', '--first-parent', '--format=%H %ct', 'HEAD')
       .trim().split('\n').map((l) => { const [sha, t] = l.split(' '); return { sha, time: Number(t) }; });
     const tags = new Set(git('tag', '--list', 'v*').split('\n').filter(Boolean));
-    const head = JSON.parse(git('show', 'HEAD:package.json')).version;
     const versionCommits = {};
     for (const sha of git('log', '--first-parent', '--reverse', '--format=%H', 'HEAD', '--', 'package.json').trim().split('\n').filter(Boolean)) {
       try {
@@ -96,7 +99,9 @@ function main([cmd, baseRef, headRef = 'HEAD']) {
         if (!versionCommits[v]) versionCommits[v] = sha;
       } catch { /* unparsable historical package.json — fall back to the date rule */ }
     }
-    for (const t of planMissingTags(git('show', 'HEAD:CHANGELOG.md'), commits, tags, head, versionCommits)) {
+    // No skip for HEAD's version: tag-and-release (PAT, triggers store-release) runs first, so the
+    // current version is only still untagged here if that run was missed — then backfill recovers it.
+    for (const t of planMissingTags(git('show', 'HEAD:CHANGELOG.md'), commits, tags, undefined, versionCommits)) {
       console.log(`${t.version} ${t.sha}`);
     }
     return;
@@ -108,6 +113,7 @@ function main([cmd, baseRef, headRef = 'HEAD']) {
       basePackage: show(baseRef, 'package.json'),
       headChangelog: show(headRef, 'CHANGELOG.md'),
       headPackage: show(headRef, 'package.json'),
+      allowMajor,
     });
     const changed = git('diff', '--name-only', `${baseRef}...${headRef}`).trim().split('\n').filter(Boolean);
     const extra = changed.filter((f) => f !== 'CHANGELOG.md' && f !== 'package.json');
@@ -119,7 +125,7 @@ function main([cmd, baseRef, headRef = 'HEAD']) {
     console.log(`release PR valid: v${result.version}`);
     return;
   }
-  console.error('usage: release-automation.mjs missing-tags | verify-pr <baseRef> [headRef]');
+  console.error('usage: release-automation.mjs missing-tags | verify-pr <baseRef> [headRef] [--allow-major]');
   process.exitCode = 2;
 }
 

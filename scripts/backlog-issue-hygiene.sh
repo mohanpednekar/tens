@@ -96,18 +96,7 @@ add_label_if_missing() {
   echo "Issue #$num: added label '$label'."
 }
 
-set_milestone_if_missing() {
-  local num=$1
-  local milestone=$2
-  local current
-  current=$(gh issue view "$num" --json milestone --jq '.milestone.title // ""' 2>/dev/null || echo '')
-  if [ "$current" = "$milestone" ]; then
-    echo "Issue #$num: milestone '$milestone' already set — skipping."
-    return 0
-  fi
-  run gh issue edit "$num" --milestone "$milestone"
-  echo "Issue #$num: set milestone '$milestone'."
-}
+# Milestones are owned solely by scripts/sync-release-milestones.sh (#1236).
 
 # --- Shipped infrastructure / navigation (close) ---
 
@@ -155,7 +144,6 @@ for spec in \
   if [ "$(issue_state "$num")" = 'OPEN' ]; then
     add_label_if_missing "$num" "$label1"
     add_label_if_missing "$num" "$label2"
-    set_milestone_if_missing "$num" 'v0.6.0'
   fi
 done
 
