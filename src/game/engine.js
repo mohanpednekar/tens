@@ -1584,6 +1584,13 @@ export const getAchievementProgress = (state, condition) => {
       return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
     case 'kernelsEarned': return { current: Math.max(state.achievements?.counters?.kernelsEarned ?? 0, state.eons?.balance ?? 0), target: condition.min }
     case 'lifetimePurges': return { current: getLifetimePurges(state), target: condition.min }
+    case 'anyOf': {
+      for (const inner of condition.conditions ?? []) {
+        const progress = getAchievementProgress(state, inner)
+        if (progress) return progress
+      }
+      return null
+    }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: Math.max(0, (state.purchaseLevels?.[condition.tierId] ?? 1) - 1), target: condition.min - 1 }
     case 'poolsCompacted': return { current: getCompactedPoolCount(state), target: condition.min }
@@ -8813,11 +8820,12 @@ export const recordRapidClick = (rush, key, nowMs) => {
   const sameButton = rush?.key === key
   const times = [...(sameButton ? rush.times : []), nowMs].filter(t => nowMs - t <= BUY_MAX_RUSH_WINDOW_MS)
   const hit = times.length >= BUY_MAX_RUSH_CLICKS
-  return { rush: { key, times: hit ? [] : times }, hit }
+  return { rush: { key, times: hit ? [] : times }, hit, count: times.length }
 }
 // Fresh tracker (no run in progress).
 export const resetRapidClicks = () => ({ key: null, times: [] })
-export const withBuyMaxRush = state => bumpAchievementCounter(state, 'buyMaxRushes', 1, 'max')
+// Records the longest same-button run inside the window (the achievement's "best"); reaching BUY_MAX_RUSH_CLICKS earns it.
+export const withRapidClickBest = count => state => bumpAchievementCounter(state, 'maxRapidClicks', count, 'max')
 
 // Marks a successful MANUAL tier purchase for the cycle (the hook wraps its Buy actions with this; autobuyers
 // call buyTierQuantity directly and do not).

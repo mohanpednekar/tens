@@ -201,7 +201,7 @@ import {
   buyPlaytimeBonus,
   recordRapidClick,
   resetRapidClicks,
-  withBuyMaxRush,
+  withRapidClickBest,
   buyCacheWarm,
   applyCacheWarm,
   getCacheWarmTier,
@@ -11858,7 +11858,7 @@ describe('Buy max mode', () => {
   it('the Buy-max rush achievement unlocks Buy max', () => {
     const state = createInitialGameState()
     expect(isBuyMaxUnlocked(state)).toBe(false)
-    const after = withBuyMaxRush(state)
+    const after = withRapidClickBest(BUY_MAX_RUSH_CLICKS)(state)
     expect(after.achievements.earned.buyMaxRush).toBe(true)
     expect(isBuyMaxUnlocked(after)).toBe(true)
   })

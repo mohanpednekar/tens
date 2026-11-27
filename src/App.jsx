@@ -136,16 +136,28 @@ function App() {
     if (page === 'boosters') setPage('foundry')
   }
 
-  // Click-fast achievement: every real click on a button, on any screen, feeds the same-button counter. Autobuyers and
+  // Click-fast achievement: every real click on a button, on any screen after the Foundry gate, feeds the same-button counter. Autobuyers and
   // other automation never click, so they cannot count. Non-button clicks are ignored.
   const { recordButtonClick } = game.actions
   useEffect(() => {
+    // Key = the button's DOM node (React keeps it for a given row; labels embed live values and would change per click).
+    // A held key auto-repeats clicks on a focused button, so a click that follows a repeating keydown is ignored.
+    let ignoreNextClick = false
+    const onKeyDown = event => { if (event.repeat) ignoreNextClick = true }
     const onClick = event => {
+      if (ignoreNextClick) {
+        ignoreNextClick = false
+        return
+      }
       const button = event.target?.closest?.('button, [role="button"]')
-      if (button) recordButtonClick(button.getAttribute('aria-label') || button)
+      if (button) recordButtonClick(button)
     }
+    document.addEventListener('keydown', onKeyDown, true)
     document.addEventListener('click', onClick, true)
-    return () => document.removeEventListener('click', onClick, true)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+      document.removeEventListener('click', onClick, true)
+    }
   }, [recordButtonClick])
 
   useEffect(() => {

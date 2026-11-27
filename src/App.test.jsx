@@ -2328,6 +2328,24 @@ test('clicking the same button 10 times in a second (any screen) unlocks Buy max
   expect(screen.getByRole('button', { name: /^open firmware$/i })).toBeInTheDocument()
 })
 
+test('clicking one real Factory Buy button 10 times in a second unlocks Buy max (its label changes between clicks)', () => {
+  seedMainGameState({ resources: { base: 1e12 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  for (let i = 0; i < 10; i += 1) fireEvent.click(screen.getAllByRole('button', { name: /^Buy.*completed level/i })[0])
+  expect(screen.getByRole('button', { name: /^open firmware$/i })).toBeInTheDocument()
+})
+
+test('a held key (auto-repeating clicks) does not count as fast clicking', () => {
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  const factory = screen.getByRole('button', { name: /^open byte factory$/i })
+  for (let i = 0; i < 12; i += 1) {
+    fireEvent.keyDown(factory, { key: 'Enter', repeat: true })
+    fireEvent.click(factory)
+  }
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+})
+
 test('Firmware appears with an unlocked Buy max before any Purge, showing only what is unlocked', async () => {
   const user = userEvent.setup()
   seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 }, achievements: { earned: { buyMaxRush: true }, counters: { pings: 0 } } })

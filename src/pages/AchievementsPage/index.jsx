@@ -289,10 +289,10 @@ const AchievementsPage = ({ game }) => {
                       {/* A title that already says it (selfExplanatory) skips the requirement line; a reward line still shows. */}
                       {!masked && !spoiler && !openRows[def.id] && (earned ? getAchievementShortReward(def) : !def.selfExplanatory) && (
                         <Detail aria-label={`${def.name} summary`}>
-                          {earned ? `Reward earned: ${getAchievementShortReward(def)}` : getAchievementShortRequirement(def)}
+                          {earned ? `Reward earned: ${getAchievementShortReward(def)}` : `${getAchievementShortRequirement(def)}${def.progressLabel && progressText ? ` · ${def.progressLabel}: ${progressText}` : ''}`}
                         </Detail>
                       )}
-                      {!masked && !spoiler && openRows[def.id] && <Detail>{def.trigger}</Detail>}
+                      {!masked && !spoiler && openRows[def.id] && <Detail>{def.trigger}{def.progressLabel && progressText && !earned ? ` · ${def.progressLabel}: ${progressText}` : ''}</Detail>}
                       {!masked && !spoiler && openRows[def.id] && getAchievementReward(def) && (
                         <Detail aria-label={`${def.name} reward ${earned ? 'earned' : 'pending'}`}>
                           {earned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}

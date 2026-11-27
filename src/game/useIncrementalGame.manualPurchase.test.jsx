@@ -67,4 +67,24 @@ describe('useIncrementalGame click-fast (Buy max) achievement', () => {
     expect(isBuyMaxUnlocked(result.current.state)).toBe(false)
     unmount()
   })
+
+  it('records the best run so far, even short of the target', () => {
+    seedBits(0)
+    const { result, unmount } = renderHook(() => useIncrementalGame())
+    click(result, 6)
+    click(result, 1, 'b')
+    click(result, 3)
+    expect(result.current.state.achievements.counters.maxRapidClicks).toBe(6)
+    expect(isBuyMaxUnlocked(result.current.state)).toBe(false)
+    unmount()
+  })
+
+  it('ignores clicks during the first-cycle Foundry gate', () => {
+    const fresh = createInitialGameState()
+    saveGameState({ ...fresh, intro: { ...fresh.intro, mainGameUnlocked: false } })
+    const { result, unmount } = renderHook(() => useIncrementalGame())
+    click(result, 12)
+    expect(result.current.state.achievements.earned.buyMaxRush).toBeUndefined()
+    unmount()
+  })
 })
