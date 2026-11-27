@@ -35,8 +35,8 @@ describe('store-release-notes', () => {
   })
 
   test('versionCode reads package.json, with the TENS_VERSION_CODE override', () => {
-    expect(versionCode({ version: '0.43.0', versionCode: 261127000 }, '')).toBe(261127000)
-    expect(versionCode({ version: '0.43.0', versionCode: 261127000 }, '10299')).toBe(10299)
+    expect(versionCode({ version: '0.43.0', versionCode: 263311330 }, '')).toBe(263311330)
+    expect(versionCode({ version: '0.43.0', versionCode: 263311330 }, '10299')).toBe(10299)
     expect(() => versionCode({ version: '0.43.0' }, '')).toThrow(/versionCode/)
   })
 

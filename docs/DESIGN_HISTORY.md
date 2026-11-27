@@ -9759,8 +9759,10 @@ milestones (#1228).
 
 **Android versionCode (same PR):** first widened from `major*10000 + minor*100 + patch` (collides past
 minor 99, which automatic bumps would hit) to `*1e6/*1e3`, then — maintainer decision, since all
-development is on main and only monotonicity matters — replaced by a date code, `YYMMDD × 1000 + n`
-(n = releases already that day), computed once by `bump-version` into `package.json`'s `versionCode`
+development is on main and only monotonicity matters — replaced by a date code, first `YYMMDD × 1000 + n`
+(n = releases already that day), then `YYDDDHHMM` (year, day of year, IST time; the maintainer asked
+for YYMMDDHHMM, which exceeds Play's 2,100,000,000 cap already in 2026 — day-of-year keeps it under it
+until 2099), computed once by `bump-version` into `package.json`'s `versionCode`
 so Gradle, the Fastfile and `store-release-notes.mjs` read one value instead of three formula copies.
 A git commit count was considered and rejected by the maintainer in favour of a readable date code.
 CalVer for the version name itself was considered and rejected: the maintainer kept SemVer.

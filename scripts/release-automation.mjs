@@ -20,7 +20,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { computeVersionCode, parseSemver, planChangelogBump, splitChangelog } from './bump-version.mjs';
+import { parseSemver, planChangelogBump, splitChangelog, versionCodeDayPrefix } from './bump-version.mjs';
 
 const IST_OFFSET_SECONDS = 5.5 * 3600;
 
@@ -80,9 +80,20 @@ export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, hea
   if (match.nextText !== headChangelog) {
     return { ok: false, reason: 'CHANGELOG.md differs from the yarn bump-version result' };
   }
+  // versionCode (YYDDDHHMM): the release time isn't recorded anywhere else, so accept any valid
+  // HHMM on the release section's day, as long as it is above the base code (the floor).
+  const versionCode = JSON.parse(headPackage).versionCode;
+  const floor = Number.isInteger(base.versionCode) ? base.versionCode : 0;
+  const hhmm = Number.isInteger(versionCode) ? versionCode % 10000 : -1;
+  const sameDay = Number.isInteger(versionCode)
+    && Math.floor(versionCode / 10000) === versionCodeDayPrefix(released.date)
+    && Math.floor(hhmm / 100) < 24 && hhmm % 100 < 60;
+  // floor + 1 can spill past the day's last minute only after 1440 same-day codes — not a real case.
+  if (!Number.isInteger(versionCode) || versionCode <= floor || (!sameDay && versionCode !== floor + 1)) {
+    return { ok: false, reason: `versionCode ${versionCode} is not YYDDDHHMM for ${released.date} above ${floor}` };
+  }
   // package.json must be byte-identical to what bump-version writes: only "version" and
   // "versionCode" may change.
-  const versionCode = computeVersionCode(baseChangelog, released.date, base.versionCode);
   if (headPackage !== `${JSON.stringify({ ...base, version: headVersion, versionCode }, null, 2)}\n`) {
     return { ok: false, reason: 'package.json changes more than the "version"/"versionCode" fields' };
   }

@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   bumpSemver,
   computeVersionCode,
+  istHhmm,
   determineBumpType,
   extractVersionSection,
   planChangelogBump,
@@ -131,16 +132,19 @@ describe('bump-version', () => {
     expect(planChangelogBump(makeChangelog(`### ${sub}\n${bullet}\n`), from, '2026-11-27').bumpType).toBe(expected);
   });
 
-  it('computeVersionCode is YYMMDD×1000 + releases already that day', () => {
-    const text = makeChangelog('### Fixed\n- A.\n');
-    expect(computeVersionCode(text, '2026-11-27')).toBe(261127000);
-    const twoToday = text.replace('## [0.5.0] - 2026-07-14', '## [0.5.1] - 2026-11-27\n\n### Fixed\n- B.\n\n## [0.5.0] - 2026-07-14');
-    expect(computeVersionCode(twoToday, '2026-11-27')).toBe(261127001);
-    expect(computeVersionCode(text, '2027-01-02')).toBeGreaterThan(computeVersionCode(text, '2026-12-31'));
-    expect(() => computeVersionCode(text, '27-1-2')).toThrow(/invalid/);
+  it('computeVersionCode is YYDDDHHMM, above the floor', () => {
+    expect(computeVersionCode('2026-11-27', '1330')).toBe(263311330);
+    expect(computeVersionCode('2026-01-01', '0000')).toBe(260010000);
+    expect(computeVersionCode('2028-12-31', '2359')).toBe(283662359); // leap year: day 366
+    expect(computeVersionCode('2099-12-31', '2359')).toBeLessThan(2100000000); // Play's cap
+    expect(computeVersionCode('2027-01-01', '0000')).toBeGreaterThan(computeVersionCode('2026-12-31', '2359'));
     // a manual-upload code recorded in package.json is a floor: never reused
-    expect(computeVersionCode(text, '2026-11-27', 261127001)).toBe(261127002);
-    expect(computeVersionCode(text, '2026-11-28', 261127001)).toBe(261128000);
+    expect(computeVersionCode('2026-11-27', '1330', 263311330)).toBe(263311331);
+    expect(computeVersionCode('2026-11-27', '1400', 263311330)).toBe(263311400);
+    expect(() => computeVersionCode('27-1-2', '1330')).toThrow(/invalid release date/);
+    expect(() => computeVersionCode('2026-02-30', '1330')).toThrow(/invalid release date/);
+    expect(() => computeVersionCode('2026-11-27', '2460')).toThrow(/invalid release time/);
+    expect(istHhmm(new Date('2026-11-27T08:00:00Z'))).toBe('1330');
   });
 
   it('forceMajor promotes 0.y.z to 1.0.0', () => {

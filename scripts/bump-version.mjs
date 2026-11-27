@@ -7,10 +7,10 @@
  *   Major is never auto-selected before 1.0.0 — breaking changes go out as minor.
  * - ≥ 1.0.0 (after the first public release): breaking or ### Removed → major;
  *   ### Added or ### Deprecated → minor; otherwise (Changed/Fixed/Security/…) → patch.
- * - Also writes package.json `versionCode` (Android): YYMMDD × 1000 + releases already that day.
+ * - Also writes package.json `versionCode` (Android): YYDDDHHMM of the release stamp (IST), > previous.
  * - `--major` promotes to the next major explicitly (e.g. 0.x → 1.0.0 at the first public release).
  *
- * Usage: yarn bump-version [--major] [--date=YYYY-MM-DD] [--dry-run]
+ * Usage: yarn bump-version [--major] [--date=YYYY-MM-DD] [--time=HHMM] [--dry-run]
  * Pure helpers are exported for unit tests and for the future release.yml
  * CHANGELOG extraction (tag message / GitHub Release body).
  */
@@ -316,23 +316,38 @@ export function planChangelogBump(changelogText, currentVersion, date = new Date
 }
 
 /**
- * Android versionCode for a release dated `dateStr`: YYMMDD × 1000 + n, where n counts the
- * releases already dated that day in `changelogText` (0 for the first). Strictly increasing as
- * long as releases are dated in order (all development is on main), ≤ 999 releases a day, and far
- * above any code from the old version-derived formulas. Written to package.json's `versionCode`.
- * Never below `floor + 1`, where floor is the current package.json versionCode — so a code used by a
- * manual TENS_VERSION_CODE upload (recorded by raising package.json versionCode) is never reused.
- * @param {string} changelogText  CHANGELOG before this release is added
+ * Android versionCode for a release stamped `dateStr` at `hhmm` (IST): **YYDDDHHMM** — 2-digit year,
+ * 3-digit day of year, 24-hour time. E.g. 2026-11-27 13:30 → 263311330. Fits Play's 2,100,000,000 cap
+ * until 2099 (max 993662359); all development is on main, so release stamps only move forward and
+ * the code only grows. Never below `floor + 1` (the current package.json versionCode), so a code used
+ * by a manual TENS_VERSION_CODE upload (recorded by raising package.json versionCode) is never reused.
+ * Written to package.json's `versionCode`.
  * @param {string} dateStr  YYYY-MM-DD
+ * @param {string} hhmm  HHMM, 24-hour
  * @param {number} [floor]  current package.json versionCode
  */
-export function computeVersionCode(changelogText, dateStr, floor = 0) {
+export function computeVersionCode(dateStr, hhmm, floor = 0) {
+  const prefix = versionCodeDayPrefix(dateStr);
+  if (!/^([01]\d|2[0-3])[0-5]\d$/.test(String(hhmm))) throw new Error(`invalid release time: ${hhmm}`);
+  return Math.max(prefix * 10000 + Number(hhmm), (Number.isInteger(floor) ? floor : 0) + 1);
+}
+
+/** YYDDD for a YYYY-MM-DD date (day of year 1–366), the versionCode prefix above HHMM. */
+export function versionCodeDayPrefix(dateStr) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
   if (!m) throw new Error(`invalid release date: ${dateStr}`);
-  const sameDay = splitChangelog(changelogText).sections.filter((s) => s.date === dateStr).length;
-  if (sameDay > 999) throw new Error(`more than 1000 releases on ${dateStr}`);
-  const dated = (Number(m[1].slice(2)) * 10000 + Number(m[2]) * 100 + Number(m[3])) * 1000 + sameDay;
-  return Math.max(dated, (Number.isInteger(floor) ? floor : 0) + 1);
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const t = Date.UTC(y, mo - 1, d);
+  const back = new Date(t);
+  if (back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) throw new Error(`invalid release date: ${dateStr}`);
+  if (y < 2000 || y > 2099) throw new Error(`versionCode supports 2000–2099 only: ${dateStr}`);
+  const dayOfYear = Math.round((t - Date.UTC(y, 0, 1)) / 86400000) + 1;
+  return (y % 100) * 1000 + dayOfYear;
+}
+
+/** Current IST wall-clock time as HHMM. */
+export function istHhmm(now = new Date()) {
+  return new Date(now.getTime() + 5.5 * 3600 * 1000).toISOString().slice(11, 16).replace(':', '');
 }
 
 /**
@@ -374,6 +389,7 @@ export function runBumpVersion(opts = {}) {
   const changelogPath = opts.changelogPath || path.join(rootDir, 'CHANGELOG.md');
   const packagePath = opts.packagePath || path.join(rootDir, 'package.json');
   const date = opts.date ?? new Date();
+  const time = opts.time ?? istHhmm();
   const dryRun = Boolean(opts.dryRun);
   const forceMajor = Boolean(opts.forceMajor);
 
@@ -397,7 +413,7 @@ export function runBumpVersion(opts = {}) {
     return { noop: true, currentVersion };
   }
 
-  const nextPkg = { ...pkg, version: plan.nextVersion, versionCode: computeVersionCode(changelogText, plan.dateStr, pkg.versionCode) };
+  const nextPkg = { ...pkg, version: plan.nextVersion, versionCode: computeVersionCode(plan.dateStr, time, pkg.versionCode) };
   // Preserve trailing newline style of the original package.json.
   const pkgOut = `${JSON.stringify(nextPkg, null, 2)}\n`;
 
@@ -434,8 +450,10 @@ function main() {
     process.exitCode = 1;
     return;
   }
+  const timeArg = process.argv.find((a) => a.startsWith('--time='));
+  const time = timeArg ? timeArg.slice('--time='.length) : undefined;
   try {
-    const result = runBumpVersion({ dryRun, forceMajor, date });
+    const result = runBumpVersion({ dryRun, forceMajor, date, time });
     if (result.noop) {
       console.log(`bump-version: nothing to do (Unreleased is empty; still at ${result.currentVersion})`);
       process.exitCode = 0;

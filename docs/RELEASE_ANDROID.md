@@ -45,8 +45,9 @@ Output: `android/app/build/outputs/bundle/release/app-release.aab`, plus the R8 
 explorer → Downloads → ReTrace mapping, or Play does it automatically for AABs).
 
 - **Version** — `versionName` is `package.json`'s `version`; `versionCode` is `package.json`'s
-  `versionCode`, written by the automatic release bump as **YYMMDD × 1000 + n** (n = releases already
-  dated that day, from 0 — e.g. 0.43.0 on 2026-11-27 → `261127000`). All development is on main, so
+  `versionCode`, written by the automatic release bump as **YYDDDHHMM** — 2-digit year, day of year,
+  IST time of the bump (e.g. 2026-11-27 13:30 → `263311330`; Play's 2,100,000,000 cap rules out
+  YYMMDDHHMM, and this fits until 2099). All development is on main, so
   release dates only move forward and the code only grows; it is far above any code from the old
   version-derived formula (0.5.0 → 500). The Fastfile and `scripts/store-release-notes.mjs` read the
   same field. Every Play upload needs a higher versionCode: merge the automatic release PR or

@@ -73,7 +73,9 @@ jobs:
           major_flag=""
           if [ "${RELEASE_MAJOR:-}" = "true" ]; then major_flag="--major"; fi
           # Dates are IST (maintainer timezone), matching release-automation.mjs's date rule.
-          node scripts/bump-version.mjs $major_flag --date="$(TZ=Asia/Kolkata date +%F)"
+          # One IST stamp for both, so date and time can't straddle midnight.
+          stamp=$(TZ=Asia/Kolkata date +%F_%H%M)
+          node scripts/bump-version.mjs $major_flag --date="${stamp%_*}" --time="${stamp#*_}"
           version=$(node -p "require('./package.json').version")
           git commit -am "Release v${version}"
           VERSION="$version" node --input-type=module -e '

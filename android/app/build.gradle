@@ -24,7 +24,7 @@ def uploadKeyAlias = releaseSetting('TENS_UPLOAD_KEY_ALIAS')
 def uploadKeyPassword = releaseSetting('TENS_UPLOAD_KEY_PASSWORD')
 def hasReleaseSigning = [uploadStoreFile, uploadStorePassword, uploadKeyAlias, uploadKeyPassword].every { it }
 
-// versionName and versionCode both come from package.json (versionCode = YYMMDD×1000 + n, written by
+// versionName and versionCode both come from package.json (versionCode = YYDDDHHMM, written by
 // the automatic release bump — scripts/bump-version.mjs) unless TENS_VERSION_CODE overrides it.
 // Play requires every upload to raise versionCode.
 def packageJson = new JsonSlurper().parse(rootProject.file('../package.json'))
