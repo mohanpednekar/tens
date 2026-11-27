@@ -57,7 +57,10 @@ export function planMissingTags(changelogText, commits, existingTags, skipVersio
 /**
  * @returns {{ ok: true, version: string } | { ok: false, reason: string }}
  */
-export function verifyReleasePr({ baseChangelog, baseVersion, headChangelog, headVersion }) {
+export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, headPackage }) {
+  const base = JSON.parse(basePackage);
+  const headVersion = JSON.parse(headPackage).version;
+  const baseVersion = base.version;
   const { sections } = splitChangelog(headChangelog);
   const released = sections.find((s) => s.id !== 'Unreleased');
   if (!released?.date) return { ok: false, reason: 'head CHANGELOG has no dated release section' };
@@ -70,6 +73,10 @@ export function verifyReleasePr({ baseChangelog, baseVersion, headChangelog, hea
   }
   if (match.nextText !== headChangelog) {
     return { ok: false, reason: 'CHANGELOG.md differs from the yarn bump-version result' };
+  }
+  // package.json must be byte-identical to what bump-version writes: only "version" may change.
+  if (headPackage !== `${JSON.stringify({ ...base, version: headVersion }, null, 2)}\n`) {
+    return { ok: false, reason: 'package.json changes more than the "version" field' };
   }
   return { ok: true, version: headVersion };
 }
@@ -98,9 +105,9 @@ function main([cmd, baseRef, headRef = 'HEAD']) {
     const show = (ref, f) => git('show', `${ref}:${f}`);
     const result = verifyReleasePr({
       baseChangelog: show(baseRef, 'CHANGELOG.md'),
-      baseVersion: JSON.parse(show(baseRef, 'package.json')).version,
+      basePackage: show(baseRef, 'package.json'),
       headChangelog: show(headRef, 'CHANGELOG.md'),
-      headVersion: JSON.parse(show(headRef, 'package.json')).version,
+      headPackage: show(headRef, 'package.json'),
     });
     const changed = git('diff', '--name-only', `${baseRef}...${headRef}`).trim().split('\n').filter(Boolean);
     const extra = changed.filter((f) => f !== 'CHANGELOG.md' && f !== 'package.json');

