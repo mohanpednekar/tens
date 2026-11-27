@@ -39,17 +39,16 @@ describe('useIncrementalGame manual purchase marking', () => {
   })
 })
 
-const click = (result, times, name = 'buyTierQuantity', arg = 'tier01') => {
-  for (let i = 0; i < times; i += 1) act(() => result.current.actions[name](arg))
+const click = (result, times, key = 'a') => {
+  for (let i = 0; i < times; i += 1) act(() => result.current.actions.recordButtonClick(key))
 }
 
-describe('useIncrementalGame Buy-max rush achievement', () => {
+describe('useIncrementalGame click-fast (Buy max) achievement', () => {
   beforeEach(() => localStorage.clear())
 
-  it('10 successful manual clicks on one Buy button unlock Buy max', () => {
-    seedBits(1e12)
+  it('10 clicks on one button unlock Buy max', () => {
+    seedBits(0)
     const { result, unmount } = renderHook(() => useIncrementalGame())
-    act(() => result.current.setBuyUnitMode(true))
     expect(isBuyMaxUnlocked(result.current.state)).toBe(false)
     click(result, 9)
     expect(isBuyMaxUnlocked(result.current.state)).toBe(false)
@@ -60,21 +59,32 @@ describe('useIncrementalGame Buy-max rush achievement', () => {
   })
 
   it('a click on a different button in between restarts the count', () => {
-    seedBits(1e12)
+    seedBits(0)
     const { result, unmount } = renderHook(() => useIncrementalGame())
-    act(() => result.current.setBuyUnitMode(true))
     click(result, 5)
-    click(result, 1, 'buyTickspeedMultiplier')
+    click(result, 1, 'b')
     click(result, 5)
     expect(isBuyMaxUnlocked(result.current.state)).toBe(false)
     unmount()
   })
 
-  it('clicks that buy nothing never count', () => {
+  it('records the best run so far, even short of the target', () => {
     seedBits(0)
     const { result, unmount } = renderHook(() => useIncrementalGame())
-    click(result, 12)
+    click(result, 6)
+    click(result, 1, 'b')
+    click(result, 3)
+    expect(result.current.state.achievements.counters.maxRapidClicks).toBe(6)
     expect(isBuyMaxUnlocked(result.current.state)).toBe(false)
+    unmount()
+  })
+
+  it('ignores clicks during the first-cycle Foundry gate', () => {
+    const fresh = createInitialGameState()
+    saveGameState({ ...fresh, intro: { ...fresh.intro, mainGameUnlocked: false } })
+    const { result, unmount } = renderHook(() => useIncrementalGame())
+    click(result, 12)
+    expect(result.current.state.achievements.earned.buyMaxRush).toBeUndefined()
     unmount()
   })
 })

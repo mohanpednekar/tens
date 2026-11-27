@@ -219,6 +219,14 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByText('Reformat the Byte Foundry')).toBeTruthy()
   })
 
+  it('the click achievement shows the best run so far while unearned', () => {
+    renderWithTheme(<AchievementsPage game={gameInMain({}, { achievements: { earned: {}, counters: { pings: 0, maxRapidClicks: 6 } } })} />)
+    openGroup('Early Factory')
+    expect(screen.getByLabelText('Click fast, buy max summary').textContent).toBe('Click ×10 in 1 s · Best: 6/10')
+    // The best shows once: the bare badge number is hidden for this row.
+    expect(screen.getAllByText(/6\/10/)).toHaveLength(1)
+  })
+
   it('a revealed row shows its requirement, then its reward once earned, without expanding', () => {
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
     openGroup('Reboot')

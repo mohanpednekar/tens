@@ -199,9 +199,9 @@ import {
   buyPrestigeSpeedBonus,
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
-  recordManualBuyClick,
-  resetManualBuyRush,
-  withBuyMaxRush,
+  recordRapidClick,
+  resetRapidClicks,
+  withRapidClickBest,
   buyCacheWarm,
   applyCacheWarm,
   getCacheWarmTier,
@@ -11858,16 +11858,16 @@ describe('Buy max mode', () => {
   it('the Buy-max rush achievement unlocks Buy max', () => {
     const state = createInitialGameState()
     expect(isBuyMaxUnlocked(state)).toBe(false)
-    const after = withBuyMaxRush(state)
+    const after = withRapidClickBest(BUY_MAX_RUSH_CLICKS)(state)
     expect(after.achievements.earned.buyMaxRush).toBe(true)
     expect(isBuyMaxUnlocked(after)).toBe(true)
   })
 
-  describe('recordManualBuyClick', () => {
+  describe('recordRapidClick', () => {
     const run = (keys, step = 50) => {
-      let rush = resetManualBuyRush()
+      let rush = resetRapidClicks()
       let hit = false
-      keys.forEach((key, i) => { ({ rush, hit } = recordManualBuyClick(rush, key, i * step)) })
+      keys.forEach((key, i) => { ({ rush, hit } = recordRapidClick(rush, key, i * step)) })
       return hit
     }
     it('hits on 10 clicks of one button within the window', () => {

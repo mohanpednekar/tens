@@ -243,8 +243,8 @@ const describeReclamationReward = ({ arrayStepGain, lakeSpeed, syncedBitrate }) 
   }
   return { shortBonus: shorts.join(', '), bonus: fulls.join('. ') }
 }
-// Buy max mode is unlocked by an achievement: BUY_MAX_RUSH_CLICKS manual clicks on the same Factory Buy button within
-// BUY_MAX_RUSH_WINDOW_MS, nothing else clicked between (see engine.js's isBuyMaxUnlocked/recordManualBuyClick).
+// Buy max mode is unlocked by an achievement: BUY_MAX_RUSH_CLICKS clicks on the same button (any screen) within
+// BUY_MAX_RUSH_WINDOW_MS, nothing else clicked between (see engine.js's isBuyMaxUnlocked/recordRapidClick).
 export const BUY_MAX_ACHIEVEMENT_ID = 'buyMaxRush'
 export const BUY_MAX_RUSH_CLICKS = 10
 export const BUY_MAX_RUSH_WINDOW_MS = 1000
@@ -277,7 +277,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', short: 'Accelerate 1', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', short: 'Accelerate 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, condition: { kind: 'overclocked' } },
-  { id: BUY_MAX_ACHIEVEMENT_ID, details: 'Manual clicks only: autobuyers do not count, a click that buys nothing, or on any other Buy or Accelerate button, starts the count over. Works on any Factory Buy or Accelerate button, as long as all ten are on the same one.', name: 'Click fast, buy max', group: 'earlyFactory', trigger: `Click the same Factory Buy button ${BUY_MAX_RUSH_CLICKS} times within 1 second`, short: `Buy ×${BUY_MAX_RUSH_CLICKS} in 1 s`, shortBonus: 'Unlocks Buy max', bonus: 'Unlocks Buy max mode on Firmware → Prestige: each purchase buys every affordable level', condition: { kind: 'anyOf', conditions: [{ kind: 'counter', key: 'buyMaxRushes', min: 1 }, { kind: 'legacyBuyMax' }] } },
+  { id: BUY_MAX_ACHIEVEMENT_ID, details: 'Any button on any screen works, as long as all ten clicks are on the same one. Automation does not count, and clicking a different button in between starts the count over.', name: 'Click fast, buy max', group: 'earlyFactory', trigger: `Click the same button ${BUY_MAX_RUSH_CLICKS} times within 1 second`, short: `Click ×${BUY_MAX_RUSH_CLICKS} in 1 s`, shortBonus: 'Unlocks Buy max', bonus: 'Unlocks Buy max mode on Firmware → Prestige: each purchase buys every affordable level', progressLabel: 'Best', condition: { kind: 'anyOf', conditions: [{ kind: 'counter', key: 'maxRapidClicks', min: BUY_MAX_RUSH_CLICKS }, { kind: 'legacyBuyMax' }] } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
     name: ['High five', 'Five alive', 'Take five', 'The Fifth Element', 'Jackson 5', 'Six pack', 'Lucky seven', 'Eight is enough', 'Cloud nine', 'Perfect ten'][i],
@@ -320,7 +320,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'rmRf', name: 'rm -rf', group: 'reboot', trigger: 'Reformat the Byte Foundry', short: 'Reformat Foundry', condition: { kind: 'counter', key: 'reformats', min: 1 } },
   { id: 'kernelPanic', details: 'Measured in time actually played, not time away.', name: 'Kernel panic', group: 'reboot', trigger: 'Reboot twice within an hour of play', short: 'Reboot ×2 in 1 h', condition: { kind: 'counter', key: 'quickReboots', min: 1 } },
   { id: 'popcorn', name: 'Popcorn', group: 'reboot', trigger: `Earn ${POPCORN_KERNELS} Kernels in total`, short: `${POPCORN_KERNELS} Kernels`, condition: { kind: 'kernelsEarned', min: POPCORN_KERNELS } },
-].map(def => ({ secret: false, platformDependent: false, selfExplanatory: false, details: null, bonus: null, short: null, shortBonus: null, reveal: undefined, ...def }))
+].map(def => ({ secret: false, platformDependent: false, selfExplanatory: false, progressLabel: null, details: null, bonus: null, short: null, shortBonus: null, reveal: undefined, ...def }))
 // Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [

@@ -271,7 +271,7 @@ const InfoPage = ({ game }) => {
           </li>
           {(seeLatePurge || shown({ kind: 'legacyBuyMax' }) || shown({ kind: 'achievementEarned', id: 'buyMaxRush' })) && (
             <li>
-              Once you earn the <strong>Click fast, buy max</strong> achievement (click one Factory Buy button 10 times within a second), the <strong>Buy max</strong> toggle on Firmware → ✦ Prestige makes
+              Once you earn the <strong>Click fast, buy max</strong> achievement (click any one button 10 times within a second), the <strong>Buy max</strong> toggle on Firmware → ✦ Prestige makes
               each purchase buy as many levels as you can afford. Tiers buy full levels only — a
               partly bought level takes its own click.
             </li>
