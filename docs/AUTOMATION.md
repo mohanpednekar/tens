@@ -698,8 +698,13 @@ agent); fires on **every** `push` to `main` (a docs-only merge must still refres
   suppressed store upload for it is harmless), else (retro versions never in `package.json`) the last
   first-parent main commit on or before its date (IST). Versions/tags without a CHANGELOG section
   are skipped with a warning; each gets a GitHub Release (`--target <sha>`, `--latest=false`), and tags without a Release
-  (v0.1.0–v0.5.0 predate this job) get one. Uses `GITHUB_TOKEN` on purpose: refs it creates trigger no
-  workflows, so `store-release.yml`'s `v*` trigger never ships an old tag.
+  (v0.1.0–v0.5.0 predate this job) get one. An old tag must never start `store-release.yml`'s `v*`
+  trigger: with more than 3 missing, the tags are pushed in **one** `git push` with the PAT (GitHub
+  creates no push events for more than three tags pushed at once, and `GITHUB_TOKEN` is refused — HTTP
+  403 — on commits that changed workflow files), then their Releases are created with `GITHUB_TOKEN`;
+  with 1–3 missing, each is created with `GITHUB_TOKEN` (no events), and one it can't create is skipped
+  with a `::warning::` (tag it by hand) rather than failing the run. First run after #1237 created
+  v0.5.1/v0.6.0 and then hit that 403 on v0.6.1 — the reason for the batch path.
 - **`tag-and-release`** — described below (the original post-merge half of #52). Each run
 operates on its own pushed SHA (no concurrency queue — a dropped middle run could otherwise skip
 a version's tag entirely), reads `package.json`'s `"version"` there and resolves its **release
