@@ -1,19 +1,21 @@
 /**
  * Automatic-versioning helpers for release.yml (versioning is automatic — no one picks a version):
  *
- * - `planMissingTags` — every CHANGELOG version without a git tag gets one, at the last first-parent
- *   `main` commit on or before its release date (IST, the maintainer's timezone; the date
- *   scripts/bump-version.mjs or the retroactive split stamped). Used to backfill historical tags.
+ * - `planMissingTags` — every CHANGELOG version without a git tag gets one: at the first-parent
+ *   `main` commit where package.json's version became that version when one exists, otherwise (the
+ *   retroactive per-day split of #1236, never in package.json) at the last first-parent commit on or
+ *   before its release date in IST (release.yml stamps dates with --date in IST too).
  * - `verifyReleasePr` — a release PR is valid only if its CHANGELOG.md/package.json are exactly what
- *   `yarn bump-version` produces from the base branch (so it can merge without a code review).
+ *   `yarn bump-version` (or `--major`) produces from the base branch, so it can merge without a review.
  *
- * CLI:
- *   node scripts/release-automation.mjs missing-tags   → prints "<version> <sha>" lines (reads git)
- *   node scripts/release-automation.mjs verify-pr <baseRef>  → exit 1 unless the release diff is pure
+ * CLI (git refs only — never the working tree):
+ *   node scripts/release-automation.mjs missing-tags   → prints "<version> <sha>" lines
+ *   node scripts/release-automation.mjs verify-pr <baseRef> [headRef=HEAD]  → exit 1 unless pure bump
+ * Run verify-pr from a checkout of the BASE branch (e.g. a `git worktree` of origin/main) so the
+ * code doing the checking is not the code under review.
  */
 
 import { execFileSync } from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSemver, planChangelogBump, splitChangelog } from './bump-version.mjs';
@@ -30,9 +32,10 @@ export function istDate(unixSeconds) {
  * @param {Array<{ sha: string, time: number }>} commits  first-parent main commits, any order
  * @param {Set<string>} existingTags  e.g. new Set(['v0.1.0'])
  * @param {string} [skipVersion]  version handled separately (tagged at HEAD by release.yml)
+ * @param {Record<string, string>} [versionCommits]  version → first main commit where package.json had it
  * @returns {Array<{ version: string, tag: string, sha: string }>}  oldest first
  */
-export function planMissingTags(changelogText, commits, existingTags, skipVersion) {
+export function planMissingTags(changelogText, commits, existingTags, skipVersion, versionCommits = {}) {
   const sorted = [...commits].sort((a, b) => a.time - b.time);
   const released = splitChangelog(changelogText).sections.filter((s) => s.id !== 'Unreleased' && s.date);
   const out = [];
@@ -40,6 +43,10 @@ export function planMissingTags(changelogText, commits, existingTags, skipVersio
     parseSemver(s.id);
     const tag = `v${s.id}`;
     if (existingTags.has(tag) || s.id === skipVersion) continue;
+    if (versionCommits[s.id]) {
+      out.push({ version: s.id, tag, sha: versionCommits[s.id] });
+      continue;
+    }
     const onOrBefore = sorted.filter((c) => istDate(c.time) <= s.date);
     if (onOrBefore.length === 0) throw new Error(`no main commit on or before ${s.date} for ${tag}`);
     out.push({ version: s.id, tag, sha: onOrBefore[onOrBefore.length - 1].sha });
@@ -56,10 +63,12 @@ export function verifyReleasePr({ baseChangelog, baseVersion, headChangelog, hea
   if (!released?.date) return { ok: false, reason: 'head CHANGELOG has no dated release section' };
   const plan = planChangelogBump(baseChangelog, baseVersion, released.date);
   if (plan.noop) return { ok: false, reason: 'base Unreleased is empty — nothing to release' };
-  if (plan.nextVersion !== headVersion) {
-    return { ok: false, reason: `package.json is ${headVersion}, expected ${plan.nextVersion}` };
+  const major = planChangelogBump(baseChangelog, baseVersion, released.date, { forceMajor: true });
+  const match = [plan, major].find((p) => p.nextVersion === headVersion);
+  if (!match) {
+    return { ok: false, reason: `package.json is ${headVersion}, expected ${plan.nextVersion} (or ${major.nextVersion} with --major)` };
   }
-  if (plan.nextText !== headChangelog) {
+  if (match.nextText !== headChangelog) {
     return { ok: false, reason: 'CHANGELOG.md differs from the yarn bump-version result' };
   }
   return { ok: true, version: headVersion };
@@ -67,26 +76,33 @@ export function verifyReleasePr({ baseChangelog, baseVersion, headChangelog, hea
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
 
-function main([cmd, baseRef]) {
+function main([cmd, baseRef, headRef = 'HEAD']) {
   if (cmd === 'missing-tags') {
     const commits = git('log', '--first-parent', '--format=%H %ct', 'HEAD')
       .trim().split('\n').map((l) => { const [sha, t] = l.split(' '); return { sha, time: Number(t) }; });
     const tags = new Set(git('tag', '--list', 'v*').split('\n').filter(Boolean));
-    const head = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
-    for (const t of planMissingTags(fs.readFileSync('CHANGELOG.md', 'utf8'), commits, tags, head)) {
+    const head = JSON.parse(git('show', 'HEAD:package.json')).version;
+    const versionCommits = {};
+    for (const sha of git('log', '--first-parent', '--reverse', '--format=%H', 'HEAD', '--', 'package.json').trim().split('\n').filter(Boolean)) {
+      try {
+        const v = JSON.parse(git('show', `${sha}:package.json`)).version;
+        if (!versionCommits[v]) versionCommits[v] = sha;
+      } catch { /* unparsable historical package.json — fall back to the date rule */ }
+    }
+    for (const t of planMissingTags(git('show', 'HEAD:CHANGELOG.md'), commits, tags, head, versionCommits)) {
       console.log(`${t.version} ${t.sha}`);
     }
     return;
   }
   if (cmd === 'verify-pr' && baseRef) {
-    const show = (f) => git('show', `${baseRef}:${f}`);
+    const show = (ref, f) => git('show', `${ref}:${f}`);
     const result = verifyReleasePr({
-      baseChangelog: show('CHANGELOG.md'),
-      baseVersion: JSON.parse(show('package.json')).version,
-      headChangelog: fs.readFileSync('CHANGELOG.md', 'utf8'),
-      headVersion: JSON.parse(fs.readFileSync('package.json', 'utf8')).version,
+      baseChangelog: show(baseRef, 'CHANGELOG.md'),
+      baseVersion: JSON.parse(show(baseRef, 'package.json')).version,
+      headChangelog: show(headRef, 'CHANGELOG.md'),
+      headVersion: JSON.parse(show(headRef, 'package.json')).version,
     });
-    const changed = git('diff', '--name-only', `${baseRef}...HEAD`).trim().split('\n').filter(Boolean);
+    const changed = git('diff', '--name-only', `${baseRef}...${headRef}`).trim().split('\n').filter(Boolean);
     const extra = changed.filter((f) => f !== 'CHANGELOG.md' && f !== 'package.json');
     if (!result.ok || extra.length) {
       console.error(`release PR invalid: ${result.ok ? `touches ${extra.join(', ')}` : result.reason}`);
@@ -96,7 +112,7 @@ function main([cmd, baseRef]) {
     console.log(`release PR valid: v${result.version}`);
     return;
   }
-  console.error('usage: release-automation.mjs missing-tags | verify-pr <baseRef>');
+  console.error('usage: release-automation.mjs missing-tags | verify-pr <baseRef> [headRef]');
   process.exitCode = 2;
 }
 

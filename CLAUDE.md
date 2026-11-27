@@ -311,10 +311,10 @@ retroactively into one version per merge day, #1236; `docs/DESIGN_HISTORY.md`).
 **Versioning is automatic — never ask, never pick a number by hand, never run `yarn bump-version` in a
 feature PR.** Semver rules (`determineBumpType` in `scripts/bump-version.mjs`): while `0.y.z`, a
 breaking change, `### Added` or `### Removed` → **minor**, anything else → patch (no major before 1.0.0);
-from `1.0.0` (the first public release — `yarn bump-version --major` on the release PR) ideal semver:
+from `1.0.0` (the first public release — set repo variable `RELEASE_MAJOR=true` once) ideal semver:
 breaking or `### Removed` → major, `### Added`/`### Deprecated` → minor, else patch. `release.yml`
 keeps one open `release/next` PR (main + `yarn bump-version`) whenever main's Unreleased has entries; the
-PR babysitter merges it once `node scripts/release-automation.mjs verify-pr origin/main` passes and CI
+PR babysitter merges it once `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes and CI
 is green (no adversarial review needed — the check proves the diff is the pure bump). The merge tags
 `v<x.y.z>` + creates the Release; a backfill job tags any untagged version. Detail:
 `docs/AUTOMATION.md` "Release".

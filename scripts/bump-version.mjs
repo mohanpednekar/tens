@@ -9,7 +9,7 @@
  *   ### Added or ### Deprecated → minor; otherwise (Changed/Fixed/Security/…) → patch.
  * - `--major` promotes to the next major explicitly (e.g. 0.x → 1.0.0 at the first public release).
  *
- * Usage: yarn bump-version [--major]
+ * Usage: yarn bump-version [--major] [--date=YYYY-MM-DD] [--dry-run]
  * Pure helpers are exported for unit tests and for the future release.yml
  * CHANGELOG extraction (tag message / GitHub Release body).
  */
@@ -56,7 +56,7 @@ const SUBHEADING_RE = /^### (.+)\s*$/;
 const BULLET_RE = /^\s*-\s+\S/;
 
 /** Bullets marking a breaking change, in any subsection. */
-export const BREAKING_BULLET_RE = /^\s*-\s+\*\*Breaking:?\*\*/i;
+export const BREAKING_BULLET_RE = /^\s*-\s+\*\*Breaking(?::\*\*|\*\*:?)/i;
 
 /**
  * @param {string} version
@@ -406,8 +406,15 @@ function isMainModule() {
 function main() {
   const dryRun = process.argv.includes('--dry-run');
   const forceMajor = process.argv.includes('--major');
+  const dateArg = process.argv.find((a) => a.startsWith('--date='));
+  const date = dateArg ? dateArg.slice('--date='.length) : undefined;
+  if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    console.error(`bump-version: --date must be YYYY-MM-DD (got ${date})`);
+    process.exitCode = 1;
+    return;
+  }
   try {
-    const result = runBumpVersion({ dryRun, forceMajor });
+    const result = runBumpVersion({ dryRun, forceMajor, date });
     if (result.noop) {
       console.log(`bump-version: nothing to do (Unreleased is empty; still at ${result.currentVersion})`);
       process.exitCode = 0;

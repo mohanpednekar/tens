@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { APP_STORE_LIMIT, PLAY_LIMIT, changelogSection, formatNotes, isPlayerFacing, releaseBullets, versionCode } from './store-release-notes.mjs'
 
 const CHANGELOG = `# Changelog
@@ -27,6 +28,13 @@ const CHANGELOG = `# Changelog
 `
 
 describe('store-release-notes', () => {
+  test('versionCode formula is identical in Gradle, the Fastfile and this script', () => {
+    const gradle = readFileSync('android/app/build.gradle', 'utf8')
+    const fastfile = readFileSync('fastlane/Fastfile', 'utf8')
+    expect(gradle).toMatch(/versionParts\[0\]\.toInteger\(\) \* 1000000 \+ versionParts\[1\]\.toInteger\(\) \* 1000 \+ versionParts\[2\]/)
+    expect(fastfile).toMatch(/major \* 1_000_000 \+ minor \* 1000 \+ patch/)
+  })
+
   test('versionCode matches the Gradle formula', () => {
     expect(versionCode('0.5.0', '')).toBe(5000)
     expect(versionCode('0.100.0', '')).toBeLessThan(versionCode('1.0.0', ''))

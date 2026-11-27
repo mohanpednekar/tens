@@ -123,6 +123,7 @@ describe('bump-version', () => {
     ['Deprecated', '- Old flag.', '1.2.3', 'minor'],
     ['Changed', '- Tweak.', '1.2.3', 'patch'],
     ['Fixed', '- Not **Breaking:** mid-line.', '1.2.3', 'patch'],
+    ['Changed', '- **Breaking**: colon outside the bold.', '1.2.3', 'major'],
   ])('### %s "%s" from %s → %s', (sub, bullet, from, expected) => {
     const body = extractVersionSection(makeChangelog(`### ${sub}\n${bullet}\n`), 'Unreleased').body;
     expect(determineBumpType(body, from)).toBe(expected);

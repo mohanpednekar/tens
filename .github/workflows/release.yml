@@ -4,7 +4,7 @@ name: Release
 # 1. release-pr: whenever main's CHANGELOG ## [Unreleased] has entries, (re)build branch
 #    `release/next` = main + `yarn bump-version` and keep one open "Release vX.Y.Z" PR for it.
 #    main is PR-only (ruleset), so the bump cannot be pushed to main directly. The PR babysitter
-#    merges it once `node scripts/release-automation.mjs verify-pr origin/main` passes and CI is
+#    merges it once `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes and CI is
 #    green (docs/AUTOMATION.md "Release").
 # 2. tag-and-release: when a push to main changes package.json's "version", tag it and create
 #    a GitHub Release. This job only ever *reads* main and pushes a tag + Release.
@@ -27,8 +27,8 @@ on:
       - package.json
       - CHANGELOG.md
 
-# GITHUB_TOKEN needs nothing beyond read here — every write (tag push, Release)
-# goes through GH_AUTOMATION_PAT like the other automation workflows.
+# GITHUB_TOKEN is read-only by default; release-pr and tag-and-release write through
+# GH_AUTOMATION_PAT. Only backfill raises GITHUB_TOKEN to contents: write, on purpose (see top).
 permissions:
   contents: read
 
@@ -51,6 +51,9 @@ jobs:
       - name: Open or refresh the release PR
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          # Set repo variable RELEASE_MAJOR=true to promote the next release to the next major
+          # (0.x → 1.0.0 at the first public release); unset it once that release has merged.
+          RELEASE_MAJOR: ${{ vars.RELEASE_MAJOR }}
         run: |
           set -euo pipefail
           has_entries=$(node --input-type=module -e '
@@ -65,7 +68,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B release/next
-          node scripts/bump-version.mjs
+          major_flag=""
+          if [ "${RELEASE_MAJOR:-}" = "true" ]; then major_flag="--major"; fi
+          # Dates are IST (maintainer timezone), matching release-automation.mjs's date rule.
+          node scripts/bump-version.mjs $major_flag --date="$(TZ=Asia/Kolkata date +%F)"
           version=$(node -p "require('./package.json').version")
           git commit -am "Release v${version}"
           VERSION="$version" node --input-type=module -e '
@@ -74,7 +80,7 @@ jobs:
             const s = extractVersionSection(fs.readFileSync("CHANGELOG.md", "utf8"), process.env.VERSION);
             fs.writeFileSync("release-notes.md",
               "Automatic release PR (release.yml). Merge once CI is green and " +
-              "`node scripts/release-automation.mjs verify-pr origin/main` passes.\n\n" + s.body.trim() + "\n");'
+              "`node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes.\n\n" + s.body.trim() + "\n");'
           git push --force origin release/next
           pr=$(gh pr list --head release/next --base main --state open --json number --jq '.[0].number // empty')
           if [ -n "$pr" ]; then
@@ -215,25 +221,28 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --tags --force origin
+          # Writes release-notes.md; returns 1 (with a warning) when the version has no section.
           notes() {
             VERSION="$1" node --input-type=module -e '
               import { extractVersionSection } from "./scripts/bump-version.mjs";
               import fs from "node:fs";
               const s = extractVersionSection(fs.readFileSync("CHANGELOG.md", "utf8"), process.env.VERSION);
+              if (!s) { console.log(`::warning::no CHANGELOG section for ${process.env.VERSION} — skipped`); process.exit(1); }
               fs.writeFileSync("release-notes.md", s.body.trim() + "\n");'
           }
           node scripts/release-automation.mjs missing-tags > missing.txt
           echo "Untagged versions: $(wc -l < missing.txt)"
           while read -r version sha; do
-            notes "$version"
+            notes "$version" || continue
             gh release create "v${version}" --target "$sha" --title "v${version}" \
-              --notes-file release-notes.md --latest=false
+              --notes-file release-notes.md --latest=false < /dev/null
           done < missing.txt
           # Tags that exist without a Release (v0.1.0–v0.5.0 predate release.yml).
           git fetch --tags --force origin
-          for tag in $(git tag --list 'v*' --sort=version:refname); do
+          for tag in $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=version:refname); do
+            [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
             if ! gh release view "$tag" >/dev/null 2>&1; then
-              notes "${tag#v}"
+              notes "${tag#v}" || continue
               gh release create "$tag" --verify-tag --title "$tag" --notes-file release-notes.md --latest=false
             fi
           done

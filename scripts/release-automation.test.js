@@ -30,6 +30,12 @@ describe('release-automation', () => {
     ]);
   });
 
+  it('planMissingTags prefers the commit where package.json became the version', () => {
+    const commits = [{ sha: 'a', time: ist('2026-07-27T09:00:00') }, { sha: 'b', time: ist('2026-07-28T09:00:00') }];
+    expect(planMissingTags(changelog('', RELEASED), commits, new Set(['v0.5.0']), undefined, { '0.5.1': 'b' }))
+      .toEqual([{ version: '0.5.1', tag: 'v0.5.1', sha: 'b' }, { version: '0.6.0', tag: 'v0.6.0', sha: 'b' }]);
+  });
+
   it('planMissingTags fails loudly when no commit precedes a release date', () => {
     expect(() => planMissingTags(changelog('', RELEASED), [{ sha: 'x', time: ist('2026-08-01T00:00:00') }], new Set()))
       .toThrow(/no main commit/);
@@ -42,6 +48,10 @@ describe('release-automation', () => {
 
     it('accepts exactly the bump-version result', () => {
       expect(verifyReleasePr(args)).toEqual({ ok: true, version: '0.7.0' });
+    });
+    it('accepts the --major result (RELEASE_MAJOR promotion to 1.0.0)', () => {
+      const major = planChangelogBump(base, '0.6.0', '2026-11-27', { forceMajor: true });
+      expect(verifyReleasePr({ ...args, headChangelog: major.nextText, headVersion: '1.0.0' })).toEqual({ ok: true, version: '1.0.0' });
     });
     it.each([
       ['wrong version', { headVersion: '0.6.1' }, /expected 0.7.0/],

@@ -478,7 +478,7 @@ instead, in one session:
 
 1. Checks `main`'s latest `ci.yml` run first; a red `main` is fixed (via PR) before any PR work.
    (The automatic `release/next` PR from `release.yml` is merged on CI green +
-   `node scripts/release-automation.mjs verify-pr origin/main` instead of an adversarial marker —
+   `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` instead of an adversarial marker —
    see "Release"; a refresh by the workflow supersedes any merge of `main` into it.)
 2. Takes every open, non-draft PR not labelled `do-not-merge`/`wip`/`hold`, in **ascending PR-number
    order**, one at a time: brings it up to date with `main` (merge, not rebase/squash), resolves
@@ -681,13 +681,19 @@ agent); fires on `push` to `main` filtered to `paths: ['package.json', 'CHANGELO
   (PAT, so CI runs) and opens or retitles the single "Release vX.Y.Z" PR. `concurrency: release-pr`
   with cancel-in-progress — only the newest main matters. main is PR-only (ruleset `Main`), which is
   why the bump goes through a PR instead of a direct push. The **PR babysitter** merges it once CI is
-  green and `node scripts/release-automation.mjs verify-pr origin/main` passes (proves the diff is
+  green and `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes (proves the diff is
   exactly the bump of the base: `package.json` + `CHANGELOG.md` only) — no adversarial-review marker
-  is needed for a PR that passes that check. Promoting to `1.0.0` at the first public release:
-  `node scripts/bump-version.mjs --major` on `release/next` instead.
+  is needed for a PR that passes that check. `<base-checkout>` is a checkout of **main**, not of the
+  PR (e.g. `git worktree add ../tens-base origin/main`), so the checker isn't the code under review;
+  the script reads both sides via `git show`, never the working tree. Promoting to `1.0.0` at the
+  first public release: set repository variable `RELEASE_MAJOR=true` (the job then runs
+  `bump-version --major`, and `verify-pr` accepts the major result); unset it after that release
+  merges. Section dates are stamped in IST (`--date`).
 - **`backfill`** (after `tag-and-release`) — `node scripts/release-automation.mjs missing-tags` lists
-  every CHANGELOG version without a tag and the last first-parent main commit on or before its date
-  (IST); each gets a GitHub Release (`--target <sha>`, `--latest=false`), and tags without a Release
+  every CHANGELOG version without a tag and its commit: the first main commit whose `package.json`
+  has that version, else (retro versions that never were in `package.json`) the last first-parent
+  main commit on or before its date (IST); versions/tags without a CHANGELOG section are skipped
+  with a warning; each gets a GitHub Release (`--target <sha>`, `--latest=false`), and tags without a Release
   (v0.1.0–v0.5.0 predate this job) get one. Uses `GITHUB_TOKEN` on purpose: refs it creates trigger no
   workflows, so `store-release.yml`'s `v*` trigger never ships an old tag.
 - **`tag-and-release`** — described below (the original post-merge half of #52). Each run
@@ -702,9 +708,9 @@ than being silently accepted. A backward/sideways version move fails loudly. Oth
 `## [x.y.z]` section from `CHANGELOG.md` — reusing `bump-version.mjs`'s
 `extractVersionSection`, one parser for both the tag message and the Release body — pushes an
 annotated `v<version>` tag at that pushed SHA, and creates a GitHub Release (`v<version>`
-title, notes = the same changelog section). Both writes go through `GH_AUTOMATION_PAT`; the
-workflow makes **no commits and no PRs**, so "never push to main" stays intact — the version bump
-itself still lands inside the PR diff via `yarn bump-version` before merge. If `package.json`'s
+title, notes = the same changelog section). Both writes go through `GH_AUTOMATION_PAT`; this job
+makes **no commits and no PRs** (only `release-pr` commits, and only to `release/next`), so "never
+push to main" stays intact — the bump lands on main only by merging the release PR. If `package.json`'s
 version has no matching changelog section (or one with no bullet entries) the run fails loudly
 rather than tagging a noteless release — that state means the bump step was skipped or
 hand-edited and needs a human. The job is resumable: a tag that already exists without a Release

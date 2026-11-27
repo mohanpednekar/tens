@@ -53,7 +53,7 @@ platform :android do
   def checkout_version_code
     return ENV['TENS_VERSION_CODE'].to_i unless ENV['TENS_VERSION_CODE'].to_s.empty?
     major, minor, patch = package_version.split('.').map(&:to_i)
-    major * 10_000 + minor * 100 + patch
+    major * 1_000_000 + minor * 1000 + patch
   end
 
   # Version codes testers actually receive on a track: releases that are completed or rolling out.
