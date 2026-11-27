@@ -10,9 +10,12 @@ name: Release
 #    (at its release commit, via the PAT) and GitHub Release. Only ever pushes a tag + Release.
 # 3. backfill: any OLDER CHANGELOG version still lacking a tag/Release (the retroactive per-day
 #    split of #1236, or an older release whose run was missed) is tagged at its release commit, else
-#    the last main commit on or before its date. Never the current version (tag-and-release owns it). Uses
-#    GITHUB_TOKEN on purpose: refs it creates trigger no workflows, so store-release.yml never
-#    ships an old tag.
+#    the last main commit on or before its date. Never the current version (tag-and-release owns it).
+#    An old tag must never start store-release.yml. GITHUB_TOKEN can't create a ref on a commit that
+#    changed workflow files (HTTP 403), so with more than 3 missing tags they are pushed in ONE git
+#    push with the PAT — GitHub creates no push events for more than three tags pushed at once — and
+#    their Releases are then created with GITHUB_TOKEN. With 1–3 missing, each is created with
+#    GITHUB_TOKEN (no events); one it can't create is skipped with a warning, not a failed run.
 # Deterministic shell only, no agent — matching the repo's deterministic-shell rationale
 # (speed, determinism, no model-quota spend on a mechanical check).
 #
@@ -227,9 +230,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout
+      - name: Checkout (PAT, only for the batched tag push below)
         uses: actions/checkout@v7
         with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
           ref: main
           fetch-depth: 0
 
@@ -260,11 +264,35 @@ jobs:
               fs.writeFileSync("release-notes.md", s.body.trim() + "\n");'
           }
           node scripts/release-automation.mjs missing-tags > missing.txt
-          echo "Untagged versions: $(wc -l < missing.txt)"
+          count=$(wc -l < missing.txt)
+          echo "Untagged versions: ${count}"
+          if [ "$count" -gt 3 ]; then
+            # One push of >3 tags: GitHub creates no push events for it, so store-release.yml can't
+            # fire for these old versions, while the PAT can tag commits that changed workflows.
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            tags=()
+            while read -r version sha; do
+              notes "$version" || continue
+              git tag -a "v${version}" "$sha" -F release-notes.md
+              tags+=("v${version}")
+            done < missing.txt
+            if [ "${#tags[@]}" -gt 3 ]; then
+              # --atomic: all or nothing, so a partial push can never land ≤3 tags (which would fire events).
+              git push --atomic origin "${tags[@]}"
+            else
+              echo "::warning::only ${#tags[@]} taggable versions left — not pushing them in a batch; tag them by hand"
+            fi
+            : > missing.txt # Releases for the pushed tags are created by the loop below
+          fi
+          failed=0
           while read -r version sha; do
             notes "$version" || continue
-            gh release create "v${version}" --target "$sha" --title "v${version}" \
-              --notes-file release-notes.md --latest=false < /dev/null
+            if ! gh release create "v${version}" --target "$sha" --title "v${version}" \
+              --notes-file release-notes.md --latest=false < /dev/null; then
+              echo "::warning::could not create v${version} with GITHUB_TOKEN (commit changes workflows?) — tag it by hand"
+              failed=$((failed + 1))
+            fi
           done < missing.txt
           # Tags that exist without a Release (v0.1.0–v0.5.0 predate release.yml).
           git fetch --tags --force origin
@@ -272,6 +300,12 @@ jobs:
             [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
             if ! gh release view "$tag" >/dev/null 2>&1; then
               notes "${tag#v}" || continue
-              gh release create "$tag" --verify-tag --title "$tag" --notes-file release-notes.md --latest=false
+              if ! gh release create "$tag" --verify-tag --title "$tag" --notes-file release-notes.md --latest=false; then
+                echo "::warning::could not create the Release for ${tag}"
+                failed=$((failed + 1))
+              fi
             fi
           done
+          if [ "$failed" -gt 0 ]; then
+            echo "::warning::${failed} tag(s)/Release(s) not created — rerun Release (workflow_dispatch) to retry"
+          fi
