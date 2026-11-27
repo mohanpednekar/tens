@@ -150,12 +150,19 @@ jobs:
           tag_exists=false
           if [ -n "$tag_target" ]; then
             tag_exists=true
-            # Verified BEFORE the Release check below: a tag (with or without a
-            # Release) pointing at a different commit means a manual/historical
-            # tag — never silently accept or attach anything to it.
+            # Verified BEFORE the Release check below. An existing tag is accepted when it is at
+            # the computed release commit, or at another main commit whose package.json has this
+            # same version (e.g. a later versionCode-only raise moved the computed commit). A tag
+            # on a commit with a different version is a manual/historical tag — fail loudly.
             if [ "$tag_target" != "$head_sha" ]; then
-              echo "ERROR: tag ${tag} already exists but points at ${tag_target}, not this push's ${head_sha} — refusing to release another commit's tag."
-              exit 1
+              tagged_version=$(git show "${tag_target}:package.json" 2>/dev/null \
+                | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).version)}catch{console.log('')}})" || true)
+              if [ "$tagged_version" != "$version" ] || ! git merge-base --is-ancestor "$tag_target" HEAD; then
+                echo "ERROR: tag ${tag} already exists at ${tag_target} (package.json ${tagged_version:-unknown}), not at release commit ${head_sha} — refusing to release another commit's tag."
+                exit 1
+              fi
+              echo "Tag ${tag} is at ${tag_target}, an earlier main commit with the same version — keeping it."
+              head_sha="$tag_target"
             fi
           fi
 

@@ -707,9 +707,10 @@ commit** (`release-automation.mjs version-commit` — the first first-parent com
 version, never HEAD), and exits when both the tag and its GitHub Release already exist. It runs on
 every push and is the sole owner of the current version's tag (backfill skips it), so a missed or
 overtaken run self-heals on the next push and the tag is always pushed with the PAT —
-`store-release.yml` fires exactly once per release. An existing tag is always verified to point at
-the release commit first — a tag (with or without a Release) pointing anywhere else means a
-manual/historical tag and fails loudly rather than being silently accepted. A backward/sideways version move fails loudly. Otherwise it extracts that version's
+`store-release.yml` fires exactly once per release. An existing tag is always verified first: it is
+accepted at the release commit, or at another earlier main commit whose `package.json` has the same
+version (a later `versionCode`-only raise moves the computed commit — the existing tag stays); a tag
+on a commit with a different version is a manual/historical tag and fails loudly. A backward/sideways version move fails loudly. Otherwise it extracts that version's
 `## [x.y.z]` section from `CHANGELOG.md` — reusing `bump-version.mjs`'s
 `extractVersionSection`, one parser for both the tag message and the Release body — pushes an
 annotated `v<version>` tag at that release commit, and creates a GitHub Release (`v<version>`
