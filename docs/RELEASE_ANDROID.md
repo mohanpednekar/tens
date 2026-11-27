@@ -50,7 +50,8 @@ explorer → Downloads → ReTrace mapping, or Play does it automatically for AA
   release dates only move forward and the code only grows; it is far above any code from the old
   version-derived formula (0.5.0 → 500). The Fastfile and `scripts/store-release-notes.mjs` read the
   same field. Every Play upload needs a higher versionCode: merge the automatic release PR or
-  override once with `-PTENS_VERSION_CODE=…` / `TENS_VERSION_CODE=…`.
+  override once with `-PTENS_VERSION_CODE=…` / `TENS_VERSION_CODE=…` — then raise `package.json`
+  `versionCode` to that value in a PR: the next automatic code is always above it, so it is never reused.
 - **R8** — release builds run with `minifyEnabled true` + `shrinkResources true`
   (`proguard-android-optimize.txt` + `android/app/proguard-rules.pro`). Capacitor and every plugin
   ship consumer keep rules; the app-level file keeps the bridge classes and line numbers.

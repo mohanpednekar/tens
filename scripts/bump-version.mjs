@@ -320,15 +320,19 @@ export function planChangelogBump(changelogText, currentVersion, date = new Date
  * releases already dated that day in `changelogText` (0 for the first). Strictly increasing as
  * long as releases are dated in order (all development is on main), ≤ 999 releases a day, and far
  * above any code from the old version-derived formulas. Written to package.json's `versionCode`.
+ * Never below `floor + 1`, where floor is the current package.json versionCode — so a code used by a
+ * manual TENS_VERSION_CODE upload (recorded by raising package.json versionCode) is never reused.
  * @param {string} changelogText  CHANGELOG before this release is added
  * @param {string} dateStr  YYYY-MM-DD
+ * @param {number} [floor]  current package.json versionCode
  */
-export function computeVersionCode(changelogText, dateStr) {
+export function computeVersionCode(changelogText, dateStr, floor = 0) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
   if (!m) throw new Error(`invalid release date: ${dateStr}`);
   const sameDay = splitChangelog(changelogText).sections.filter((s) => s.date === dateStr).length;
   if (sameDay > 999) throw new Error(`more than 1000 releases on ${dateStr}`);
-  return (Number(m[1].slice(2)) * 10000 + Number(m[2]) * 100 + Number(m[3])) * 1000 + sameDay;
+  const dated = (Number(m[1].slice(2)) * 10000 + Number(m[2]) * 100 + Number(m[3])) * 1000 + sameDay;
+  return Math.max(dated, (Number.isInteger(floor) ? floor : 0) + 1);
 }
 
 /**
@@ -393,7 +397,7 @@ export function runBumpVersion(opts = {}) {
     return { noop: true, currentVersion };
   }
 
-  const nextPkg = { ...pkg, version: plan.nextVersion, versionCode: computeVersionCode(changelogText, plan.dateStr) };
+  const nextPkg = { ...pkg, version: plan.nextVersion, versionCode: computeVersionCode(changelogText, plan.dateStr, pkg.versionCode) };
   // Preserve trailing newline style of the original package.json.
   const pkgOut = `${JSON.stringify(nextPkg, null, 2)}\n`;
 

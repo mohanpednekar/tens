@@ -138,6 +138,9 @@ describe('bump-version', () => {
     expect(computeVersionCode(twoToday, '2026-11-27')).toBe(261127001);
     expect(computeVersionCode(text, '2027-01-02')).toBeGreaterThan(computeVersionCode(text, '2026-12-31'));
     expect(() => computeVersionCode(text, '27-1-2')).toThrow(/invalid/);
+    // a manual-upload code recorded in package.json is a floor: never reused
+    expect(computeVersionCode(text, '2026-11-27', 261127001)).toBe(261127002);
+    expect(computeVersionCode(text, '2026-11-28', 261127001)).toBe(261128000);
   });
 
   it('forceMajor promotes 0.y.z to 1.0.0', () => {

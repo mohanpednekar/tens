@@ -82,7 +82,7 @@ export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, hea
   }
   // package.json must be byte-identical to what bump-version writes: only "version" and
   // "versionCode" may change.
-  const versionCode = computeVersionCode(baseChangelog, released.date);
+  const versionCode = computeVersionCode(baseChangelog, released.date, base.versionCode);
   if (headPackage !== `${JSON.stringify({ ...base, version: headVersion, versionCode }, null, 2)}\n`) {
     return { ok: false, reason: 'package.json changes more than the "version"/"versionCode" fields' };
   }
@@ -91,12 +91,17 @@ export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, hea
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
 
-/** version → first first-parent commit (oldest first) whose package.json has that version. */
-function firstVersionCommits() {
+/**
+ * version → first first-parent commit (oldest first) whose package.json has that version (and, when
+ * `versionCode` is given, that versionCode too).
+ */
+function firstVersionCommits(versionCode) {
   const out = {};
   for (const sha of git('log', '--first-parent', '--reverse', '--format=%H', 'HEAD', '--', 'package.json').trim().split('\n').filter(Boolean)) {
     try {
-      const v = JSON.parse(git('show', `${sha}:package.json`)).version;
+      const p = JSON.parse(git('show', `${sha}:package.json`));
+      if (versionCode !== undefined && p.versionCode !== versionCode) continue;
+      const v = p.version;
       if (!out[v]) out[v] = sha;
     } catch { /* unparsable historical package.json — fall back to the date rule */ }
   }
@@ -119,7 +124,10 @@ function main(argv) {
     return;
   }
   if (cmd === 'version-commit' && baseRef) {
-    const sha = firstVersionCommits()[baseRef];
+    // The release commit is the first one whose package.json matches HEAD's version AND versionCode,
+    // so a rebase-merged release PR (several commits) resolves to the commit with the final code.
+    const headPkg = JSON.parse(git('show', 'HEAD:package.json'));
+    const sha = headPkg.version === baseRef ? firstVersionCommits(headPkg.versionCode)[baseRef] : firstVersionCommits()[baseRef];
     if (!sha) { console.error(`no main commit has package.json version ${baseRef}`); process.exitCode = 1; return; }
     console.log(sha);
     return;
