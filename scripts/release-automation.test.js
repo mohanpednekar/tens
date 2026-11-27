@@ -33,10 +33,10 @@ describe('release-automation', () => {
     ]);
   });
 
-  it('planMissingTags never plans a live release (a version that was in package.json)', () => {
+  it('planMissingTags places an older live release at its release commit, and skips the current one', () => {
     const commits = [{ sha: 'a', time: ist('2026-07-27T09:00:00') }, { sha: 'b', time: ist('2026-07-28T09:00:00') }];
-    expect(planMissingTags(changelog('', RELEASED), commits, new Set(['v0.5.0']), undefined, { '0.5.1': 'b' }))
-      .toEqual([{ version: '0.6.0', tag: 'v0.6.0', sha: 'b' }]);
+    expect(planMissingTags(changelog('', RELEASED), commits, new Set(['v0.5.0']), '0.6.0', { '0.5.1': 'b', '0.6.0': 'b' }))
+      .toEqual([{ version: '0.5.1', tag: 'v0.5.1', sha: 'b' }]);
   });
 
   it('planMissingTags fails loudly when no commit precedes a release date', () => {

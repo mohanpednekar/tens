@@ -9,8 +9,8 @@ name: Release
 # 2. tag-and-release: on every push, makes sure the current package.json version has its tag
 #    (at its release commit, via the PAT) and GitHub Release. Only ever pushes a tag + Release.
 # 3. backfill: any OLDER CHANGELOG version still lacking a tag/Release (the retroactive per-day
-#    split of #1236 — versions never in package.json) is tagged at the last main commit on or before
-#    its date. Never a live release (tag-and-release owns those), so it can't race one. Uses
+#    split of #1236, or an older release whose run was missed) is tagged at its release commit, else
+#    the last main commit on or before its date. Never the current version (tag-and-release owns it). Uses
 #    GITHUB_TOKEN on purpose: refs it creates trigger no workflows, so store-release.yml never
 #    ships an old tag.
 # Deterministic shell only, no agent — matching the repo's deterministic-shell rationale
@@ -201,7 +201,10 @@ jobs:
               [ "$now" = "$head_sha" ] || { echo "ERROR: could not push ${tag}"; exit 1; }
             fi
           fi
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes-file release-notes.md
+          # A concurrent run may create it between our check and here: re-check before failing.
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --title "$tag" --notes-file release-notes.md \
+            || gh release view "$tag" >/dev/null 2>&1
 
   backfill:
     needs: tag-and-release

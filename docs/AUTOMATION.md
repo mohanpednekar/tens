@@ -692,10 +692,11 @@ agent); fires on **every** `push` to `main` (a docs-only merge must still refres
   already-open release PR, and pass `--allow-major` to `verify-pr` only while the variable is set);
   unset it after that release merges. Section dates are stamped in IST (`--date`).
 - **`backfill`** (after `tag-and-release`) — `node scripts/release-automation.mjs missing-tags` lists
-  every untagged CHANGELOG version that was **never** in `package.json` (the retro split) and the
-  last first-parent main commit on or before its date (IST). Live releases (any version that was in
-  `package.json`) belong to `tag-and-release` only, so overlapping runs can never let backfill claim
-  one with `GITHUB_TOKEN` and suppress its store upload. Versions/tags without a CHANGELOG section
+  every untagged CHANGELOG version except the **current** one (owned by `tag-and-release`, PAT →
+  store upload) with its commit: an older live release at the commit where `package.json` became it
+  (only possible if its run was missed or overtaken — a newer release has already shipped, so a
+  suppressed store upload for it is harmless), else (retro versions never in `package.json`) the last
+  first-parent main commit on or before its date (IST). Versions/tags without a CHANGELOG section
   are skipped with a warning; each gets a GitHub Release (`--target <sha>`, `--latest=false`), and tags without a Release
   (v0.1.0–v0.5.0 predate this job) get one. Uses `GITHUB_TOKEN` on purpose: refs it creates trigger no
   workflows, so `store-release.yml`'s `v*` trigger never ships an old tag.
