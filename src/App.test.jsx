@@ -2315,23 +2315,35 @@ test.each([
   expect(screen.getAllByLabelText(ownedLabel).length).toBeGreaterThan(0)
 })
 
+// Fast clicks on a controlled clock (50 ms apart) so these tests never depend on how fast the machine renders.
+let fakeNow = 1_000_000
+const clickAt = element => {
+  fakeNow += 50
+  const spy = vi.spyOn(Date, 'now').mockReturnValue(fakeNow)
+  try {
+    fireEvent.click(element)
+  } finally {
+    spy.mockRestore()
+  }
+}
+
 test('clicking the same button 10 times in a second (any screen) unlocks Buy max; a different button in between does not', () => {
   seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
   render(<App />)
   const factory = screen.getByRole('button', { name: /^open byte factory$/i })
   const foundry = screen.getByRole('button', { name: /^open byte foundry$/i })
-  for (let i = 0; i < 5; i += 1) fireEvent.click(factory)
-  fireEvent.click(foundry)
-  for (let i = 0; i < 5; i += 1) fireEvent.click(factory)
+  for (let i = 0; i < 5; i += 1) clickAt(factory)
+  clickAt(foundry)
+  for (let i = 0; i < 5; i += 1) clickAt(factory)
   expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
-  for (let i = 0; i < 10; i += 1) fireEvent.click(factory)
+  for (let i = 0; i < 10; i += 1) clickAt(factory)
   expect(screen.getByRole('button', { name: /^open firmware$/i })).toBeInTheDocument()
 })
 
 test('clicking one real Factory Buy button 10 times in a second unlocks Buy max (its label changes between clicks)', () => {
   seedMainGameState({ resources: { base: 1e12 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
   render(<App />)
-  for (let i = 0; i < 10; i += 1) fireEvent.click(screen.getAllByRole('button', { name: /^Buy.*completed level/i })[0])
+  for (let i = 0; i < 10; i += 1) clickAt(screen.getAllByRole('button', { name: /^Buy.*completed level/i })[0])
   expect(screen.getByRole('button', { name: /^open firmware$/i })).toBeInTheDocument()
 })
 
@@ -2341,7 +2353,7 @@ test('a held key (auto-repeating clicks) does not count as fast clicking', () =>
   const factory = screen.getByRole('button', { name: /^open byte factory$/i })
   for (let i = 0; i < 12; i += 1) {
     fireEvent.keyDown(factory, { key: 'Enter', repeat: true })
-    fireEvent.click(factory)
+    clickAt(factory)
   }
   expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
 })

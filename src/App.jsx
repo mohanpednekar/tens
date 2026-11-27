@@ -141,9 +141,9 @@ function App() {
   const { recordButtonClick } = game.actions
   useEffect(() => {
     // Key = the button's DOM node (React keeps it for a given row; labels embed live values and would change per click).
-    // A held key auto-repeats clicks on a focused button, so a click that follows a repeating keydown is ignored.
+    // A held Enter auto-repeats clicks on a focused button (Space clicks once, on keyup), so a click that follows a repeating keydown is ignored.
     let ignoreNextClick = false
-    const onKeyDown = event => { if (event.repeat && event.target?.closest?.('button, [role="button"]')) ignoreNextClick = true }
+    const onKeyDown = event => { if (event.repeat && event.key === 'Enter' && event.target?.closest?.('button, [role="button"]')) ignoreNextClick = true }
     const onClick = event => {
       if (ignoreNextClick) {
         ignoreNextClick = false
