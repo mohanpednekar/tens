@@ -1,6 +1,7 @@
 import { applyAutobuyerMilestones, applyFlopsAutobuyerMilestones, autoCompleteChallenges, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
 import { EON_UPGRADE_DEFINITIONS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES } from './layers'
 import { adaptSaveForCurrentSchema, migrateToV3, SAVE_SCHEMA_VERSION } from 'save-migration'
+import { IS_NATIVE_BUILD } from 'services/config'
 
 
 
@@ -49,6 +50,7 @@ const DEV_MODE_ACTIVE_KEY = 'tens_dev_mode_active'
 const DEV_SLOT_ID = 'dev'
 const DEV_STATE_KEY = 'tens_dev_state'
 const DEV_TIMESTAMP_KEY = 'tens_dev_timestamp'
+const DEV_SUPPORTER_KEY = 'tens_dev_supporter_unlocked'
 
 /** Free players get one slot; a redeemed supporter unlock code raises this to SUPPORTER_SLOT_COUNT. */
 export const FREE_SLOT_COUNT = 1
@@ -199,7 +201,7 @@ export const getActiveSlotId = () => (isDevModeActive() ? DEV_SLOT_ID : loadSave
 export const isSupporterUnlocked = () => Boolean(loadSavesMeta().supporterUnlocked)
 
 /** Permanently unlocks the Supporter pack (slots + System log + Task Manager). Idempotent. */
-export const grantSupporterUnlock = (source = 'code') => {
+const grantSupporterUnlock = () => {
   const meta = loadSavesMeta()
   if (meta.supporterUnlocked) {
     return { ok: true, already: true, meta }
@@ -207,7 +209,7 @@ export const grantSupporterUnlock = (source = 'code') => {
   const next = withSupporterSlots({
     ...meta,
     supporterUnlocked: true,
-    supporterSource: source === 'dummy_purchase' ? 'dummy_purchase' : 'code',
+    supporterSource: 'code',
   })
   writeMeta(next)
   return { ok: true, meta: next }
@@ -288,17 +290,35 @@ export const renameSaveSlot = (slotId, name) => {
  * (extra save slots, System log, Task Manager). Real payment replaces this later.
  */
 export const redeemSupporterUnlockCode = code => {
+  if (IS_NATIVE_BUILD || (import.meta.env.DEV && isDevModeActive())) {
+    return { ok: false, reason: 'unavailable' }
+  }
   if (normalizeUnlockCode(code) !== SUPPORTER_UNLOCK_CODE) {
     return { ok: false, reason: 'invalid' }
   }
-  return grantSupporterUnlock('code')
+  return grantSupporterUnlock()
 }
 
-/**
- * Dummy checkout stand-in until real payment ships. Always "succeeds" and grants the same
- * entitlement as a valid unlock code — no money moves, no network call.
- */
-export const completeDummySupporterPurchase = () => grantSupporterUnlock('dummy_purchase')
+export const isDevSupporterUnlocked = () => {
+  if (!import.meta.env.DEV || !isDevModeActive()) return false
+  try {
+    return localStorage.getItem(DEV_SUPPORTER_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** Unlocks Supporter tools for the isolated dev save without editing numbered slot metadata. */
+export const completeDummySupporterPurchase = () => {
+  if (!import.meta.env.DEV || !isDevModeActive()) return { ok: false, reason: 'unavailable' }
+  try {
+    const already = isDevSupporterUnlocked()
+    if (!already) localStorage.setItem(DEV_SUPPORTER_KEY, '1')
+    return { ok: true, already }
+  } catch {
+    return { ok: false, reason: 'storage' }
+  }
+}
 
 export const getActiveSlotDisplayName = () => {
   const meta = loadSavesMeta()

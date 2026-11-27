@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { forfeitDailyRun, playDailyRun, restartDailyRun, startDailyRun, tickDailyRuns } from './dailyChallenges'
 import { addActivePlaySeconds, withManualPurchaseMark, recordRapidClick, resetRapidClicks, withRapidClickBest, buyCacheWarm, buyPlaytimeBonus, buyPrestigeSpeedBonus, buySleepModeCapUpgrade, getMaxOfflineSeconds, activateComputeBoost, applyOfflineProgress, AUTOBUYER_UNIT_BATCH, applyOfflineRewardBonus, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, restageManually, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry, setAutoPurgeSetting, buyEonUpgrade, buyAutoHyperscaler, setAutoHyperscalerEnabled } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, loadBuyUnitPreference, saveBuyUnitPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
+import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, loadBuyUnitPreference, saveBuyUnitPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, isDevSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -92,6 +92,10 @@ const computeInitialGame = () => {
     // dev save instead of the real active player slot. Its own entry point is gated behind
     // import.meta.env.DEV, so this stays inert (and unreachable) in a production build.
     const [devModeActive, setDevModeActiveState] = useState(() => isDevModeActive())
+    const [devSupporterUnlocked, setDevSupporterUnlocked] = useState(isDevSupporterUnlocked)
+    const supporterUnlocked = import.meta.env.DEV && devModeActive
+      ? devSupporterUnlocked
+      : savesMeta.supporterUnlocked
     // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
     const [opsSamples, setOpsSamples] = useState([])
     // AchievementToasts baseline: `earned` before any catch-up for the loaded save; `epoch` bumps on every
@@ -196,7 +200,7 @@ const computeInitialGame = () => {
 
     // Ops sparkline sampling — only while Supporter is unlocked (avoids useless work for free).
     useEffect(() => {
-      if (!savesMeta.supporterUnlocked) {
+      if (!supporterUnlocked) {
         setOpsSamples([])
         return undefined
       }
@@ -217,7 +221,7 @@ const computeInitialGame = () => {
       sample()
       const id = window.setInterval(sample, OPS_SAMPLE_INTERVAL_MS)
       return () => window.clearInterval(id)
-    }, [savesMeta.supporterUnlocked, savesMeta.activeSlotId])
+    }, [supporterUnlocked, savesMeta.activeSlotId, devModeActive])
 
     // Buy max mode (see isBuyMaxUnlocked in engine.js): a per-device preference, read through a ref
     // so the memoized actions below always see the current toggle without being rebuilt.
@@ -448,6 +452,7 @@ const computeInitialGame = () => {
     const next = !isDevModeActive()
     setDevModeActive(next)
     setDevModeActiveState(next)
+    setDevSupporterUnlocked(isDevSupporterUnlocked())
     const incompatibleReason = discardIncompatibleActiveSaveIfNeeded()
     const loaded = loadGameState()
     rebaseAchievements(loaded)
@@ -528,9 +533,9 @@ const computeInitialGame = () => {
 
   const purchaseSupporterDummy = useCallback(() => {
     const result = completeDummySupporterPurchase()
-    if (result.ok) refreshSavesUi()
+    if (result.ok) setDevSupporterUnlocked(true)
     return result
-  }, [refreshSavesUi])
+  }, [])
 
   return {
     actions,
@@ -557,6 +562,7 @@ const computeInitialGame = () => {
     resetGame,
     saveSlots,
     savesMeta,
+    supporterUnlocked,
     setBuyMaxMode,
     setBuyUnitMode,
     setDevState,

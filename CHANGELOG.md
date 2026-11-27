@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Keep the dummy Supporter checkout in active Dev Mode and isolate its unlock from regular saves. The legacy unlock code is available in normal web play.
+
 ### Security
 
 ## [0.43.0] - 2026-11-27

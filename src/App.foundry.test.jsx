@@ -2544,6 +2544,25 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     expect(isDevModeActive()).toBe(false)
   })
 
+  it('offers dummy checkout only while active and leaves the real Supporter pack locked', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await openSettings(user)
+
+    expect(screen.queryByRole('button', { name: /redeem supporter unlock code/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /dummy supporter checkout/i }))
+    expect(screen.getByText('Unlocked for the Dev Mode save.')).toBeInTheDocument()
+
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await openSettings(user)
+    expect(screen.queryByLabelText(/test supporter section/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /redeem supporter unlock code/i })).toBeInTheDocument()
+  })
+
   it('enabling switches to an isolated save and disabling resumes the real one untouched', async () => {
     const user = userEvent.setup()
     seedMainGameState({ resources: { base: 4242 } })

@@ -64,7 +64,8 @@ Continues the root `CLAUDE.md`'s "Architecture" (layers 1–2: `engine.js`, `use
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`), laid out as a
     grouped list (`SettingsGroup`/`SettingsItem` in `index.jsx`: Game / Data / Display / Danger zone captions; each `SettingsItem` row shows its
     key value and expands its section in place, aria-label `"<name> settings"`; Theme is an inline control):
-    Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
+    Supporter pack (unlock code in normal web play, isolated dummy checkout only in active Dev Mode),
+    Cloud save (`CloudSaveSection.jsx`, only when
     `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Backup / Restore
     (`ManualSaveSection.jsx`, always: copy/download/paste/file → `applyCloudSave`), Store
     (`StoreSection.jsx`, only when IAP is on), multi-slot saves, System log, Reboot
