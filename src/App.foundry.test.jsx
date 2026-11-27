@@ -2553,8 +2553,18 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     await openSettings(user)
 
     expect(screen.queryByRole('button', { name: /redeem supporter unlock code/i })).not.toBeInTheDocument()
+    const setItem = Storage.prototype.setItem
+    const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+      if (key === 'tens_dev_supporter_unlocked') throw new Error('Storage is full')
+      return setItem.call(this, key, value)
+    })
+    await user.click(screen.getByRole('button', { name: /dummy supporter checkout/i }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/couldn’t save the test unlock/i)
+    storage.mockRestore()
+
     await user.click(screen.getByRole('button', { name: /dummy supporter checkout/i }))
     expect(screen.getByText('Unlocked for the Dev Mode save.')).toBeInTheDocument()
+    expect(screen.queryByText(/couldn’t save the test unlock/i)).not.toBeInTheDocument()
 
     await openDevMode(user)
     await user.click(screen.getByRole('button', { name: /^dev mode$/i }))

@@ -302,6 +302,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   const canRedeemSupporterCode = !IS_NATIVE_BUILD && !devModeActive
   const [code, setCode] = useState('')
   const [codeStatus, setCodeStatus] = useState(null)
+  const [dummyPurchaseFailed, setDummyPurchaseFailed] = useState(false)
   const [eraConfirmOpen, setEraConfirmOpen] = useState(false)
 
   const eraCount = game.state.era?.count ?? 0
@@ -379,12 +380,15 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
               ) : (
                 <Button
                   aria-label="dummy supporter checkout"
-                  onClick={game.purchaseSupporterDummy}
+                  onClick={() => setDummyPurchaseFailed(!game.purchaseSupporterDummy().ok)}
                   type="button"
                   variant="neutral"
                 >
                   <ButtonContent>Dummy checkout (free)</ButtonContent>
                 </Button>
+              )}
+              {dummyPurchaseFailed && (
+                <StatusText $error role="alert">Couldn’t save the test unlock. Try again.</StatusText>
               )}
             </Section>
           </SettingsItem>
