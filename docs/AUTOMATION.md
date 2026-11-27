@@ -708,8 +708,8 @@ version, never HEAD), and exits when both the tag and its GitHub Release already
 every push and is the sole owner of the current version's tag (backfill skips it), so a missed or
 overtaken run self-heals on the next push and the tag is always pushed with the PAT —
 `store-release.yml` fires exactly once per release. An existing tag is always verified first: it is
-accepted at the release commit, or at another earlier main commit whose `package.json` has the same
-version (a later `versionCode`-only raise moves the computed commit — the existing tag stays); a tag
+accepted at the release commit, or at another earlier first-parent main commit whose `package.json`
+has the same version (a later `versionCode`-only raise moves the computed commit — the existing tag stays); a tag
 on a commit with a different version is a manual/historical tag and fails loudly. A backward/sideways version move fails loudly. Otherwise it extracts that version's
 `## [x.y.z]` section from `CHANGELOG.md` — reusing `bump-version.mjs`'s
 `extractVersionSection`, one parser for both the tag message and the Release body — pushes an
@@ -720,9 +720,9 @@ push to main" stays intact — the bump lands on main only by merging the releas
 version has no matching changelog section (or one with no bullet entries) the run fails loudly
 rather than tagging a noteless release — that state means the bump step was skipped or
 hand-edited and needs a human. The job is resumable: a tag that already exists without a Release
-(e.g. a prior run died between the tag push and `gh release create`) is first verified to point
-at the pushed SHA — a mismatch means a manual/historical tag and fails loudly — then the run
-finishes just the Release. It is on
+(e.g. a prior run died between the tag push and `gh release create`) is first verified by the
+same rule as above (release commit, or an earlier first-parent main commit with the same version;
+anything else fails loudly), then the run finishes just the Release. It is on
 the shared deny-list's protected base (`scripts/claude-deny-settings.sh`), so no unattended
 *Claude* agent can edit it; the Devin engine runs without a deny list and is covered by the
 always-open-a-PR + CODEOWNERS human-review gate instead. Failures are not watched by
