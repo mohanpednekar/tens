@@ -580,14 +580,18 @@ TIER_DEFINITIONS/economy-change ban applies. `deploy.yml` is still not gated on 
 
 ### Auto-merge
 
-**Nothing enables GitHub auto-merge** — not workflows, not agents — because an armed auto-merge
-fires whenever its checks go green, out of PR-number order. Merges happen only by direct merge
-from the PR babysitter routine (ascending PR-number order, see above) or a maintainer-driven
-interactive session (`CLAUDE.md` "Direct merge"). Merge commits only: the Main ruleset's
+**Only the PR babysitter routine enables GitHub auto-merge** (maintainer standing rule; its own
+scheduled-task prompt is the authority). Processing PRs in ascending PR-number order, it arms
+auto-merge (merge method `merge`) on a PR with an adversarial `APPROVE` marker for the current head
+(for `release/next`: a passing `verify-pr`), no conflicts and no unresolved threads, so the PR lands
+when required checks pass; if a later push changes the head it re-reviews and keeps auto-merge only on
+a new `APPROVE`. It may instead merge directly when every check is already green. Workflows,
+autonomous runs, Devin and dev-team roles never enable it; maintainer-driven interactive sessions
+merge directly (`CLAUDE.md` "Direct merge"). Trade-off accepted: an armed PR can land slightly out of
+PR-number order when its checks finish first. Merge commits only: the Main ruleset's
 `allowed_merge_methods` is `merge` + `rebase`; squash is rejected (issue #343). The former low-risk
 bar and its helpers (`scripts/pr-low-risk-eligible.sh`, `scripts/enable-auto-merge-if-eligible.sh`)
-were removed with it. Auto-merge requests armed before this cutover stay queued in GitHub until
-disarmed; the babysitter disarms any it finds.
+were removed with it.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
 adversarial reviewer on the final head → post the
@@ -765,8 +769,8 @@ cheap while work is still private to the session, heavier once other reviewers c
    (human, Copilot, other bots) — per `CLAUDE.md`'s existing "keep repeating check → address → push
    until status quo" loop. Don't stop after the first round just because it was addressed; a
    finding that recurs after a fix means dig for the root cause, not declare done.
-4. **Merging.** No workflow merges anything (see "Auto-merge"). A maintainer-driven interactive
-   session or the PR babysitter routine merges directly once the PR is mergeable (brought up to date
+4. **Merging.** No workflow merges anything (see "Auto-merge"; the babysitter may arm auto-merge on
+   the same conditions). A maintainer-driven interactive session or the PR babysitter routine merges directly once the PR is mergeable (brought up to date
    with `main`, then re-reviewed for the new head), every required check is complete and passing,
    nothing is still running, no review threads are unresolved, and an adversarial `APPROVE` marker
    exists for the **current head SHA**. Autonomous workflow runs, Devin and

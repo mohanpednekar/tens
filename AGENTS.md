@@ -314,7 +314,8 @@ check at draft creation, multiple adversarial-review rounds once ready. Full det
 
 **After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
 `<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, and mark the PR ready on
-`APPROVE`. Never enable GitHub auto-merge (it would merge out of PR-number order); never force-merge,
+`APPROVE`. Only the PR babysitter routine enables GitHub auto-merge (on a current-head `APPROVE`, no
+conflicts, no unresolved threads); every other agent/workflow never does. Never force-merge,
 never push to `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.
 

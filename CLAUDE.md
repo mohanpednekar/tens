@@ -115,10 +115,12 @@ SHA before considering the session done. Post its machine-readable marker as a P
 ```
 
 Then: **`APPROVE`** → mark ready; **`NEEDS CHANGES` / `BLOCK`** → fix (or stop) and re-run the reviewer
-after the next final commit so the marker matches the new HEAD. **Never enable GitHub auto-merge** (it
-would merge out of PR-number order): merging is done only by the PR babysitter routine, in ascending
-PR-number order, or by a maintainer-driven interactive session (below). Never force-merge, push to
-`main`, or GitHub-approve your own PR.
+after the next final commit so the marker matches the new HEAD. **Only the PR babysitter routine
+enables GitHub auto-merge** (maintainer standing rule; merge method `merge`): it arms it, in
+ascending PR-number order, on a PR with an `APPROVE` marker for the current head, no conflicts and no
+unresolved threads, and re-checks if the head changes. Workflows, autonomous runs and other agents
+never enable it; maintainer-driven interactive sessions merge directly (below). Never force-merge,
+push to `main`, or GitHub-approve your own PR.
 
 **Direct merge (maintainer standing rule):** in
 maintainer-driven interactive sessions and the PR babysitter routine, for every PR in this repo: once the PR is
@@ -227,8 +229,8 @@ assignments idempotent, running on every `autonomous-maintenance.yml` invocation
 ## Automation workflows
 
 Claude/GitHub automation under `.github/workflows/` runs unattended and opens PRs, but no workflow follows up
-on, refreshes or merges PRs (the PR babysitter routine does; "Pull requests"), and nothing enables GitHub
-auto-merge (it would break PR-number merge order). Git/GitHub
+on, refreshes or merges PRs (the PR babysitter routine does; "Pull requests"), and no workflow enables GitHub
+auto-merge (only the babysitter routine may). Git/GitHub
 writes authenticate via the `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (its pushes/merges can't trigger other
 workflows; read-only guard steps, the deploy-failure alert, and `devin-workflow-health.yml`/`deploy.yml` use
 `GITHUB_TOKEN`). The PAT has `Workflows: write`, so autonomous runs may push `.github/workflows/**` changes when a

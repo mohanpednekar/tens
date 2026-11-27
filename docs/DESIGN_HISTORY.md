@@ -9767,3 +9767,12 @@ so Gradle, the Fastfile and `store-release-notes.mjs` read one value instead of 
 A git commit count was considered and rejected by the maintainer in favour of a readable date code.
 CalVer for the version name itself was considered and rejected: the maintainer kept SemVer.
 
+
+## PR babysitter may enable auto-merge (2026-11)
+
+The earlier rule ("nothing enables GitHub auto-merge — it would merge out of PR-number order") had
+drifted from the maintainer's babysitter scheduled-task prompt, which explicitly wants auto-merge
+armed on approved PRs. Maintainer decision: the docs now follow the prompt. Only the babysitter arms
+it (merge method `merge`, current-head `APPROVE`, no conflicts, no unresolved threads, re-checked on
+head changes); workflows, autonomous runs and other agents still never do. Accepted trade-off: an
+armed PR can land slightly out of PR-number order when its checks finish first.
