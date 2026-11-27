@@ -224,9 +224,10 @@ jobs:
             release) cat > "$brief" <<'BRIEF_EOF'
           SLOT TASK: weekly release readiness. After Phase 0: audit merged PRs since the last tag
           for missing/incorrect CHANGELOG [Unreleased] entries and fix them; check docs/CLAUDE.md
-          sync, `yarn test` + `yarn build` green on main. If Unreleased is non-empty and nothing
-          release-blocking is open on the target milestone, open a PR running `yarn bump-version`;
-          otherwise file/refresh a `release-readiness` comment listing blockers.
+          sync, `yarn test` + `yarn build` green on main. Versioning is automatic: never run
+          `yarn bump-version` or open a bump PR yourself — release.yml keeps the `release/next` PR.
+          If Unreleased is non-empty, check that PR exists and is CI-green (fix its CI via a normal
+          PR to main if red); otherwise file/refresh a `release-readiness` comment listing blockers.
           BRIEF_EOF
             ;;
             retro) cat > "$brief" <<'BRIEF_EOF'

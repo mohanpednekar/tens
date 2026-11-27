@@ -60,7 +60,7 @@ Claude to run it (`store-release` skill).
 
 `.github/workflows/store-release.yml` runs all of it:
 
-- **Tag push** `v*` (pushed by `release.yml` after a `yarn bump-version` PR merges) — when repository
+- **Tag push** `v*` (pushed by `release.yml` after the automatic `release/next` release PR merges) — when repository
   variable `STORE_AUTO_RELEASE` is `true`: Play **internal** track + **TestFlight**, listing included.
 - **Manual dispatch** — platforms, Play track (`internal`/`alpha` = closed/`beta` = open/`production`/
   `none`), status (`draft` until first publish), staged rollout fraction, iOS action (`testflight`/

@@ -1,10 +1,18 @@
 name: Release
 
-# Post-merge half of #52: when a push to main changes package.json's "version",
-# tag it and create a GitHub Release. The pre-merge half (PR authors running
-# `yarn bump-version` — scripts/bump-version.mjs) already landed the version
-# bump inside the merged PR diff, so this workflow only ever *reads* main and
-# pushes a tag + Release — never a commit, never a PR.
+# Versioning is automatic (#1236) — nobody picks a version number:
+# 1. release-pr: whenever main's CHANGELOG ## [Unreleased] has entries, (re)build branch
+#    `release/next` = main + `yarn bump-version` and keep one open "Release vX.Y.Z" PR for it.
+#    main is PR-only (ruleset), so the bump cannot be pushed to main directly. The PR babysitter
+#    merges it once `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes and CI is
+#    green (docs/AUTOMATION.md "Release").
+# 2. tag-and-release: on every push, makes sure the current package.json version has its tag
+#    (at its release commit, via the PAT) and GitHub Release. Only ever pushes a tag + Release.
+# 3. backfill: any OLDER CHANGELOG version still lacking a tag/Release (the retroactive per-day
+#    split of #1236, or an older release whose run was missed) is tagged at its release commit, else
+#    the last main commit on or before its date. Never the current version (tag-and-release owns it). Uses
+#    GITHUB_TOKEN on purpose: refs it creates trigger no workflows, so store-release.yml never
+#    ships an old tag.
 # Deterministic shell only, no agent — matching the repo's deterministic-shell rationale
 # (speed, determinism, no model-quota spend on a mechanical check).
 #
@@ -12,20 +20,84 @@ name: Release
 # pushed SHA, so serializing with a single-slot queue could drop a middle
 # version bump entirely. Runs are idempotent instead.
 
+# Every main push (no paths filter): a docs-only merge must still refresh release/next so it is
+# never left behind main. workflow_dispatch re-runs release-pr + backfill by hand — e.g. right
+# after setting RELEASE_MAJOR, so an already-open release PR picks up the major bump.
 on:
   push:
     branches:
       - main
-    paths:
-      - package.json
+  workflow_dispatch:
 
-# GITHUB_TOKEN needs nothing beyond read here — every write (tag push, Release)
-# goes through GH_AUTOMATION_PAT like the other automation workflows.
+# GITHUB_TOKEN is read-only by default; release-pr and tag-and-release write through
+# GH_AUTOMATION_PAT. Only backfill raises GITHUB_TOKEN to contents: write, on purpose (see top).
 permissions:
   contents: read
 
 jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only the newest main matters: an older run's branch would be force-pushed over anyway.
+    concurrency:
+      group: release-pr
+      cancel-in-progress: true
+    steps:
+      - name: Checkout (automation PAT so the push triggers CI on the release PR)
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Open or refresh the release PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          # Set repo variable RELEASE_MAJOR=true to promote the next release to the next major
+          # (0.x → 1.0.0 at the first public release); unset it once that release has merged.
+          RELEASE_MAJOR: ${{ vars.RELEASE_MAJOR }}
+        run: |
+          set -euo pipefail
+          has_entries=$(node --input-type=module -e '
+            import { extractVersionSection, unreleasedHasEntries } from "./scripts/bump-version.mjs";
+            import fs from "node:fs";
+            const s = extractVersionSection(fs.readFileSync("CHANGELOG.md", "utf8"), "Unreleased");
+            console.log(s && unreleasedHasEntries(s.body) ? "yes" : "no");')
+          if [ "$has_entries" != "yes" ]; then
+            echo "Unreleased is empty on main — no release PR needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B release/next
+          major_flag=""
+          if [ "${RELEASE_MAJOR:-}" = "true" ]; then major_flag="--major"; fi
+          # Dates are IST (maintainer timezone), matching release-automation.mjs's date rule.
+          # One IST stamp for both, so date and time can't straddle midnight.
+          stamp=$(TZ=Asia/Kolkata date +%F_%H%M)
+          node scripts/bump-version.mjs $major_flag --date="${stamp%_*}" --time="${stamp#*_}"
+          version=$(node -p "require('./package.json').version")
+          git commit -am "Release v${version}"
+          VERSION="$version" node --input-type=module -e '
+            import { extractVersionSection } from "./scripts/bump-version.mjs";
+            import fs from "node:fs";
+            const s = extractVersionSection(fs.readFileSync("CHANGELOG.md", "utf8"), process.env.VERSION);
+            fs.writeFileSync("release-notes.md",
+              "Automatic release PR (release.yml). Merge once CI is green and " +
+              "`node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next" +
+              (process.env.RELEASE_MAJOR === "true" ? " --allow-major" : "") + "` passes.\n\n" + s.body.trim() + "\n");'
+          git push --force origin release/next
+          # Same-repo PRs only: a fork PR whose branch is also named release/next must never be edited.
+          pr=$(gh pr list --head release/next --base main --state open --json number,isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "Release v${version}" --body-file release-notes.md
+          else
+            gh pr create --base main --head release/next --title "Release v${version}" --body-file release-notes.md
+          fi
+
   tag-and-release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -42,24 +114,19 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
-          head_sha=$(git rev-parse HEAD)
           version=$(node -p "require('./package.json').version")
           tag="v${version}"
-          echo "package.json version at this main HEAD: ${version} (${tag} @ ${head_sha})"
+          # Sole owner of the CURRENT version's tag (backfill skips it): always tag the release
+          # commit — the first main commit where package.json became this version — never HEAD.
+          # Runs on every push, so a missed or overtaken run self-heals on the next push, and the
+          # tag is always pushed with the PAT, so store-release.yml fires exactly once per release.
+          head_sha=$(node scripts/release-automation.mjs version-commit "$version")
+          echo "Current version ${version}: release commit ${head_sha}"
 
-          # paths: ['package.json'] also fires on dependency bumps and other
-          # non-version edits — only act when this push actually bumped the
-          # version field, so an unrelated merge can't tag the current version
-          # at a non-release commit (which would also preempt #51's historical
-          # placement of the retroactive tags).
           if [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
             old_version=$(git show "$BEFORE_SHA:package.json" \
               | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
-            if [ "$old_version" = "$version" ]; then
-              echo "Version unchanged by this push ($old_version -> $version) — nothing to tag."
-              exit 0
-            fi
-            VERSION="$version" OLD_VERSION="$old_version" node --input-type=module -e '
+            [ "$old_version" = "$version" ] || VERSION="$version" OLD_VERSION="$old_version" node --input-type=module -e '
               import { parseSemver } from "./scripts/bump-version.mjs";
               const o = parseSemver(process.env.OLD_VERSION);
               const n = parseSemver(process.env.VERSION);
@@ -72,7 +139,6 @@ jobs:
                   `(${process.env.OLD_VERSION} -> ${process.env.VERSION}) — refusing to tag`);
                 process.exit(1);
               }'
-            echo "Version bumped by this push: $old_version -> $version"
           fi
 
           # Peeled (^{}) form resolves an annotated tag to its target commit; a
@@ -86,12 +152,19 @@ jobs:
           tag_exists=false
           if [ -n "$tag_target" ]; then
             tag_exists=true
-            # Verified BEFORE the Release check below: a tag (with or without a
-            # Release) pointing at a different commit means a manual/historical
-            # tag — never silently accept or attach anything to it.
+            # Verified BEFORE the Release check below. An existing tag is accepted when it is at
+            # the computed release commit, or at another main commit whose package.json has this
+            # same version (e.g. a later versionCode-only raise moved the computed commit). A tag
+            # on a commit with a different version is a manual/historical tag — fail loudly.
             if [ "$tag_target" != "$head_sha" ]; then
-              echo "ERROR: tag ${tag} already exists but points at ${tag_target}, not this push's ${head_sha} — refusing to release another commit's tag."
-              exit 1
+              tagged_version=$(git show "${tag_target}:package.json" 2>/dev/null \
+                | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).version)}catch{console.log('')}})" || true)
+              if [ "$tagged_version" != "$version" ] || ! git rev-list --first-parent HEAD | grep -x "$tag_target" >/dev/null; then
+                echo "ERROR: tag ${tag} already exists at ${tag_target} (package.json ${tagged_version:-unknown}), not at release commit ${head_sha} — refusing to release another commit's tag."
+                exit 1
+              fi
+              echo "Tag ${tag} is at ${tag_target}, an earlier main commit with the same version — keeping it."
+              head_sha="$tag_target"
             fi
           fi
 
@@ -130,7 +203,75 @@ jobs:
           if [ "$tag_exists" = false ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag -a "$tag" -F release-notes.md
-            git push origin "$tag"
+            git tag -a "$tag" "$head_sha" -F release-notes.md
+            if ! git push origin "$tag"; then
+              # A concurrent run may have just pushed it; accept only the same commit.
+              now=$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')
+              [ "$now" = "$head_sha" ] || { echo "ERROR: could not push ${tag}"; exit 1; }
+            fi
           fi
-          gh release create "$tag" --title "$tag" --notes-file release-notes.md
+          # A concurrent run may create it between our check and here: re-check before failing.
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --title "$tag" --notes-file release-notes.md \
+            || gh release view "$tag" >/dev/null 2>&1
+
+  backfill:
+    needs: tag-and-release
+    # Runs after a successful tag-and-release, or on a manual dispatch (tag-and-release skipped).
+    if: always() && (needs.tag-and-release.result == 'success' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: release-backfill
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Tag and release every untagged CHANGELOG version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # On push, only when this push touched the versioning files (keeps docs-only merges cheap).
+          if [ "$EVENT_NAME" = "push" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            changed=$(git diff --name-only "$BEFORE_SHA" "$HEAD_SHA")
+            if ! grep -xE 'CHANGELOG.md|package.json' <<<"$changed" >/dev/null; then
+              echo "Push did not touch CHANGELOG.md/package.json — nothing to backfill."
+              exit 0
+            fi
+          fi
+          git fetch --tags --force origin
+          # Writes release-notes.md; returns 1 (with a warning) when the version has no section.
+          notes() {
+            VERSION="$1" node --input-type=module -e '
+              import { extractVersionSection } from "./scripts/bump-version.mjs";
+              import fs from "node:fs";
+              const s = extractVersionSection(fs.readFileSync("CHANGELOG.md", "utf8"), process.env.VERSION);
+              if (!s) { console.log(`::warning::no CHANGELOG section for ${process.env.VERSION} — skipped`); process.exit(1); }
+              fs.writeFileSync("release-notes.md", s.body.trim() + "\n");'
+          }
+          node scripts/release-automation.mjs missing-tags > missing.txt
+          echo "Untagged versions: $(wc -l < missing.txt)"
+          while read -r version sha; do
+            notes "$version" || continue
+            gh release create "v${version}" --target "$sha" --title "v${version}" \
+              --notes-file release-notes.md --latest=false < /dev/null
+          done < missing.txt
+          # Tags that exist without a Release (v0.1.0–v0.5.0 predate release.yml).
+          git fetch --tags --force origin
+          for tag in $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=version:refname); do
+            [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              notes "${tag#v}" || continue
+              gh release create "$tag" --verify-tag --title "$tag" --notes-file release-notes.md --latest=false
+            fi
+          done

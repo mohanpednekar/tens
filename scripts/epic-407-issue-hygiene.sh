@@ -86,18 +86,7 @@ add_label_if_missing() {
   echo "Issue #$num: added label '$label'."
 }
 
-set_milestone_if_missing() {
-  local num=$1
-  local milestone=$2
-  local current
-  current=$(gh issue view "$num" --json milestone --jq '.milestone.title // ""' 2>/dev/null || echo '')
-  if [ "$current" = "$milestone" ]; then
-    echo "Issue #$num: milestone '$milestone' already set — skipping."
-    return 0
-  fi
-  run gh issue edit "$num" --milestone "$milestone"
-  echo "Issue #$num: set milestone '$milestone'."
-}
+# Milestones are owned solely by scripts/sync-release-milestones.sh (#1236).
 
 DESIGN_LOCKIN="$(cat <<'EOF'
 ## Design lock-in (shipped naming — supersede stale "meta-prestige" / `metaPrestige` wording)
@@ -140,7 +129,6 @@ for num in 411 412 413 414; do
     continue
   fi
   add_label_if_missing "$num" 'claude-task'
-  set_milestone_if_missing "$num" 'v0.7.0'
 done
 
 add_label_if_missing 411 'size:M'

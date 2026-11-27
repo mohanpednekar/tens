@@ -44,10 +44,15 @@ Output: `android/app/build/outputs/bundle/release/app-release.aab`, plus the R8 
 `android/app/build/outputs/mapping/release/mapping.txt` (upload it to Play Console → App bundle
 explorer → Downloads → ReTrace mapping, or Play does it automatically for AABs).
 
-- **Version** — `versionName` is `package.json`'s `version`; `versionCode` is derived from it
-  (`major*10000 + minor*100 + patch`, so 0.5.0 → 500). Every Play upload needs a higher
-  versionCode: bump the version (`yarn bump-version`) or override once with
-  `-PTENS_VERSION_CODE=501` / `TENS_VERSION_CODE=501`.
+- **Version** — `versionName` is `package.json`'s `version`; `versionCode` is `package.json`'s
+  `versionCode`, written by the automatic release bump as **YYDDDHHMM** — 2-digit year, day of year,
+  IST time of the bump (e.g. 2026-11-27 13:30 → `263311330`; Play's 2,100,000,000 cap rules out
+  YYMMDDHHMM, and this fits until 2099). All development is on main, so
+  release dates only move forward and the code only grows; it is far above any code from the old
+  version-derived formula (0.5.0 → 500). The Fastfile and `scripts/store-release-notes.mjs` read the
+  same field. Every Play upload needs a higher versionCode: merge the automatic release PR or
+  override once with `-PTENS_VERSION_CODE=…` / `TENS_VERSION_CODE=…` — then raise `package.json`
+  `versionCode` to that value in a PR: the next automatic code is always above it, so it is never reused.
 - **R8** — release builds run with `minifyEnabled true` + `shrinkResources true`
   (`proguard-android-optimize.txt` + `android/app/proguard-rules.pro`). Capacitor and every plugin
   ship consumer keep rules; the app-level file keeps the bridge classes and line numbers.

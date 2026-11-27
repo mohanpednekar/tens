@@ -229,8 +229,9 @@ resolve to that dir's `index.jsx`/`index.js`.
 `CHANGELOG.md` (repo root, Keep a Changelog format) tracks user-facing/behaviorally-relevant changes
 from `v0.5.0` onward — add an entry under `## [Unreleased]`'s matching subheading for any such PR;
 skip it for docs-only/internal CI changes. `package.json`'s `"version"` mirrors this file's released
-sections. To cut Unreleased into a dated release on a PR branch, run `yarn bump-version` (see
-`CLAUDE.md`'s Changelog convention; major bumps stay manual).
+sections. Versioning is automatic (never ask, never bump in a feature PR): `release.yml` keeps a
+`release/next` PR with the `yarn bump-version` result; 0.y.z → breaking/Added/Removed = minor, else
+patch; from 1.0.0 ideal semver. Mark breaking bullets `**Breaking:**` (see `CLAUDE.md`'s Changelog convention).
 
 ## Issue tracking conventions
 
@@ -251,9 +252,9 @@ sections. To cut Unreleased into a dated release on a PR branch, run `yarn bump-
 - **GitHub Milestones vs Project `Track`:** complementary axes. A Milestone targets one planned release
   (due date + automatic X/Y-closed progress); `Track` groups issues by theme/dependency chain and can
   span releases. Interactive sessions and Planning (#53) should assign **player-facing**
-  feature/economy issues to the next release's milestone. `v0.6.0` (UI revamp) has shipped; `v0.7.0`
-  (Era ascension, now player-labelled Reboot) is the current next-release milestone. Process/infrastructure `claude-task` issues
-  typically stay off a versioned milestone.
+  feature/economy issues to the matching milestone. Milestones are named by feature, never by version
+  (versions are automatic); open: `Guide screens`, `Guide screens — spotlights & What's new`. Process/infrastructure
+  `claude-task` issues typically stay off a milestone.
 
 ## Budget discipline
 
@@ -283,9 +284,8 @@ loop check feedback → address → resolve threads until mergeable before the r
 waits for the PR babysitter routine).
 
 Everything else lives in `docs/AUTOMATION.md` — read it before touching any `.github/workflows/*.yml`:
-`main-ci-heal.yml`, `revert-deploy.yml`, `release.yml` (on a `package.json`
-push to `main`, tags `v<x.y.z>` and creates the GitHub Release from that `CHANGELOG.md` section;
-pre-merge half is `yarn bump-version`), the run summary (`## RUN SUMMARY` in each run's job summary,
+`main-ci-heal.yml`, `revert-deploy.yml`, `release.yml` (keeps the automatic `release/next` bump PR open while
+Unreleased has entries; on a `package.json` version bump tags `v<x.y.z>` + creates the Release; backfills untagged versions), the run summary (`## RUN SUMMARY` in each run's job summary,
 #74), guard-step feeds (bounded by standing rule #81: explicit `--limit` + display cap with "+N more";
 number + title + labels only, never bodies), the Discussions "Ideas" feed (#66, propose-only), the
 orphaned-branch feed (#59, `scripts/orphan-branch-scan.sh`), shared helpers

@@ -122,7 +122,9 @@ const seedMainGameState = (overrides = {}) => {
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
-  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
 }
 
@@ -2486,7 +2488,9 @@ test('Reboot survives a page reload', async () => {
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
-  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
   expect(screen.getByLabelText(/^reboot section$/i)).toHaveTextContent('1 Kernel')
 })
