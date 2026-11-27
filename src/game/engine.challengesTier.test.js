@@ -421,35 +421,48 @@ describe('offline replay equals one long tick for time-based rules', () => {
     tickspeedLevels: { ...state.tickspeedLevels, [T(tierIndex)]: tickLevel || state.tickspeedLevels?.[T(tierIndex)] },
   })
   // 600 s is within the full-speed window, so the replay simulates exactly 600 s.
+  const replay = (id, tierIndex, level) => {
+    const start = runOf(id, seedOf(tierIndex, level))
+    return { offline: applyOfflineProgress(600)(start), long: tickGame(600)(start) }
+  }
   it.each([
     ['F5', 4, 0],
     ['F15', 4, 5],
     ['F19', 8, 5],
   ])('%s: applyOfflineProgress(600) matches tickGame(600)', (id, tierIndex, level) => {
-    const start = runOf(id, seedOf(tierIndex, level))
-    const offline = applyOfflineProgress(600)(start)
-    const long = tickGame(600)(start)
+    const { offline, long } = replay(id, tierIndex, level)
     expect(offline.challenges.activeSeconds).toBeCloseTo(600)
     expect(offline.challenges.activeSeconds).toBeCloseTo(long.challenges.activeSeconds)
-    expect(offline.challenges.run.refreshes).toBe(long.challenges.run.refreshes)
     expect(offline.tickspeedLevels[T(tierIndex)]).toBe(long.tickspeedLevels[T(tierIndex)])
-    if (id === 'F5') {
-      // Hard Refresh fires at 300 s and 600 s, and the last one leaves Petabytes empty.
-      expect(offline.challenges.run.refreshes).toBe(2)
-      expect(offline.owned[T(4)]).toBe(0)
-    }
-    // Clock Drift fires once at 600 s: Petabytes tickspeed drops from level 5 to 4.
-    if (id === 'F15') expect(offline.tickspeedLevels[T(4)]).toBe(4)
-    if (id === 'F19') {
-      // Duty Cycle only changes how fast Ronnabytes produce the tier below: compare that output, with a no-rule contrast.
-      const produced = state => state.owned[T(7)]
-      expect(produced(offline)).toBeGreaterThan(50)
-      expect(Math.abs(produced(offline) - produced(long)) / produced(long)).toBeLessThan(0.02)
-      const noRule = tickGame(600)(runOf('F2', seedOf(tierIndex, level)))
-      expect(Math.abs(produced(noRule) - produced(offline))).toBeGreaterThan(1)
-      // A level-1 F19 control (the on-window has nothing to add) produces less, so the on-window adds output.
-      expect(produced(offline)).toBeGreaterThan(produced(applyOfflineProgress(600)(runOf(id, seedOf(tierIndex, 1)))))
-    }
+  })
+
+  it('F5: Hard Refresh fires at 300 s and 600 s in both paths, leaving Petabytes empty', () => {
+    const { offline, long } = replay('F5', 4, 0)
+    expect(offline.challenges.run.refreshes).toBe(2)
+    expect(long.challenges.run.refreshes).toBe(2)
+    expect(offline.owned[T(4)]).toBe(0)
+  })
+
+  it('F15: Clock Drift fires once at 600 s, dropping Petabytes tickspeed from level 5 to 4', () => {
+    const { offline, long } = replay('F15', 4, 5)
+    expect(offline.tickspeedLevels[T(4)]).toBe(4)
+    expect(long.tickspeedLevels[T(4)]).toBe(4)
+  })
+
+  it('F19: Duty Cycle output matches across paths, and the on-window out-produces the off-window', () => {
+    const produced = state => state.owned[T(7)]
+    const { offline, long } = replay('F19', 8, 5)
+    expect(produced(offline)).toBeGreaterThan(50)
+    expect(Math.abs(produced(offline) - produced(long)) / produced(long)).toBeLessThan(0.02)
+    // Nothing produces Ronnabytes here, so each window's gain depends only on the effective tickspeed:
+    // [0, 30) is on (level 5), [30, 60) is off (read as level 1). Measured ~1.33x; without the rule the off-window gains more.
+    const start = runOf('F19', seedOf(8, 5))
+    const afterOn = applyOfflineProgress(30)(start)
+    const afterOff = applyOfflineProgress(30)(afterOn)
+    const onGain = produced(afterOn) - produced(start)
+    const offGain = produced(afterOff) - produced(afterOn)
+    expect(offGain).toBeGreaterThan(0)
+    expect(onGain).toBeGreaterThan(offGain * 1.2)
   })
 
   it('F9: a Bit Rot restart during the gap is counted and the challenge stays active', () => {
