@@ -63,6 +63,11 @@ describe('release-automation', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     });
 
+    it('accepts floor + 1 when the floor is already past the release minute', () => {
+      const basePackage = pkg('0.6.0', { versionCode: 263312359 });
+      expect(verifyReleasePr({ ...args, basePackage, headPackage: head('0.7.0', { versionCode: 263312360 }) })).toEqual({ ok: true, version: '0.7.0' });
+    });
+
     it('accepts exactly the bump-version result', () => {
       expect(verifyReleasePr(args)).toEqual({ ok: true, version: '0.7.0' });
     });
@@ -79,6 +84,8 @@ describe('release-automation', () => {
       ['versionCode for another day', { headPackage: head('0.7.0', { versionCode: 263321330 }) }, /not YYDDDHHMM/],
       ['versionCode with an invalid time', { headPackage: head('0.7.0', { versionCode: 263312460 }) }, /not YYDDDHHMM/],
       ['versionCode not above the base', { basePackage: pkg('0.6.0', { versionCode: 263311330 }) }, /not YYDDDHHMM/],
+      // floor+1 from an older floor lands before the release day — computeVersionCode never emits it
+      ['floor + 1 before the release day', { basePackage: pkg('0.6.0', { versionCode: 260010000 }), headPackage: head('0.7.0', { versionCode: 260010001 }) }, /not YYDDDHHMM/],
       ['edited notes', { headChangelog: plan.nextText.replace('- New.', '- Sneaky.') }, /differs/],
       ['nothing to release', { baseChangelog: changelog('### Added\n', RELEASED) }, /nothing to release/],
     ])('rejects %s', (_name, override, reason) => {

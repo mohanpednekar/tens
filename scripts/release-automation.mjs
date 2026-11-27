@@ -88,8 +88,11 @@ export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, hea
   const sameDay = Number.isInteger(versionCode)
     && Math.floor(versionCode / 10000) === versionCodeDayPrefix(released.date)
     && Math.floor(hhmm / 100) < 24 && hhmm % 100 < 60;
-  // floor + 1 can spill past the day's last minute only after 1440 same-day codes — not a real case.
-  if (!Number.isInteger(versionCode) || versionCode <= floor || (!sameDay && versionCode !== floor + 1)) {
+  // Exactly what computeVersionCode can emit: a valid HHMM that day above the floor, or floor + 1
+  // when the floor is already at/after that day's first code (never a code before the release day).
+  const dayStart = versionCodeDayPrefix(released.date) * 10000;
+  const floorPlusOne = versionCode === floor + 1 && floor + 1 >= dayStart;
+  if (!Number.isInteger(versionCode) || versionCode <= floor || (!sameDay && !floorPlusOne)) {
     return { ok: false, reason: `versionCode ${versionCode} is not YYDDDHHMM for ${released.date} above ${floor}` };
   }
   // package.json must be byte-identical to what bump-version writes: only "version" and
