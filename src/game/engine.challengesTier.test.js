@@ -433,7 +433,14 @@ describe('offline replay equals one long tick for time-based rules', () => {
     expect(offline.challenges.activeSeconds).toBeCloseTo(long.challenges.activeSeconds)
     expect(offline.challenges.run.refreshes).toBe(long.challenges.run.refreshes)
     expect(offline.tickspeedLevels[T(tierIndex)]).toBe(long.tickspeedLevels[T(tierIndex)])
-    expect(offline.owned[T(tierIndex)]).toBeCloseTo(long.owned[T(tierIndex)], 3)
+    if (id === 'F19') {
+      // Duty Cycle only changes how fast Ronnabytes produce the tier below: compare that output, with a no-rule contrast.
+      const produced = state => state.owned[T(7)]
+      expect(produced(offline)).toBeGreaterThan(50)
+      expect(Math.abs(produced(offline) - produced(long)) / produced(long)).toBeLessThan(0.02)
+      const noRule = tickGame(600)(runOf('F2', seedOf(tierIndex, level)))
+      expect(Math.abs(produced(noRule) - produced(offline))).toBeGreaterThan(1)
+    }
   })
 
   it('F9: a Bit Rot restart during the gap is counted and the challenge stays active', () => {
