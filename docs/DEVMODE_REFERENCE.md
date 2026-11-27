@@ -32,6 +32,10 @@ toggling on for the first time starts from a fresh `createInitialGameState()`.
 `isDevModeActive`/`setDevModeActive` persist the flag itself (`tens_dev_mode_active`) separately from
 `tens_saves_meta`, so flipping it never touches player slot bookkeeping.
 
+Settings → Test Supporter exposes the dummy checkout only while Dev Mode is active. Its unlock is
+stored in `tens_dev_supporter_unlocked`, which lets the dev save exercise the System log and Task
+Manager without changing regular Supporter entitlements or numbered save slots.
+
 `DevModePage` mirrors the real game's UI: a header card with a Firmware-style `Switch` (`aria-label="dev
 mode"`) and HUD-style readouts (Bits, PP, Prestiges, Reboot · Kernels, Capacity in binary units), then three ways to
 seed/experiment, all going through `useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both
