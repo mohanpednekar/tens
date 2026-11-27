@@ -368,7 +368,7 @@ docs/                        ← DESIGN_HISTORY.md (the "why": superseded formul
                                lake engine code), MAINPAGE_REFERENCE.md (incl. ComputePage), COMPONENTS_REFERENCE.md
                                (component props/styling), TESTING_REFERENCE.md, THEMING_REFERENCE.md, PWA_REFERENCE.md,
                                NATIVE_APPS_REFERENCE.md, DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md,
-                               STORE_RELEASE.md (automated store pipeline)
+                               STORE_RELEASE.md (automated store pipeline), REPO_META_REFERENCE.md (Funding/License rationale)
 src/
   game/
     layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
@@ -554,22 +554,11 @@ SDK targets, feature flags, mobile-build.yml, rewarded-ad placement) before touc
 with fastlane (`fastlane/` listing text is the source of truth; `Gemfile`) via `store-release.yml` —
 **read `docs/STORE_RELEASE.md`** before touching either; agents follow the `store-release` skill.
 
-## Funding
+## Funding & License
 
-`.github/FUNDING.yml` declares GitHub Sponsors for `mohanpednekar`, so the repo shows a native "Sponsor"
-button. The file alone doesn't enroll the account — Sponsors enrollment (`github.com/sponsors`) is a
-separate, maintainer-only step tracked in issue #62's checklist; until then the button won't
-display/function.
-
-## License
-
-`LICENSE` (repo root) is an explicit all-rights-reserved notice — the maintainer's deliberate choice over
-an OSS license (MIT/Apache 2.0/etc.). Code stays publicly visible but isn't legally reusable without
-written permission; this states what default copyright already implies, for clarity given the repo's
-public-visibility surface (GitHub Sponsors, Releases, the PWA). A `CODE_OF_CONDUCT`/`CONTRIBUTING` guide
-is deliberately not present — a solo, AI-driven hobby project not soliciting external contributions;
-`README.md`, `.github/ISSUE_TEMPLATE/` (`claude-task.yml` + `config.yml`), and
-`.github/pull_request_template.md` already cover the useful Community Standards items.
+`.github/FUNDING.yml` → GitHub Sponsors (enrollment is a maintainer-only step, issue #62). `LICENSE` is an
+explicit all-rights-reserved notice (deliberate; not OSS) — don't add an OSS license, or a
+`CODE_OF_CONDUCT`/`CONTRIBUTING` guide (deliberately absent). Rationale: `docs/REPO_META_REFERENCE.md`.
 
 ## Testing
 
