@@ -45,9 +45,10 @@ Output: `android/app/build/outputs/bundle/release/app-release.aab`, plus the R8 
 explorer → Downloads → ReTrace mapping, or Play does it automatically for AABs).
 
 - **Version** — `versionName` is `package.json`'s `version`; `versionCode` is derived from it
-  (`major*10000 + minor*100 + patch`, so 0.5.0 → 500). Every Play upload needs a higher
-  versionCode: bump the version (`yarn bump-version`) or override once with
-  `-PTENS_VERSION_CODE=501` / `TENS_VERSION_CODE=501`.
+  (`major*1000000 + minor*1000 + patch`, so 0.43.0 → 43000; room for 999 automatic minor/patch
+  bumps — the old `*10000/*100` formula collided past minor 99). Every Play upload needs a higher
+  versionCode: merge the automatic release PR (versioning is automatic) or override once with
+  `-PTENS_VERSION_CODE=43001` / `TENS_VERSION_CODE=43001`.
 - **R8** — release builds run with `minifyEnabled true` + `shrinkResources true`
   (`proguard-android-optimize.txt` + `android/app/proguard-rules.pro`). Capacitor and every plugin
   ship consumer keep rules; the app-level file keeps the bridge classes and line numbers.

@@ -477,6 +477,9 @@ Claude Code Remote scheduled routine ("Babysit tens PRs", 01:45 IST, maintainer-
 instead, in one session:
 
 1. Checks `main`'s latest `ci.yml` run first; a red `main` is fixed (via PR) before any PR work.
+   (The automatic `release/next` PR from `release.yml` is merged on CI green +
+   `node scripts/release-automation.mjs verify-pr origin/main` instead of an adversarial marker —
+   see "Release"; a refresh by the workflow supersedes any merge of `main` into it.)
 2. Takes every open, non-draft PR not labelled `do-not-merge`/`wip`/`hold`, in **ascending PR-number
    order**, one at a time: brings it up to date with `main` (merge, not rebase/squash), resolves
    conflicts for real, fixes failing CI at the root cause (never by weakening a test), runs the
@@ -490,7 +493,7 @@ instead, in one session:
    `.github/CODEOWNERS`, any script a workflow runs with the automation token (e.g.
    `scripts/claude-deny-settings.sh`, `scripts/backlog-issue-hygiene.sh`,
    `scripts/sync-release-milestones.sh`, `scripts/verify-maintainer-checklist.mjs`,
-   `scripts/bump-version.mjs` (imported by `release.yml`), `scripts/orphan-branch-scan.sh`,
+   `scripts/bump-version.mjs` + `scripts/release-automation.mjs` (run by `release.yml`), `scripts/orphan-branch-scan.sh`,
    `scripts/classify-claude-failure.sh`, `scripts/epic-407-issue-hygiene.sh` (called by the backlog
    hygiene script) — check the workflows' `run:` steps and anything the scripts they run call in turn),
    or the routine's own review inputs (`.claude/agents/code-reviewer.md`)
@@ -670,9 +673,24 @@ download the `mutation-report` artifact and open `index.html` to see them. Local
 
 ### Release (`release.yml`)
 
-Deterministic (no agent) — the post-merge half of #52, complementing the pre-merge
-`yarn bump-version` script (`scripts/bump-version.mjs`). Fires on `push` to `main` filtered to
-`paths: ['package.json']`, so it only runs when a merged PR touched the version file. Each run
+**Versioning is automatic (#1236)** — no one picks or asks for a version number. Deterministic (no
+agent); fires on `push` to `main` filtered to `paths: ['package.json', 'CHANGELOG.md']`. Three jobs:
+
+- **`release-pr`** — if main's `## [Unreleased]` has entries, resets branch `release/next` to main,
+  runs `scripts/bump-version.mjs` (semver rules: CLAUDE.md "Changelog convention"), force-pushes it
+  (PAT, so CI runs) and opens or retitles the single "Release vX.Y.Z" PR. `concurrency: release-pr`
+  with cancel-in-progress — only the newest main matters. main is PR-only (ruleset `Main`), which is
+  why the bump goes through a PR instead of a direct push. The **PR babysitter** merges it once CI is
+  green and `node scripts/release-automation.mjs verify-pr origin/main` passes (proves the diff is
+  exactly the bump of the base: `package.json` + `CHANGELOG.md` only) — no adversarial-review marker
+  is needed for a PR that passes that check. Promoting to `1.0.0` at the first public release:
+  `node scripts/bump-version.mjs --major` on `release/next` instead.
+- **`backfill`** (after `tag-and-release`) — `node scripts/release-automation.mjs missing-tags` lists
+  every CHANGELOG version without a tag and the last first-parent main commit on or before its date
+  (IST); each gets a GitHub Release (`--target <sha>`, `--latest=false`), and tags without a Release
+  (v0.1.0–v0.5.0 predate this job) get one. Uses `GITHUB_TOKEN` on purpose: refs it creates trigger no
+  workflows, so `store-release.yml`'s `v*` trigger never ships an old tag.
+- **`tag-and-release`** — described below (the original post-merge half of #52). Each run
 operates on its own pushed SHA (no concurrency queue — a dropped middle run could otherwise skip
 a version's tag entirely), reads `package.json`'s `"version"` there, and exits silently when the
 push didn't actually change `"version"` (dependency bumps and other non-version `package.json`

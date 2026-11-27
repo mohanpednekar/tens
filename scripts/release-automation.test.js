@@ -1,0 +1,56 @@
+import { istDate, planMissingTags, verifyReleasePr } from './release-automation.mjs';
+import { planChangelogBump } from './bump-version.mjs';
+
+const changelog = (unreleased, released) =>
+  `# Changelog\n\n## [Unreleased]\n\n${unreleased}\n${released}`;
+const RELEASED = `## [0.6.0] - 2026-07-28\n\n### Added\n- B.\n\n## [0.5.1] - 2026-07-27\n\n### Fixed\n- A.\n\n## [0.5.0] - 2026-07-14\n\n### Added\n- Z.\n`;
+// unix seconds for IST wall-clock times
+const ist = (iso) => Math.floor(Date.parse(`${iso}+05:30`) / 1000);
+
+describe('release-automation', () => {
+  it('istDate uses the IST calendar day', () => {
+    expect(istDate(ist('2026-07-27T23:59:00'))).toBe('2026-07-27');
+    expect(istDate(ist('2026-07-28T00:01:00'))).toBe('2026-07-28');
+  });
+
+  it('planMissingTags tags each untagged version at the last main commit on or before its date', () => {
+    const commits = [
+      { sha: 'a', time: ist('2026-07-14T10:00:00') },
+      { sha: 'b', time: ist('2026-07-27T09:00:00') },
+      { sha: 'c', time: ist('2026-07-27T23:30:00') },
+      { sha: 'd', time: ist('2026-07-28T00:30:00') },
+      { sha: 'e', time: ist('2026-07-30T00:30:00') },
+    ];
+    expect(planMissingTags(changelog('', RELEASED), commits, new Set(['v0.5.0']))).toEqual([
+      { version: '0.5.1', tag: 'v0.5.1', sha: 'c' },
+      { version: '0.6.0', tag: 'v0.6.0', sha: 'd' },
+    ]);
+    expect(planMissingTags(changelog('', RELEASED), commits, new Set(['v0.5.0']), '0.6.0')).toEqual([
+      { version: '0.5.1', tag: 'v0.5.1', sha: 'c' },
+    ]);
+  });
+
+  it('planMissingTags fails loudly when no commit precedes a release date', () => {
+    expect(() => planMissingTags(changelog('', RELEASED), [{ sha: 'x', time: ist('2026-08-01T00:00:00') }], new Set()))
+      .toThrow(/no main commit/);
+  });
+
+  describe('verifyReleasePr', () => {
+    const base = changelog('### Added\n- New.\n', RELEASED);
+    const plan = planChangelogBump(base, '0.6.0', '2026-11-27');
+    const args = { baseChangelog: base, baseVersion: '0.6.0', headChangelog: plan.nextText, headVersion: '0.7.0' };
+
+    it('accepts exactly the bump-version result', () => {
+      expect(verifyReleasePr(args)).toEqual({ ok: true, version: '0.7.0' });
+    });
+    it.each([
+      ['wrong version', { headVersion: '0.6.1' }, /expected 0.7.0/],
+      ['edited notes', { headChangelog: plan.nextText.replace('- New.', '- Sneaky.') }, /differs/],
+      ['nothing to release', { baseChangelog: changelog('### Added\n', RELEASED) }, /nothing to release/],
+    ])('rejects %s', (_name, override, reason) => {
+      const result = verifyReleasePr({ ...args, ...override });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toMatch(reason);
+    });
+  });
+});

@@ -58,7 +58,7 @@ yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--
 yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738),
                   # then fail on any git conflict marker in a tracked text file (#945)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
-                  # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
+                  # (semver rules in "Changelog convention"; run only by release.yml — versioning is automatic)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
 ```
 
@@ -214,15 +214,15 @@ land with the code is deferred.
 
 ### GitHub Milestones (release grouping)
 
-Milestones group player-facing work toward a named release target; they complement (do not replace) the
-Project's `Track` field from #53 (a `Track` answers "what's related to what" across releases; a
-Milestone answers "what's targeted for this release", with a native due-date and X/Y-closed progress).
-Interactive sessions and Planning (#53) should assign player-facing feature/economy issues to the next
-release's milestone; process and infrastructure `claude-task` issues typically stay off a versioned
-milestone. `v0.6.0` (UI-revamp chain #138/#139/#140) has fully shipped; the current next-release
-milestone is `v0.7.0`, targeting Era ascension / Reboot (`#407` / `#411–#414`, in progress).
-`scripts/sync-release-milestones.sh` keeps milestones and assignments idempotent, running on every
-`autonomous-maintenance.yml` invocation.
+Milestones group player-facing work toward a feature target; they complement (do not replace) the
+Project's `Track` field from #53 (a `Track` answers "what's related to what"; a Milestone answers
+"what ships together", with a native due-date and X/Y-closed progress). Milestones are **named by
+feature, never by version** — versions are computed automatically at release time (below), so a future
+number can't be promised. Interactive sessions and Planning (#53) assign player-facing feature/economy
+issues to the matching milestone; process/infrastructure `claude-task` issues typically stay off one.
+Shipped and closed: `UI revamp`, `Era ascension / Reboot`; open: `Guide screens` (#1228),
+`Guide screens — spotlights & What's new`. `scripts/sync-release-milestones.sh` keeps milestones and
+assignments idempotent, running on every `autonomous-maintenance.yml` invocation.
 
 ## Automation workflows
 
@@ -303,19 +303,21 @@ user-facing and behaviorally-relevant changes going forward from `v0.5.0`. Every
 behavior adds an entry to `## [Unreleased]` at the top, under the matching subheading — `### Added`
 for new features, `### Changed` for behavior changes, `### Fixed` for bug fixes (`### Removed`/
 `### Security`/`### Deprecated` as needed). Purely internal changes (docs-only, CI/workflow tweaks with
-no user-visible effect) don't need an entry. `package.json`'s `"version"` field (currently `0.5.0`) and
-future git tags (`v0.1.0`–`v0.5.0` retroactively, then onward) mirror this file's version sections —
-see `docs/DESIGN_HISTORY.md` for why versioning/tagging started here rather than at project inception.
+no user-visible effect) don't need an entry. Mark a breaking change (e.g. a save-format or removed
+behavior) by starting its bullet with `**Breaking:**`. `package.json`'s `"version"` and the `v<x.y.z>` git
+tags/GitHub Releases mirror this file's version sections (everything since `v0.5.0` was split
+retroactively into one version per merge day, #1236; `docs/DESIGN_HISTORY.md`).
 
-**Version bump before release:** when a PR is ready to cut the accumulated `## [Unreleased]` entries
-into a dated release section, run `yarn bump-version` (`scripts/bump-version.mjs`) as a final step on
-that PR's own branch — it reads Unreleased, chooses **minor** if `### Added` or `### Removed` has
-entries (otherwise **patch**; major is never auto-selected), writes the new `package.json` version,
-moves Unreleased into `## [x.y.z] - YYYY-MM-DD`, and resets Unreleased to empty subheadings. No-op
-(exit 0) when Unreleased has no bullet entries. The bump lands in the PR diff like any other change
-(never a direct commit to `main`). Once that PR merges, `release.yml` (push-to-`main`,
-`paths: ['package.json']`, deterministic — no agent) pushes the annotated `v<x.y.z>` tag and creates
-the GitHub Release from that version's changelog section; see `docs/AUTOMATION.md`'s "Release" entry.
+**Versioning is automatic — never ask, never pick a number by hand, never run `yarn bump-version` in a
+feature PR.** Semver rules (`determineBumpType` in `scripts/bump-version.mjs`): while `0.y.z`, a
+breaking change, `### Added` or `### Removed` → **minor**, anything else → patch (no major before 1.0.0);
+from `1.0.0` (the first public release — `yarn bump-version --major` on the release PR) ideal semver:
+breaking or `### Removed` → major, `### Added`/`### Deprecated` → minor, else patch. `release.yml`
+keeps one open `release/next` PR (main + `yarn bump-version`) whenever main's Unreleased has entries; the
+PR babysitter merges it once `node scripts/release-automation.mjs verify-pr origin/main` passes and CI
+is green (no adversarial review needed — the check proves the diff is the pure bump). The merge tags
+`v<x.y.z>` + creates the Release; a backfill job tags any untagged version. Detail:
+`docs/AUTOMATION.md` "Release".
 
 ## Model delegation
 

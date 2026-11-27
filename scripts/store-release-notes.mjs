@@ -18,7 +18,7 @@ const SECTION_ORDER = ['Added', 'Changed', 'Fixed']
 export const versionCode = (version, override = process.env.TENS_VERSION_CODE) => {
   if (override) return Number(override)
   const [major, minor, patch] = version.split('.').map(Number)
-  return major * 10000 + minor * 100 + patch
+  return major * 1000000 + minor * 1000 + patch
 }
 
 // CHANGELOG.md also records tooling/automation changes; players never see those. Names of tools

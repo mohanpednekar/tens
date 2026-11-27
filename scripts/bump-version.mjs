@@ -1,13 +1,15 @@
 /**
  * Semver bump from CHANGELOG.md's ## [Unreleased] section (Part of #52).
  *
- * Rules:
+ * Rules (semver; a breaking change is a bullet starting `- **Breaking:**` in any subsection):
  * - No bullet entries under Unreleased → no-op (exit 0).
- * - ### Added or ### Removed has ≥1 entry → minor bump.
- * - Otherwise (only Changed/Fixed/Security/Deprecated/…) → patch bump.
- * - Major is never auto-selected.
+ * - 0.y.z (initial development): breaking, ### Added or ### Removed → minor; otherwise patch.
+ *   Major is never auto-selected before 1.0.0 — breaking changes go out as minor.
+ * - ≥ 1.0.0 (after the first public release): breaking or ### Removed → major;
+ *   ### Added or ### Deprecated → minor; otherwise (Changed/Fixed/Security/…) → patch.
+ * - `--major` promotes to the next major explicitly (e.g. 0.x → 1.0.0 at the first public release).
  *
- * Usage: yarn bump-version
+ * Usage: yarn bump-version [--major]
  * Pure helpers are exported for unit tests and for the future release.yml
  * CHANGELOG extraction (tag message / GitHub Release body).
  */
@@ -53,8 +55,8 @@ export const EMPTY_UNRELEASED_BODY = [
 const SUBHEADING_RE = /^### (.+)\s*$/;
 const BULLET_RE = /^\s*-\s+\S/;
 
-/** Subheadings that trigger a minor (not patch) bump when they have entries. */
-const MINOR_BUMP_SUBHEADINGS = new Set(['Added', 'Removed']);
+/** Bullets marking a breaking change, in any subsection. */
+export const BREAKING_BULLET_RE = /^\s*-\s+\*\*Breaking:?\*\*/i;
 
 /**
  * @param {string} version
@@ -70,11 +72,12 @@ export function parseSemver(version) {
 
 /**
  * @param {string} version
- * @param {'minor' | 'patch'} bumpType
+ * @param {'major' | 'minor' | 'patch'} bumpType
  * @returns {string}
  */
 export function bumpSemver(version, bumpType) {
   const { major, minor, patch } = parseSemver(version);
+  if (bumpType === 'major') return `${major + 1}.0.0`;
   if (bumpType === 'minor') return `${major}.${minor + 1}.0`;
   if (bumpType === 'patch') return `${major}.${minor}.${patch + 1}`;
   throw new Error(`invalid bump type: ${bumpType}`);
@@ -193,13 +196,20 @@ export function unreleasedHasEntries(unreleasedBody) {
 
 /**
  * @param {string} unreleasedBody
- * @returns {'minor' | 'patch' | null}  null when nothing to bump
+ * @param {string} [currentVersion]  version being bumped from (selects 0.y.z vs ≥1.0.0 rules)
+ * @returns {'major' | 'minor' | 'patch' | null}  null when nothing to bump
  */
-export function determineBumpType(unreleasedBody) {
+export function determineBumpType(unreleasedBody, currentVersion = '0.0.0') {
   const subs = parseSubheadings(unreleasedBody);
   const withEntries = subs.filter((s) => subsectionHasEntries(s.lines));
   if (withEntries.length === 0) return null;
-  if (withEntries.some((s) => MINOR_BUMP_SUBHEADINGS.has(s.name))) return 'minor';
+  const has = (name) => withEntries.some((s) => s.name === name);
+  const breaking = withEntries.some((s) => s.lines.some((l) => BREAKING_BULLET_RE.test(l)));
+  if (parseSemver(currentVersion).major === 0) {
+    return breaking || has('Added') || has('Removed') ? 'minor' : 'patch';
+  }
+  if (breaking || has('Removed')) return 'major';
+  if (has('Added') || has('Deprecated')) return 'minor';
   return 'patch';
 }
 
@@ -261,16 +271,17 @@ export function assertUnreleasedWellFormed(unreleasedBody) {
 
 /**
  * Apply a bump to changelog text: move Unreleased → ## [next] - date, reset Unreleased.
- * @returns {{ nextText: string, bumpType: 'minor' | 'patch', nextVersion: string, dateStr: string } | { noop: true }}
+ * @returns {{ nextText: string, bumpType: 'major' | 'minor' | 'patch', nextVersion: string, dateStr: string } | { noop: true }}
  */
-export function planChangelogBump(changelogText, currentVersion, date = new Date()) {
+export function planChangelogBump(changelogText, currentVersion, date = new Date(), { forceMajor = false } = {}) {
   const unreleased = extractVersionSection(changelogText, 'Unreleased');
   if (!unreleased) {
     throw new Error('CHANGELOG.md has no ## [Unreleased] section');
   }
   assertUnreleasedWellFormed(unreleased.body);
-  const bumpType = determineBumpType(unreleased.body);
-  if (!bumpType) return { noop: true };
+  const detected = determineBumpType(unreleased.body, currentVersion);
+  if (!detected) return { noop: true };
+  const bumpType = forceMajor ? 'major' : detected;
 
   const nextVersion = bumpSemver(currentVersion, bumpType);
   const dateStr = typeof date === 'string' ? date : formatChangelogDate(date);
@@ -343,6 +354,7 @@ export function runBumpVersion(opts = {}) {
   const packagePath = opts.packagePath || path.join(rootDir, 'package.json');
   const date = opts.date ?? new Date();
   const dryRun = Boolean(opts.dryRun);
+  const forceMajor = Boolean(opts.forceMajor);
 
   const pkgRaw = fs.readFileSync(packagePath, 'utf8');
   const pkg = JSON.parse(pkgRaw);
@@ -352,7 +364,7 @@ export function runBumpVersion(opts = {}) {
   }
 
   const changelogText = fs.readFileSync(changelogPath, 'utf8');
-  const plan = planChangelogBump(changelogText, currentVersion, date);
+  const plan = planChangelogBump(changelogText, currentVersion, date, { forceMajor });
   if (plan.noop) {
     const latest = latestReleasedVersionId(changelogText);
     if (latest && latest !== currentVersion) {
@@ -393,8 +405,9 @@ function isMainModule() {
 
 function main() {
   const dryRun = process.argv.includes('--dry-run');
+  const forceMajor = process.argv.includes('--major');
   try {
-    const result = runBumpVersion({ dryRun });
+    const result = runBumpVersion({ dryRun, forceMajor });
     if (result.noop) {
       console.log(`bump-version: nothing to do (Unreleased is empty; still at ${result.currentVersion})`);
       process.exitCode = 0;

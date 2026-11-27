@@ -28,8 +28,9 @@ const CHANGELOG = `# Changelog
 
 describe('store-release-notes', () => {
   test('versionCode matches the Gradle formula', () => {
-    expect(versionCode('0.5.0', '')).toBe(500)
-    expect(versionCode('1.2.3', '')).toBe(10203)
+    expect(versionCode('0.5.0', '')).toBe(5000)
+    expect(versionCode('0.100.0', '')).toBeLessThan(versionCode('1.0.0', ''))
+    expect(versionCode('1.2.3', '')).toBe(1002003)
     expect(versionCode('1.2.3', '10299')).toBe(10299)
   })
 

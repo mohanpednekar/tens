@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Idempotent release-milestone setup for player-facing feature tracks.
-# Creates/updates version milestones and assigns the Era (#407) and UI-revamp
-# (#138–#140) issue groups. Safe to rerun on every housekeeping pass.
+# Milestones are named by feature, not version: versioning is automatic (release.yml bumps on
+# every release, #1236), so a future version number can't be promised up front. Renames the
+# old version-titled milestones once, then assigns the UI-revamp (#138–#140), Era (#407) and
+# guide-screen (#1228) issue groups. Safe to rerun on every housekeeping pass.
 #
 # Requires `gh` with Issues read/write (GH_AUTOMATION_PAT in GHA, or a maintainer's
 # local `gh` session — see docs/AUTOMATION.md).
@@ -35,7 +37,7 @@ run() {
 
 milestone_number() {
   local title=$1
-  gh api repos/{owner}/{repo}/milestones --paginate \
+  gh api "repos/{owner}/{repo}/milestones?state=all" --paginate \
     --jq ".[] | select(.title==\"$title\") | .number" | head -1
 }
 
@@ -59,6 +61,17 @@ ensure_milestone() {
   echo "$num"
 }
 
+rename_milestone() {
+  local old=$1
+  local new=$2
+  local num
+  num=$(milestone_number "$old")
+  if [ -n "$num" ] && [ -z "$(milestone_number "$new")" ]; then
+    run gh api "repos/{owner}/{repo}/milestones/$num" -X PATCH -f "title=$new" >/dev/null
+    echo "Renamed milestone '$old' → '$new' (#$num)."
+  fi
+}
+
 assign_milestone() {
   local issue=$1
   local milestone_title=$2
@@ -76,25 +89,40 @@ assign_milestone() {
   echo "Issue #$issue: set milestone '$milestone_title' (was '${current:-none}')."
 }
 
-V06_DESC='UI revamp release — tier row redesign (#138), prestige surfaces (#139), light mode (#140). Shipped prestige/Flops foundations (#404, #405) grouped here for release tracking.'
-V07_DESC='Era ascension release — voluntary Googol PP Era ascension, Eons meta currency, deep Foundry/Factory reset (#407 epic: engine #410, UI #411, tests #412, docs #413, Eon shop #414).'
+UI_TITLE='UI revamp'
+ERA_TITLE='Era ascension / Reboot'
+GUIDES_TITLE='Guide screens'
+GUIDES_POLISH_TITLE='Guide screens — spotlights & What'"'"'s new'
 
-ensure_milestone 'v0.6.0' "$V06_DESC" >/dev/null
-ensure_milestone 'v0.7.0' "$V07_DESC" >/dev/null
+UI_DESC='UI revamp — tier row redesign (#138), prestige surfaces (#139), light mode (#140). Shipped prestige/Flops foundations (#404, #405) grouped here for release tracking.'
+ERA_DESC='Era ascension — voluntary Googol PP Era ascension, Eons meta currency, deep Foundry/Factory reset (#407 epic: engine #410, UI #411, tests #412, docs #413, Eon shop #414).'
+GUIDES_DESC='In-game guide screens for new mechanics (#1228): registry (#1229), sheet UI (#1230), content (#1233), tests (#1234), docs (#1235).'
+GUIDES_POLISH_DESC='Guide-screen follow-ups after the core ships (#1228): spotlights (#1231), What'"'"'s new (#1232).'
 
-# UI revamp (open)
-for issue in 138 139 140; do
-  assign_milestone "$issue" 'v0.6.0'
+rename_milestone 'v0.6.0' "$UI_TITLE"
+rename_milestone 'v0.7.0' "$ERA_TITLE"
+rename_milestone 'v0.8.0' "$GUIDES_TITLE"
+rename_milestone 'v0.9.0' "$GUIDES_POLISH_TITLE"
+
+ensure_milestone "$UI_TITLE" "$UI_DESC" >/dev/null
+ensure_milestone "$ERA_TITLE" "$ERA_DESC" >/dev/null
+ensure_milestone "$GUIDES_TITLE" "$GUIDES_DESC" >/dev/null
+ensure_milestone "$GUIDES_POLISH_TITLE" "$GUIDES_POLISH_DESC" >/dev/null
+
+for issue in 138 139 140 404 405; do
+  assign_milestone "$issue" "$UI_TITLE"
 done
 
-# Prestige / Flops foundations (shipped — retrospective milestone for release notes)
-for issue in 404 405; do
-  assign_milestone "$issue" 'v0.6.0'
-done
-
-# Era ascension epic + sub-issues (open + shipped engine)
 for issue in 407 410 411 412 413 414; do
-  assign_milestone "$issue" 'v0.7.0'
+  assign_milestone "$issue" "$ERA_TITLE"
+done
+
+for issue in 1228 1229 1230 1233 1234 1235; do
+  assign_milestone "$issue" "$GUIDES_TITLE"
+done
+
+for issue in 1231 1232; do
+  assign_milestone "$issue" "$GUIDES_POLISH_TITLE"
 done
 
 echo "sync-release-milestones: done."

@@ -106,6 +106,35 @@ describe('bump-version', () => {
     expect(released.body).toContain('### Security');
   });
 
+  it('bumpSemver applies major', () => {
+    expect(bumpSemver('0.43.2', 'major')).toBe('1.0.0');
+    expect(bumpSemver('1.2.3', 'major')).toBe('2.0.0');
+  });
+
+  // 0.y.z: breaking changes go out as minor; ≥1.0.0: ideal semver.
+  it.each([
+    ['Fixed', '- **Breaking:** save format changed.', '0.5.0', 'minor'],
+    ['Changed', '- **breaking** renamed X.', '0.5.0', 'minor'],
+    ['Removed', '- Old button.', '0.5.0', 'minor'],
+    ['Deprecated', '- Old flag.', '0.5.0', 'patch'],
+    ['Fixed', '- **Breaking:** save format changed.', '1.2.3', 'major'],
+    ['Removed', '- Old button.', '1.2.3', 'major'],
+    ['Added', '- New feature.', '1.2.3', 'minor'],
+    ['Deprecated', '- Old flag.', '1.2.3', 'minor'],
+    ['Changed', '- Tweak.', '1.2.3', 'patch'],
+    ['Fixed', '- Not **Breaking:** mid-line.', '1.2.3', 'patch'],
+  ])('### %s "%s" from %s → %s', (sub, bullet, from, expected) => {
+    const body = extractVersionSection(makeChangelog(`### ${sub}\n${bullet}\n`), 'Unreleased').body;
+    expect(determineBumpType(body, from)).toBe(expected);
+    expect(planChangelogBump(makeChangelog(`### ${sub}\n${bullet}\n`), from, '2026-11-27').bumpType).toBe(expected);
+  });
+
+  it('forceMajor promotes 0.y.z to 1.0.0', () => {
+    const plan = planChangelogBump(makeChangelog('### Fixed\n- A fix.\n'), '0.43.0', '2026-11-27', { forceMajor: true });
+    expect(plan.nextVersion).toBe('1.0.0');
+    expect(plan.nextText).toContain('## [1.0.0] - 2026-11-27');
+  });
+
   it('runBumpVersion writes package.json + CHANGELOG.md (and supports dry-run)', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bump-version-'));
     const changelogPath = path.join(dir, 'CHANGELOG.md');

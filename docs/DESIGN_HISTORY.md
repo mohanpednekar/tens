@@ -9727,3 +9727,33 @@ before any claim), not on the first claim — Patient Overclock counts only the 
 revealing it after that claim would be too late. Always-visible Manual topics (Overview, Sleep mode) hold
 back bullets about later mechanics (Buy max, Overflow mode, PP Sleep upgrades); the Milestones topic is
 Purge-gated.
+
+## Automatic versioning and the retroactive per-day split (2026-11, #1236)
+
+**Before:** versions were cut by hand with `yarn bump-version` on some PR. Nobody did after v0.5.0
+(2026-07-14), so `## [Unreleased]` grew to ~1,600 lines / 533 entries over four months while
+`package.json` stayed at 0.5.0, and milestones were named by guessed future versions (v0.6.0, v0.7.0).
+
+**Maintainer decision:** semver always, decided automatically, never asked; breaking changes go out as
+minor while 0.y.z; ideal semver from the first public release (1.0.0); fix the old numbers too.
+
+**Retroactive split:** each Unreleased bullet was dated by `git blame --first-parent -M` on
+`origin/main` (the main commit that introduced its earliest line), grouped by IST calendar day, and each
+day became one version, bumped from 0.5.0 by the same `determineBumpType` rules — 84 versions,
+0.5.1 → 0.43.0. Per day rather than per merge because 0.1.0–0.5.0 were already roughly daily and per-merge
+would have made ~340 versions; content was verified unchanged (sorted-line diff). Caveat: a bullet
+reworded later keeps its original date only if one of its lines survived; a fully rewritten bullet is
+dated by the rewrite. Backfilled tags point at the last main commit of that day, so each tag contains
+everything its notes list.
+
+**Forward automation — rejected alternatives:** (1) a workflow committing the bump straight to main —
+impossible, the `Main` ruleset requires PRs with no bypass for automation; (2) bumping inside every
+feature PR — concurrent PRs would all claim the same next version and conflict on every merge; (3)
+deriving the version at build time without committing — CHANGELOG would never show versions. Chosen:
+one rolling `release/next` PR the workflow keeps current, merged by the babysitter on a mechanical
+`verify-pr` check (so a pure bump needs no model review).
+
+**Milestones** are now named by feature, since versions can no longer be predicted: v0.6.0 → `UI
+revamp`, v0.7.0 → `Era ascension / Reboot` (both closed, fully shipped), v0.8.0/v0.9.0 → the guide-screen
+milestones (#1228).
+
