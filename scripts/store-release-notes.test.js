@@ -28,18 +28,16 @@ const CHANGELOG = `# Changelog
 `
 
 describe('store-release-notes', () => {
-  test('versionCode formula is identical in Gradle, the Fastfile and this script', () => {
-    const gradle = readFileSync('android/app/build.gradle', 'utf8')
-    const fastfile = readFileSync('fastlane/Fastfile', 'utf8')
-    expect(gradle).toMatch(/versionParts\[0\]\.toInteger\(\) \* 1000000 \+ versionParts\[1\]\.toInteger\(\) \* 1000 \+ versionParts\[2\]/)
-    expect(fastfile).toMatch(/major \* 1_000_000 \+ minor \* 1000 \+ patch/)
+  test('Gradle, the Fastfile and this script all read package.json versionCode', () => {
+    expect(readFileSync('android/app/build.gradle', 'utf8')).toMatch(/packageJson\.versionCode/)
+    expect(readFileSync('fastlane/Fastfile', 'utf8')).toMatch(/fetch\('versionCode'\)/)
+    expect(Number.isInteger(JSON.parse(readFileSync('package.json', 'utf8')).versionCode)).toBe(true)
   })
 
-  test('versionCode matches the Gradle formula', () => {
-    expect(versionCode('0.5.0', '')).toBe(5000)
-    expect(versionCode('0.100.0', '')).toBeLessThan(versionCode('1.0.0', ''))
-    expect(versionCode('1.2.3', '')).toBe(1002003)
-    expect(versionCode('1.2.3', '10299')).toBe(10299)
+  test('versionCode reads package.json, with the TENS_VERSION_CODE override', () => {
+    expect(versionCode({ version: '0.43.0', versionCode: 261127000 }, '')).toBe(261127000)
+    expect(versionCode({ version: '0.43.0', versionCode: 261127000 }, '10299')).toBe(10299)
+    expect(() => versionCode({ version: '0.43.0' }, '')).toThrow(/versionCode/)
   })
 
   test('isPlayerFacing drops tooling entries', () => {

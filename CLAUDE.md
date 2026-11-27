@@ -314,7 +314,8 @@ breaking change, `### Added` or `### Removed` → **minor**, anything else → p
 from `1.0.0` (the first public release — set repo variable `RELEASE_MAJOR=true` once) ideal semver:
 breaking or `### Removed` → major, `### Added`/`### Deprecated` → minor, else patch. `release.yml`
 keeps one open `release/next` PR (main + `yarn bump-version`) whenever main's Unreleased has entries; the
-PR babysitter merges it once `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` (`--allow-major` only while `RELEASE_MAJOR` is set) passes and CI
+The bump also writes `package.json` `versionCode` (Android: `YYMMDD×1000 + n`, n = releases
+already that day — `computeVersionCode`; Gradle/Fastfile read it). The PR babysitter merges it once `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` (`--allow-major` only while `RELEASE_MAJOR` is set) passes and CI
 is green (no adversarial review needed — the check proves the diff is the pure bump). The merge tags
 `v<x.y.z>` + creates the Release; a backfill job tags any untagged version. Detail:
 `docs/AUTOMATION.md` "Release".

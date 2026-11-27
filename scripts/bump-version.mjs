@@ -7,6 +7,7 @@
  *   Major is never auto-selected before 1.0.0 — breaking changes go out as minor.
  * - ≥ 1.0.0 (after the first public release): breaking or ### Removed → major;
  *   ### Added or ### Deprecated → minor; otherwise (Changed/Fixed/Security/…) → patch.
+ * - Also writes package.json `versionCode` (Android): YYMMDD × 1000 + releases already that day.
  * - `--major` promotes to the next major explicitly (e.g. 0.x → 1.0.0 at the first public release).
  *
  * Usage: yarn bump-version [--major] [--date=YYYY-MM-DD] [--dry-run]
@@ -315,6 +316,22 @@ export function planChangelogBump(changelogText, currentVersion, date = new Date
 }
 
 /**
+ * Android versionCode for a release dated `dateStr`: YYMMDD × 1000 + n, where n counts the
+ * releases already dated that day in `changelogText` (0 for the first). Strictly increasing as
+ * long as releases are dated in order (all development is on main), ≤ 999 releases a day, and far
+ * above any code from the old version-derived formulas. Written to package.json's `versionCode`.
+ * @param {string} changelogText  CHANGELOG before this release is added
+ * @param {string} dateStr  YYYY-MM-DD
+ */
+export function computeVersionCode(changelogText, dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (!m) throw new Error(`invalid release date: ${dateStr}`);
+  const sameDay = splitChangelog(changelogText).sections.filter((s) => s.date === dateStr).length;
+  if (sameDay > 999) throw new Error(`more than 1000 releases on ${dateStr}`);
+  return (Number(m[1].slice(2)) * 10000 + Number(m[2]) * 100 + Number(m[3])) * 1000 + sameDay;
+}
+
+/**
  * Latest dated (non-Unreleased) section id, or null.
  * @param {string} changelogText
  * @returns {string | null}
@@ -376,7 +393,7 @@ export function runBumpVersion(opts = {}) {
     return { noop: true, currentVersion };
   }
 
-  const nextPkg = { ...pkg, version: plan.nextVersion };
+  const nextPkg = { ...pkg, version: plan.nextVersion, versionCode: computeVersionCode(changelogText, plan.dateStr) };
   // Preserve trailing newline style of the original package.json.
   const pkgOut = `${JSON.stringify(nextPkg, null, 2)}\n`;
 

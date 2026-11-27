@@ -9,7 +9,8 @@
  *   `yarn bump-version` (or `--major`) produces from the base branch, so it can merge without a review.
  *
  * CLI (git refs only — never the working tree):
- *   node scripts/release-automation.mjs missing-tags   → prints "<version> <sha>" lines
+ *   node scripts/release-automation.mjs missing-tags   → prints "<version> <sha>" lines (older versions)
+ *   node scripts/release-automation.mjs version-commit <version>  → release commit of that version
  *   node scripts/release-automation.mjs verify-pr <baseRef> [headRef=HEAD] [--allow-major]  → exit 1 unless pure bump
  *   (--allow-major only while repo variable RELEASE_MAJOR is true)
  * Run verify-pr from a checkout of the BASE branch (e.g. a `git worktree` of origin/main) so the
@@ -19,7 +20,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSemver, planChangelogBump, splitChangelog } from './bump-version.mjs';
+import { computeVersionCode, parseSemver, planChangelogBump, splitChangelog } from './bump-version.mjs';
 
 const IST_OFFSET_SECONDS = 5.5 * 3600;
 
@@ -32,7 +33,7 @@ export function istDate(unixSeconds) {
  * @param {string} changelogText
  * @param {Array<{ sha: string, time: number }>} commits  first-parent main commits, any order
  * @param {Set<string>} existingTags  e.g. new Set(['v0.1.0'])
- * @param {string} [skipVersion]  version handled separately (tagged at HEAD by release.yml)
+ * @param {string} [skipVersion]  the current version (tag-and-release tags it at its release commit)
  * @param {Record<string, string>} [versionCommits]  version → first main commit where package.json had it
  * @returns {Array<{ version: string, tag: string, sha: string }>}  oldest first
  */
@@ -76,14 +77,28 @@ export function verifyReleasePr({ baseChangelog, basePackage, headChangelog, hea
   if (match.nextText !== headChangelog) {
     return { ok: false, reason: 'CHANGELOG.md differs from the yarn bump-version result' };
   }
-  // package.json must be byte-identical to what bump-version writes: only "version" may change.
-  if (headPackage !== `${JSON.stringify({ ...base, version: headVersion }, null, 2)}\n`) {
-    return { ok: false, reason: 'package.json changes more than the "version" field' };
+  // package.json must be byte-identical to what bump-version writes: only "version" and
+  // "versionCode" may change.
+  const versionCode = computeVersionCode(baseChangelog, released.date);
+  if (headPackage !== `${JSON.stringify({ ...base, version: headVersion, versionCode }, null, 2)}\n`) {
+    return { ok: false, reason: 'package.json changes more than the "version"/"versionCode" fields' };
   }
   return { ok: true, version: headVersion };
 }
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
+
+/** version → first first-parent commit (oldest first) whose package.json has that version. */
+function firstVersionCommits() {
+  const out = {};
+  for (const sha of git('log', '--first-parent', '--reverse', '--format=%H', 'HEAD', '--', 'package.json').trim().split('\n').filter(Boolean)) {
+    try {
+      const v = JSON.parse(git('show', `${sha}:package.json`)).version;
+      if (!out[v]) out[v] = sha;
+    } catch { /* unparsable historical package.json — fall back to the date rule */ }
+  }
+  return out;
+}
 
 function main(argv) {
   const allowMajor = argv.includes('--allow-major');
@@ -92,18 +107,18 @@ function main(argv) {
     const commits = git('log', '--first-parent', '--format=%H %ct', 'HEAD')
       .trim().split('\n').map((l) => { const [sha, t] = l.split(' '); return { sha, time: Number(t) }; });
     const tags = new Set(git('tag', '--list', 'v*').split('\n').filter(Boolean));
-    const versionCommits = {};
-    for (const sha of git('log', '--first-parent', '--reverse', '--format=%H', 'HEAD', '--', 'package.json').trim().split('\n').filter(Boolean)) {
-      try {
-        const v = JSON.parse(git('show', `${sha}:package.json`)).version;
-        if (!versionCommits[v]) versionCommits[v] = sha;
-      } catch { /* unparsable historical package.json — fall back to the date rule */ }
-    }
-    // No skip for HEAD's version: tag-and-release (PAT, triggers store-release) runs first, so the
-    // current version is only still untagged here if that run was missed — then backfill recovers it.
-    for (const t of planMissingTags(git('show', 'HEAD:CHANGELOG.md'), commits, tags, undefined, versionCommits)) {
+    const versionCommits = firstVersionCommits();
+    // HEAD's version is skipped: tag-and-release owns it (PAT tag → store-release fires once).
+    const head = JSON.parse(git('show', 'HEAD:package.json')).version;
+    for (const t of planMissingTags(git('show', 'HEAD:CHANGELOG.md'), commits, tags, head, versionCommits)) {
       console.log(`${t.version} ${t.sha}`);
     }
+    return;
+  }
+  if (cmd === 'version-commit' && baseRef) {
+    const sha = firstVersionCommits()[baseRef];
+    if (!sha) { console.error(`no main commit has package.json version ${baseRef}`); process.exitCode = 1; return; }
+    console.log(sha);
     return;
   }
   if (cmd === 'verify-pr' && baseRef) {

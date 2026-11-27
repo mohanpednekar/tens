@@ -13,12 +13,12 @@ export const PLAY_LIMIT = 500
 export const APP_STORE_LIMIT = 4000
 const SECTION_ORDER = ['Added', 'Changed', 'Fixed']
 
-// Mirrors android/app/build.gradle's appVersionCode, including its TENS_VERSION_CODE override
-// (env here; the Gradle-property / keystore.properties forms of the override are local-only).
-export const versionCode = (version, override = process.env.TENS_VERSION_CODE) => {
+// Mirrors android/app/build.gradle's appVersionCode: package.json "versionCode", unless the
+// TENS_VERSION_CODE override is set (env here; the Gradle-property form is local-only).
+export const versionCode = (pkg, override = process.env.TENS_VERSION_CODE) => {
   if (override) return Number(override)
-  const [major, minor, patch] = version.split('.').map(Number)
-  return major * 1000000 + minor * 1000 + patch
+  if (!Number.isInteger(pkg.versionCode)) throw new Error('package.json has no integer "versionCode"')
+  return pkg.versionCode
 }
 
 // CHANGELOG.md also records tooling/automation changes; players never see those. Names of tools
@@ -89,7 +89,8 @@ export const PATHS = {
 const write = (path, text) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, text) }
 
 const main = () => {
-  const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
+  const { version } = pkg
   let play
   let appStore
   if (existsSync(PATHS.override)) {
@@ -102,9 +103,9 @@ const main = () => {
     play = formatNotes(bullets, PLAY_LIMIT)
     appStore = formatNotes(bullets, APP_STORE_LIMIT)
   }
-  write(PATHS.play(versionCode(version)), play)
+  write(PATHS.play(versionCode(pkg)), play)
   write(PATHS.appStore, appStore)
-  console.log(`release notes for ${version} (versionCode ${versionCode(version)}) written`)
+  console.log(`release notes for ${version} (versionCode ${versionCode(pkg)}) written`)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main()

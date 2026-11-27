@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   bumpSemver,
+  computeVersionCode,
   determineBumpType,
   extractVersionSection,
   planChangelogBump,
@@ -128,6 +129,15 @@ describe('bump-version', () => {
     const body = extractVersionSection(makeChangelog(`### ${sub}\n${bullet}\n`), 'Unreleased').body;
     expect(determineBumpType(body, from)).toBe(expected);
     expect(planChangelogBump(makeChangelog(`### ${sub}\n${bullet}\n`), from, '2026-11-27').bumpType).toBe(expected);
+  });
+
+  it('computeVersionCode is YYMMDD×1000 + releases already that day', () => {
+    const text = makeChangelog('### Fixed\n- A.\n');
+    expect(computeVersionCode(text, '2026-11-27')).toBe(261127000);
+    const twoToday = text.replace('## [0.5.0] - 2026-07-14', '## [0.5.1] - 2026-11-27\n\n### Fixed\n- B.\n\n## [0.5.0] - 2026-07-14');
+    expect(computeVersionCode(twoToday, '2026-11-27')).toBe(261127001);
+    expect(computeVersionCode(text, '2027-01-02')).toBeGreaterThan(computeVersionCode(text, '2026-12-31'));
+    expect(() => computeVersionCode(text, '27-1-2')).toThrow(/invalid/);
   });
 
   it('forceMajor promotes 0.y.z to 1.0.0', () => {

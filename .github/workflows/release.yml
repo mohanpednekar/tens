@@ -6,11 +6,11 @@ name: Release
 #    main is PR-only (ruleset), so the bump cannot be pushed to main directly. The PR babysitter
 #    merges it once `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes and CI is
 #    green (docs/AUTOMATION.md "Release").
-# 2. tag-and-release: when a push to main changes package.json's "version", tag it and create
-#    a GitHub Release. This job only ever *reads* main and pushes a tag + Release.
-# 3. backfill: any CHANGELOG version still lacking a tag/Release (the retroactive per-day split of
-#    #1236, or a missed run — including the current version) is tagged at the commit where
-#    package.json became that version, else the last main commit on or before its date. Uses
+# 2. tag-and-release: on every push, makes sure the current package.json version has its tag
+#    (at its release commit, via the PAT) and GitHub Release. Only ever pushes a tag + Release.
+# 3. backfill: any OLDER CHANGELOG version still lacking a tag/Release (the retroactive per-day
+#    split of #1236) is tagged at the commit where package.json became that version, else the last
+#    main commit on or before its date. Never the current version (tag-and-release owns it). Uses
 #    GITHUB_TOKEN on purpose: refs it creates trigger no workflows, so store-release.yml never
 #    ships an old tag.
 # Deterministic shell only, no agent — matching the repo's deterministic-shell rationale
@@ -111,24 +111,19 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
-          head_sha=$(git rev-parse HEAD)
           version=$(node -p "require('./package.json').version")
           tag="v${version}"
-          echo "package.json version at this main HEAD: ${version} (${tag} @ ${head_sha})"
+          # Sole owner of the CURRENT version's tag (backfill skips it): always tag the release
+          # commit — the first main commit where package.json became this version — never HEAD.
+          # Runs on every push, so a missed or overtaken run self-heals on the next push, and the
+          # tag is always pushed with the PAT, so store-release.yml fires exactly once per release.
+          head_sha=$(node scripts/release-automation.mjs version-commit "$version")
+          echo "Current version ${version}: release commit ${head_sha}"
 
-          # paths: ['package.json'] also fires on dependency bumps and other
-          # non-version edits — only act when this push actually bumped the
-          # version field, so an unrelated merge can't tag the current version
-          # at a non-release commit (which would also preempt #51's historical
-          # placement of the retroactive tags).
           if [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
             old_version=$(git show "$BEFORE_SHA:package.json" \
               | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
-            if [ "$old_version" = "$version" ]; then
-              echo "Version unchanged by this push ($old_version -> $version) — nothing to tag."
-              exit 0
-            fi
-            VERSION="$version" OLD_VERSION="$old_version" node --input-type=module -e '
+            [ "$old_version" = "$version" ] || VERSION="$version" OLD_VERSION="$old_version" node --input-type=module -e '
               import { parseSemver } from "./scripts/bump-version.mjs";
               const o = parseSemver(process.env.OLD_VERSION);
               const n = parseSemver(process.env.VERSION);
@@ -141,7 +136,6 @@ jobs:
                   `(${process.env.OLD_VERSION} -> ${process.env.VERSION}) — refusing to tag`);
                 process.exit(1);
               }'
-            echo "Version bumped by this push: $old_version -> $version"
           fi
 
           # Peeled (^{}) form resolves an annotated tag to its target commit; a
@@ -199,10 +193,14 @@ jobs:
           if [ "$tag_exists" = false ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag -a "$tag" -F release-notes.md
-            git push origin "$tag"
+            git tag -a "$tag" "$head_sha" -F release-notes.md
+            if ! git push origin "$tag"; then
+              # A concurrent run may have just pushed it; accept only the same commit.
+              now=$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')
+              [ "$now" = "$head_sha" ] || { echo "ERROR: could not push ${tag}"; exit 1; }
+            fi
           fi
-          gh release create "$tag" --title "$tag" --notes-file release-notes.md
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes-file release-notes.md
 
   backfill:
     needs: tag-and-release
@@ -232,7 +230,8 @@ jobs:
           set -euo pipefail
           # On push, only when this push touched the versioning files (keeps docs-only merges cheap).
           if [ "$EVENT_NAME" = "push" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-            if ! git diff --name-only "$BEFORE_SHA" "$HEAD_SHA" | grep -qxE 'CHANGELOG.md|package.json'; then
+            changed=$(git diff --name-only "$BEFORE_SHA" "$HEAD_SHA")
+            if ! grep -xE 'CHANGELOG.md|package.json' <<<"$changed" >/dev/null; then
               echo "Push did not touch CHANGELOG.md/package.json — nothing to backfill."
               exit 0
             fi

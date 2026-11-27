@@ -700,16 +700,17 @@ agent); fires on **every** `push` to `main` (a docs-only merge must still refres
   workflows, so `store-release.yml`'s `v*` trigger never ships an old tag.
 - **`tag-and-release`** — described below (the original post-merge half of #52). Each run
 operates on its own pushed SHA (no concurrency queue — a dropped middle run could otherwise skip
-a version's tag entirely), reads `package.json`'s `"version"` there, and exits silently when the
-push didn't actually change `"version"` (dependency bumps and other non-version `package.json`
-edits — guarding against tagging the current version at a non-release commit, which would also
-preempt #51's historical tag placement) or when both the tag and its GitHub Release already
-exist. An existing tag is always verified to point at the pushed SHA first — a tag (with or
-without a Release) pointing anywhere else means a manual/historical tag and fails loudly rather
-than being silently accepted. A backward/sideways version move fails loudly. Otherwise it extracts that version's
+a version's tag entirely), reads `package.json`'s `"version"` there and resolves its **release
+commit** (`release-automation.mjs version-commit` — the first first-parent commit with that
+version, never HEAD), and exits when both the tag and its GitHub Release already exist. It runs on
+every push and is the sole owner of the current version's tag (backfill skips it), so a missed or
+overtaken run self-heals on the next push and the tag is always pushed with the PAT —
+`store-release.yml` fires exactly once per release. An existing tag is always verified to point at
+the release commit first — a tag (with or without a Release) pointing anywhere else means a
+manual/historical tag and fails loudly rather than being silently accepted. A backward/sideways version move fails loudly. Otherwise it extracts that version's
 `## [x.y.z]` section from `CHANGELOG.md` — reusing `bump-version.mjs`'s
 `extractVersionSection`, one parser for both the tag message and the Release body — pushes an
-annotated `v<version>` tag at that pushed SHA, and creates a GitHub Release (`v<version>`
+annotated `v<version>` tag at that release commit, and creates a GitHub Release (`v<version>`
 title, notes = the same changelog section). Both writes go through `GH_AUTOMATION_PAT`; this job
 makes **no commits and no PRs** (only `release-pr` commits, and only to `release/next`), so "never
 push to main" stays intact — the bump lands on main only by merging the release PR. If `package.json`'s

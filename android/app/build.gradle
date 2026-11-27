@@ -24,12 +24,12 @@ def uploadKeyAlias = releaseSetting('TENS_UPLOAD_KEY_ALIAS')
 def uploadKeyPassword = releaseSetting('TENS_UPLOAD_KEY_PASSWORD')
 def hasReleaseSigning = [uploadStoreFile, uploadStorePassword, uploadKeyAlias, uploadKeyPassword].every { it }
 
-// versionName mirrors package.json; versionCode derives from it (major*1000000 + minor*1000 + patch)
-// unless TENS_VERSION_CODE overrides it. Play requires every upload to raise versionCode.
-def packageVersion = new JsonSlurper().parse(rootProject.file('../package.json')).version
-def versionParts = packageVersion.tokenize('.-')
-def derivedVersionCode = versionParts[0].toInteger() * 1000000 + versionParts[1].toInteger() * 1000 + versionParts[2].toInteger()
-def appVersionCode = (releaseSetting('TENS_VERSION_CODE') ?: derivedVersionCode.toString()).toInteger()
+// versionName and versionCode both come from package.json (versionCode = YYMMDD×1000 + n, written by
+// the automatic release bump — scripts/bump-version.mjs) unless TENS_VERSION_CODE overrides it.
+// Play requires every upload to raise versionCode.
+def packageJson = new JsonSlurper().parse(rootProject.file('../package.json'))
+def packageVersion = packageJson.version
+def appVersionCode = (releaseSetting('TENS_VERSION_CODE') ?: packageJson.versionCode.toString()).toInteger()
 
 // AdMob app id: only read by the Google Mobile Ads SDK, which is compiled in only when
 // VITE_TENS_ADS_ENABLED=true at `cap sync` time (capacitor.config.js). Defaults to Google's
