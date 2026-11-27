@@ -299,7 +299,7 @@ const AchievementsPage = ({ game }) => {
                         </Detail>
                       )}
                     </Text>
-                    <Badge $color={earned ? theme.color.good : theme.color.textMuted}>{progressText && !earned ? `${progressText} ` : ''}{earned ? '✅' : '🔒'}</Badge>
+                    <Badge $color={earned ? theme.color.good : theme.color.textMuted}>{progressText && !earned && !def.progressLabel ? `${progressText} ` : ''}{earned ? '✅' : '🔒'}</Badge>
                   </Row>
                 )
               })}
