@@ -1020,6 +1020,8 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockLevel = 0
 // lastTierXpConsumed baseline a Prestige/Overclock left behind.
 export const isLastTierTickspeedXpUnlocked = state => (state.scaleUpTierCounts?.[getEffectiveLastTier(state).id] ?? 0) >= 1
 
+export const hasPurchasedRestageTier = state => getTierPurchasedCount(state, getEffectiveLastTier(state).id) > 0
+
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
 // compounds LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
 // consumeXpForLastTierTickspeed, matching the same multiplicative form every other tier's own
@@ -8704,10 +8706,11 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // frozen.
 export const consumeXpForLastTierTickspeed = amount => state => consumeXpForLastTierTickspeedCore(amount, false)(state)
 
-// A player-clicked Restage (MainPage button, Daily-run action). Unlike Auto Restage, it is allowed while the last tier
-// owns 0 — the real stall: every tier and Bits end at 0 with nothing left to rebuild them. Doing so counts the lifetime
+// A player-clicked Restage (Factory or Daily run) requires a last-tier purchase since the last reset.
+// Spending the balance down to 0 still allows manual Restage, wiping every tier and Bits. Doing so counts the lifetime
 // `emptyRestages` achievement counter, which earns Quetta broke (whose regardless-of-balance credit is the way out).
 export const restageManually = amount => state => {
+  if (!hasPurchasedRestageTier(state)) return state
   const emptyLastTier = clampNonNegative(state.owned?.[getEffectiveLastTier(state).id]) <= 0
   const next = consumeXpForLastTierTickspeedCore(amount, true)(state)
   if (!emptyLastTier || next === state || !ACHIEVEMENTS_FEATURE.enabled) return next

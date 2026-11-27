@@ -1364,6 +1364,7 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
+    purchased: { tier10: 25 },
     purchaseLevels: { tier01: 2, tier09: 3, tier10: 2 },
     scaleUpTierCounts: { tier10: 1 },
     scaleUpTargetTierIndex: 9,
@@ -1400,12 +1401,35 @@ test('the Restage panel is hidden before the last tier has been a Scale Up targe
   expect(screen.queryByLabelText(/^restage panel$/i)).toBeNull()
 })
 
-test('the Restage button stays clickable at 0 owned last-tier units and warns before Restaging', async () => {
+test('the visible Restage button enables when the player buys their first QB', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: getTierCost(TIER_DEFINITIONS.at(-1), 1) },
+    everUnlockedTierIds: { tier10: true },
+    purchaseLevels: { tier09: 3 },
+    scaleUpTierCounts: { tier10: 1 },
+    scaleUpTargetTierIndex: 9,
+    purge: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
+  })
+  render(<App />)
+
+  const xpPanel = screen.getByLabelText(/^restage panel$/i)
+  const restage = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
+  expect(restage).toBeDisabled()
+  expect(restage).not.toHaveAttribute('title')
+
+  const lastTier = screen.getByLabelText(/^quettabytes layer$/i)
+  await user.click(within(lastTier).getByRole('button', { name: /^buy for /i }))
+  expect(restage).toBeEnabled()
+})
+
+test('the Restage button stays clickable after buying QB and spending to 0, with a warning before Restaging', async () => {
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier09: 10, tier10: 0 },
+    purchased: { tier10: 10 },
     purchaseLevels: { tier09: 3, tier10: 2 },
     scaleUpTierCounts: { tier10: 1 },
     purge: { xp: 37, points: 0, count: 0, highestMilestone: 0 },

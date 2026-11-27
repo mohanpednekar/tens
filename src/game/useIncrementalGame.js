@@ -295,7 +295,7 @@ const computeInitialGame = () => {
       overclock: () => setState(overclockGame),
       setComputeAutoBoostEnabled: enabled => setState(setComputeAutoBoostEnabled(enabled)),
       setComputeAutoBoostType: boostType => setState(setComputeAutoBoostType(boostType)),
-      // The Restage button: a manual Restage, also allowed at 0 QB (Quetta broke) — Auto Restage keeps the guard.
+      // Manual Restage can earn Quetta broke after the player buys QB and spends their balance.
       consumeXpForLastTierTickspeed: amount => setState(restageManually(amount)),
       setAutoScaleUpEnabled: enabled => setState(setAutoScaleUpEnabled(enabled)),
       setAutoXpTickspeedEnabled: enabled => setState(setAutoXpTickspeedEnabled(enabled)),

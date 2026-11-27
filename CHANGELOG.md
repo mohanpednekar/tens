@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Restage stays disabled until you buy your first Quettabyte after a reset.
+
 ### Security
 
 ## [0.43.0] - 2026-11-27
