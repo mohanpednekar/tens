@@ -9,7 +9,7 @@ default.
 Three Claude-side workflows under `.github/workflows/` (`autonomous-maintenance.yml`,
 `main-ci-heal.yml`, `automation-self-heal.yml`) run Claude Code and GitHub automation
 unattended to open and fix up PRs. None of them merges anything: the PR babysitter routine (below)
-does, in ascending PR-number order (see "Auto-merge"). All three authenticate git/GitHub operations
+does, processing PRs in ascending PR-number order (see "Auto-merge"). All three authenticate git/GitHub operations
 with a `GH_AUTOMATION_PAT` repo secret instead of the default `GITHUB_TOKEN`, because
 commits/pushes/merges authored by the default token can't trigger other workflows (see
 `docs/DESIGN_HISTORY.md` for why this matters concretely).
@@ -580,14 +580,27 @@ TIER_DEFINITIONS/economy-change ban applies. `deploy.yml` is still not gated on 
 
 ### Auto-merge
 
-**Nothing enables GitHub auto-merge** — not workflows, not agents — because an armed auto-merge
-fires whenever its checks go green, out of PR-number order. Merges happen only by direct merge
-from the PR babysitter routine (ascending PR-number order, see above) or a maintainer-driven
-interactive session (`CLAUDE.md` "Direct merge"). Merge commits only: the Main ruleset's
+**Only the PR babysitter routine enables GitHub auto-merge** (maintainer standing rule, reversing
+the 2026-11-21 decision in `docs/DESIGN_HISTORY.md`; its own scheduled-task prompt is the authority).
+Processing PRs in ascending PR-number order, it arms auto-merge (merge method `merge`) only on a PR it
+could also merge directly — every `CLAUDE.md` "Direct merge" / "PR babysitter" exclusion applies
+(workflow-control fail-closed rule, `revert-deploy/*`, `do-not-merge`/`wip`/`hold`, drafts) — that has
+an adversarial `APPROVE` marker for the current head (for `release/next`: a passing `verify-pr`), no
+conflicts and no unresolved threads. It may instead merge directly when every check is already green.
+On its next run it re-checks armed PRs and disarms any whose head lost its `APPROVE`. Workflows,
+autonomous runs, Devin and dev-team roles never enable it; maintainer-driven interactive sessions
+merge directly (`CLAUDE.md` "Direct merge"). Requires the repo setting **"Allow auto-merge"**
+(Settings → General) to stay on.
+
+Accepted trade-offs (GitHub auto-merge semantics, not enforced by this repo):
+- it waits only for **required** checks (`test`), so a failing/pending non-required check (CodeQL,
+  mobile builds) doesn't stop an armed merge, unlike direct merge's "nothing still running";
+- an armed PR can land **out of PR-number order** when its checks finish first;
+- a push by someone **with write access** (agents pushing with `GH_AUTOMATION_PAT`) does not disarm
+  it, so a new head can merge on green required checks before the next daily run re-reviews it. Merge commits only: the Main ruleset's
 `allowed_merge_methods` is `merge` + `rebase`; squash is rejected (issue #343). The former low-risk
 bar and its helpers (`scripts/pr-low-risk-eligible.sh`, `scripts/enable-auto-merge-if-eligible.sh`)
-were removed with it. Auto-merge requests armed before this cutover stay queued in GitHub until
-disarmed; the babysitter disarms any it finds.
+were removed with it.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
 adversarial reviewer on the final head → post the
@@ -603,9 +616,9 @@ session):
   `main-ci-heal.yml`'s `gh run rerun` / `gh run watch`; workflow-level `permissions: actions: write`
   only covers `GITHUB_TOKEN`), alongside
   `CLAUDE_CODE_OAUTH_TOKEN`.
-- Branch protection on `main` requiring the `test` check from `ci.yml`. ("Allow auto-merge" in
-  Settings → General is no longer used and is best turned off, so nothing can arm it; the #62
-  checklist verifier no longer checks it.)
+- Branch protection on `main` requiring the `test` check from `ci.yml`.
+- "Allow auto-merge" in Settings → General **on** (the PR babysitter arms auto-merge — see
+  "Auto-merge"; currently on).
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
   workflow-control entries (workflows, actions, CODEOWNERS, automation-token scripts, the reviewer agent)
   actually take effect (tracked in issue #62's checklist until confirmed done). The owner can't approve
@@ -765,8 +778,8 @@ cheap while work is still private to the session, heavier once other reviewers c
    (human, Copilot, other bots) — per `CLAUDE.md`'s existing "keep repeating check → address → push
    until status quo" loop. Don't stop after the first round just because it was addressed; a
    finding that recurs after a fix means dig for the root cause, not declare done.
-4. **Merging.** No workflow merges anything (see "Auto-merge"). A maintainer-driven interactive
-   session or the PR babysitter routine merges directly once the PR is mergeable (brought up to date
+4. **Merging.** No workflow merges anything. The babysitter may arm auto-merge under the conditions in
+   "Auto-merge". A maintainer-driven interactive session or the PR babysitter routine merges directly once the PR is mergeable (brought up to date
    with `main`, then re-reviewed for the new head), every required check is complete and passing,
    nothing is still running, no review threads are unresolved, and an adversarial `APPROVE` marker
    exists for the **current head SHA**. Autonomous workflow runs, Devin and

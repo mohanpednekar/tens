@@ -11,7 +11,8 @@ adversarial review, resolve threads, and merge directly in ascending PR-number o
 place that owns PR state instead of four event-driven workflows racing each other on the same PR.
 Trade-offs accepted: feedback and conflicts now wait for the next daily run instead of being handled
 within minutes, and a human GitHub approval no longer auto-enables auto-merge (the old Path 1).
-GitHub auto-merge is no longer enabled by anyone (and `scripts/pr-low-risk-eligible.sh` /
+GitHub auto-merge is no longer enabled by anyone (*superseded 2026-11-27: the PR babysitter may arm it
+again — see "PR babysitter may enable auto-merge" below*) (and `scripts/pr-low-risk-eligible.sh` /
 `scripts/enable-auto-merge-if-eligible.sh` were removed): an armed auto-merge fires on green checks,
 out of the PR-number merge order the maintainer wants; only the routine (or a maintainer-driven
 interactive session) merges.
@@ -9767,3 +9768,15 @@ so Gradle, the Fastfile and `store-release-notes.mjs` read one value instead of 
 A git commit count was considered and rejected by the maintainer in favour of a readable date code.
 CalVer for the version name itself was considered and rejected: the maintainer kept SemVer.
 
+
+## PR babysitter may enable auto-merge (2026-11)
+
+Reverses the 2026-11-21 decision near the top of this file ("GitHub auto-merge is no longer enabled
+by anyone", for PR-number merge order). The maintainer's babysitter scheduled-task prompt had since
+been changed to arm auto-merge on approved PRs, and the maintainer asked for the repo docs to follow
+it. Only the babysitter arms it, merge method `merge`, and only on PRs it could merge directly (all
+direct-merge exclusions apply) with a current-head `APPROVE` (or passing `verify-pr` for
+`release/next`), no conflicts and no unresolved threads; workflows, autonomous runs and other agents
+still never do. Accepted trade-offs, documented in `docs/AUTOMATION.md` "Auto-merge": only required
+checks gate it, PRs can land out of PR-number order, and a write-access push doesn't disarm it before
+the next daily run. "Allow auto-merge" must stay on (it was previously described as best turned off).
