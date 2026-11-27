@@ -9,8 +9,8 @@ name: Release
 # 2. tag-and-release: on every push, makes sure the current package.json version has its tag
 #    (at its release commit, via the PAT) and GitHub Release. Only ever pushes a tag + Release.
 # 3. backfill: any OLDER CHANGELOG version still lacking a tag/Release (the retroactive per-day
-#    split of #1236) is tagged at the commit where package.json became that version, else the last
-#    main commit on or before its date. Never the current version (tag-and-release owns it). Uses
+#    split of #1236 — versions never in package.json) is tagged at the last main commit on or before
+#    its date. Never a live release (tag-and-release owns those), so it can't race one. Uses
 #    GITHUB_TOKEN on purpose: refs it creates trigger no workflows, so store-release.yml never
 #    ships an old tag.
 # Deterministic shell only, no agent — matching the repo's deterministic-shell rationale
@@ -82,7 +82,8 @@ jobs:
             const s = extractVersionSection(fs.readFileSync("CHANGELOG.md", "utf8"), process.env.VERSION);
             fs.writeFileSync("release-notes.md",
               "Automatic release PR (release.yml). Merge once CI is green and " +
-              "`node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` passes.\n\n" + s.body.trim() + "\n");'
+              "`node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next" +
+              (process.env.RELEASE_MAJOR === "true" ? " --allow-major" : "") + "` passes.\n\n" + s.body.trim() + "\n");'
           git push --force origin release/next
           # Same-repo PRs only: a fork PR whose branch is also named release/next must never be edited.
           pr=$(gh pr list --head release/next --base main --state open --json number,isCrossRepository \

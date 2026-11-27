@@ -1,5 +1,8 @@
 import { istDate, planMissingTags, verifyReleasePr } from './release-automation.mjs';
-import { planChangelogBump } from './bump-version.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { planChangelogBump, runBumpVersion } from './bump-version.mjs';
 
 const changelog = (unreleased, released) =>
   `# Changelog\n\n## [Unreleased]\n\n${unreleased}\n${released}`;
@@ -30,10 +33,10 @@ describe('release-automation', () => {
     ]);
   });
 
-  it('planMissingTags prefers the commit where package.json became the version', () => {
+  it('planMissingTags never plans a live release (a version that was in package.json)', () => {
     const commits = [{ sha: 'a', time: ist('2026-07-27T09:00:00') }, { sha: 'b', time: ist('2026-07-28T09:00:00') }];
     expect(planMissingTags(changelog('', RELEASED), commits, new Set(['v0.5.0']), undefined, { '0.5.1': 'b' }))
-      .toEqual([{ version: '0.5.1', tag: 'v0.5.1', sha: 'b' }, { version: '0.6.0', tag: 'v0.6.0', sha: 'b' }]);
+      .toEqual([{ version: '0.6.0', tag: 'v0.6.0', sha: 'b' }]);
   });
 
   it('planMissingTags fails loudly when no commit precedes a release date', () => {
@@ -48,6 +51,17 @@ describe('release-automation', () => {
     // RELEASED has no 2026-11-27 section, so the bump's versionCode is that day's first: 261127000.
     const head = (version, extra = {}) => pkg(version, { versionCode: 261127000, ...extra });
     const args = { baseChangelog: base, basePackage: pkg('0.6.0'), headChangelog: plan.nextText, headPackage: head('0.7.0') };
+
+    it('accepts what runBumpVersion actually writes (not a hand-built manifest)', () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-pr-'));
+      fs.writeFileSync(path.join(dir, 'CHANGELOG.md'), base);
+      fs.writeFileSync(path.join(dir, 'package.json'), pkg('0.6.0'));
+      runBumpVersion({ rootDir: dir, date: '2026-11-27' });
+      const headPackage = fs.readFileSync(path.join(dir, 'package.json'), 'utf8');
+      expect(verifyReleasePr({ ...args, headPackage, headChangelog: fs.readFileSync(path.join(dir, 'CHANGELOG.md'), 'utf8') }))
+        .toEqual({ ok: true, version: '0.7.0' });
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
 
     it('accepts exactly the bump-version result', () => {
       expect(verifyReleasePr(args)).toEqual({ ok: true, version: '0.7.0' });

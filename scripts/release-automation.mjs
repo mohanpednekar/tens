@@ -1,10 +1,10 @@
 /**
  * Automatic-versioning helpers for release.yml (versioning is automatic — no one picks a version):
  *
- * - `planMissingTags` — every CHANGELOG version without a git tag gets one: at the first-parent
- *   `main` commit where package.json's version became that version when one exists, otherwise (the
- *   retroactive per-day split of #1236, never in package.json) at the last first-parent commit on or
- *   before its release date in IST (release.yml stamps dates with --date in IST too).
+ * - `planMissingTags` — every CHANGELOG version that was NEVER in package.json (the retroactive
+ *   per-day split of #1236) and has no git tag gets one, at the last first-parent `main` commit on
+ *   or before its release date (IST). Versions that were in package.json are live releases owned by
+ *   release.yml's tag-and-release, so they are never planned here.
  * - `verifyReleasePr` — a release PR is valid only if its CHANGELOG.md/package.json are exactly what
  *   `yarn bump-version` (or `--major`) produces from the base branch, so it can merge without a review.
  *
@@ -33,8 +33,8 @@ export function istDate(unixSeconds) {
  * @param {string} changelogText
  * @param {Array<{ sha: string, time: number }>} commits  first-parent main commits, any order
  * @param {Set<string>} existingTags  e.g. new Set(['v0.1.0'])
- * @param {string} [skipVersion]  the current version (tag-and-release tags it at its release commit)
- * @param {Record<string, string>} [versionCommits]  version → first main commit where package.json had it
+ * @param {string} [skipVersion]  the current version (also skipped via versionCommits; kept for callers)
+ * @param {Record<string, string>} [versionCommits]  version → first main commit where package.json had it (skipped)
  * @returns {Array<{ version: string, tag: string, sha: string }>}  oldest first
  */
 export function planMissingTags(changelogText, commits, existingTags, skipVersion, versionCommits = {}) {
@@ -45,10 +45,10 @@ export function planMissingTags(changelogText, commits, existingTags, skipVersio
     parseSemver(s.id);
     const tag = `v${s.id}`;
     if (existingTags.has(tag) || s.id === skipVersion) continue;
-    if (versionCommits[s.id]) {
-      out.push({ version: s.id, tag, sha: versionCommits[s.id] });
-      continue;
-    }
+    // A version that was ever in package.json is a live release: tag-and-release owns its tag
+    // (PAT → store-release). Backfill only places versions that never were (the retro split), so
+    // it can never race a live release run, however runs overlap.
+    if (versionCommits[s.id]) continue;
     const onOrBefore = sorted.filter((c) => istDate(c.time) <= s.date);
     if (onOrBefore.length === 0) throw new Error(`no main commit on or before ${s.date} for ${tag}`);
     out.push({ version: s.id, tag, sha: onOrBefore[onOrBefore.length - 1].sha });
