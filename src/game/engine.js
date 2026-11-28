@@ -8269,9 +8269,10 @@ const resetFactoryCycle = (state, awardPurge) => {
       mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
       capacity: state.intro?.capacity ?? initial.intro.capacity,
       byteCreated: state.intro?.byteCreated ?? initial.intro.byteCreated,
-      // Factory resets preserve the Foundry setting, cooldown, and test data.
+      // Factory resets preserve the live Staging buffers and their fill measurements.
       foundrySpeedSelection: state.intro?.foundrySpeedSelection ?? null,
       foundrySpeedSavedAtMs: state.intro?.foundrySpeedSavedAtMs ?? null,
+      foundrySpeedFills: state.intro?.foundrySpeedFills ?? {},
       foundrySpeedFillTimes: state.intro?.foundrySpeedFillTimes ?? {},
       // The Data Stream balance survives a Factory-cycle reset (Purge / challenge enter/exit) — Prestige never empties it.
       bits: state.intro?.bits ?? initial.intro.bits,

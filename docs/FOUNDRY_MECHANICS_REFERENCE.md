@@ -142,7 +142,8 @@ keep the preference and cooldown, and temporarily
 clamp the effective setting to the live maximum. Full Reset clears both. Only a manual changed
 selection restarts the cooldown. Achievement rewards shorten it immediately from the last save.
 
-The cooldown achievements observe normal Staging fills. Reloads clear in-progress measurements.
+The cooldown achievements observe normal Staging fills. Purge preserves in-progress measurements
+alongside Staging. Reloads clear those measurements.
 No achievement changes Staging, modifies its consumers, or starts a separate run.
 
 - **Sprint and Spend** (1 hour). At maximum speed, beat the 1× time from 10% to 25% Staging and

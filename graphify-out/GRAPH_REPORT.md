@@ -1,7 +1,7 @@
 # Graph Report - tens  (2026-11-28)
 
 ## Corpus Check
-- 269 files · ~656,137 words
+- 269 files · ~656,168 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 34 file(s) not represented in the graph (top: (none) 12, .xml 9, .properties 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5e1e5d8c`
+- Built from commit: `9c744f84`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -279,16 +279,16 @@
 10. `tickGame()` - 91 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Fixed` --references--> `buyBooster()`  [INFERRED]
+- `Storage auto-redeem toggle button removed for now, default flipped to always-on` --references--> `createInitialGameState()`  [INFERRED]
+  docs/DESIGN_HISTORY.md → src/game/engine.js
+- `Fixed` --references--> `formatCurrency()`  [INFERRED]
   CHANGELOG.md → src/game/engine.js
-- `Data Lake Boosters: spending real deposits, not a separate "used" ledger` --references--> `getDataLakeDepositedUnits()`  [INFERRED]
-  docs/DESIGN_HISTORY.md → src/game/engine.js
-- `Hierarchical Data Lake disks + direct pool disk fills (2026-11, #1087)` --references--> `getDataLakeReachableUnits()`  [INFERRED]
-  docs/DESIGN_HISTORY.md → src/game/engine.js
-- `Idle disk liquidation could destroy a disk from a still-mid-build array, not just a genuinely full lake` --references--> `isDataLakeCapacityMaxed()`  [INFERRED]
-  docs/DESIGN_HISTORY.md → src/game/engine.js
-- `Changed` --references--> `isDataLakePoolReady()`  [INFERRED]
+- `Fixed` --references--> `formatCurrency()`  [INFERRED]
   CHANGELOG.md → src/game/engine.js
+- `Changed` --references--> `getCostEpochExponent()`  [INFERRED]
+  CHANGELOG.md → src/game/engine.js
+- `Production speed bonus: automatic log10 → 1 PP purchase, 1 + log10(n) with ×1.1 first Purge — 2026-11-15 (#1098, #1097, #1100)` --references--> `buyPrestigeSpeedBonus()`  [INFERRED]
+  docs/DESIGN_HISTORY.md → src/game/engine.js
 
 ## Import Cycles
 - None detected.
@@ -1116,7 +1116,7 @@ Nodes (5): Heading, Note, Panel, Rows, SpeedDetailsPopover()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Changelog` connect `Changelog` to `[0.30.1] - 2026-10-28`, `[0.32.1] - 2026-11-05`, `getStoragePoolBandwidth`, `[0.6.0] - 2026-07-28`, `[0.44.0] - 2026-11-27`, `Fixed`, `[0.11.0] - 2026-08-19`, `adaptSaveForCurrentSchema`, `[0.9.1] - 2026-08-11`, `[0.23.3] - 2026-09-15`, `[0.12.0] - 2026-08-20`, `[0.15.1] - 2026-08-26`, `[0.19.0] - 2026-09-03`, `[0.20.0] - 2026-09-04`, `buyTickspeedMultiplier`, `[0.28.0] - 2026-10-23`, `[0.31.0] - 2026-11-02`, `[0.32.0] - 2026-11-04`, `[0.38.0] - 2026-11-20`, `[0.39.0] - 2026-11-21`, `[0.3.0] - 2026-07-13`, `[0.41.0] - 2026-11-24`, `[0.43.0] - 2026-11-27`, `[0.4.0] - 2026-07-13`, `[0.5.0] - 2026-07-14`, `[0.7.0] - 2026-08-05`, `[0.8.0] - 2026-08-07`, `[0.13.0] - 2026-08-21`, `[0.14.1] - 2026-08-23`, `[0.15.2] - 2026-08-27`, `[0.15.3] - 2026-08-30`, `[0.21.0] - 2026-09-08`, `[0.21.1] - 2026-09-09`, `[0.23.0] - 2026-09-12`, `[0.23.5] - 2026-09-17`, `[0.15.0] - 2026-08-25`, `[0.26.1] - 2026-10-17`, `[0.27.0] - 2026-10-22`, `[0.29.0] - 2026-10-25`, `[0.2.0] - 2026-07-12`, `[0.30.0] - 2026-10-27`, `[0.30.4] - 2026-10-31`, `[0.30.5] - 2026-11-01`, `[0.33.0] - 2026-11-10`, `[0.34.0] - 2026-11-11`, `[0.36.0] - 2026-11-14`, `[0.37.0] - 2026-11-19`, `[0.40.0] - 2026-11-22`, `[0.23.2] - 2026-09-14`, `[0.9.0] - 2026-08-10`, `[0.24.1] - 2026-09-24`, `[0.26.3] - 2026-10-19`, `[0.10.0] - 2026-08-18`, `[0.35.0] - 2026-11-12`, `[0.20.3] - 2026-09-07`, `[0.36.3] - 2026-11-17`, `[0.16.0] - 2026-08-31`, `[0.26.2] - 2026-10-18`, `[0.40.1] - 2026-11-23`, `[0.20.1] - 2026-09-05`, `[0.20.2] - 2026-09-06`, `[0.7.1] - 2026-08-06`, `[0.23.4] - 2026-09-16`, `[0.9.2] - 2026-08-12`, `[0.6.1] - 2026-07-29`?**
-  _High betweenness centrality (0.084) - this node is a cross-community bridge._
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
 - **Are the 280 inferred relationships involving `Key engine functions (`src/game/engine.js`)` (e.g. with `activateComputeBoost()` and `applyAutobuyerMilestones()`) actually correct?**
   _`Key engine functions (`src/game/engine.js`)` has 280 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `file:scripts/lint-conflict-markers.mjs`, `file:scripts/lint-conflict-markers.test.js`, `file:src/game/storagePrefix.js` to the rest of the system?**
@@ -1124,7 +1124,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `DataLakePanel/index.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.05544448887111822 - nodes in this community are weakly interconnected._
 - **Why does `Design history & rationale` connect `Shared components reference` to `DataLakePanel/index.jsx`, `Distribution`, `Documentation`, `ComputePage/index.jsx`, `tickPoolBufferFill`, `getStoragePoolBandwidth`, `Automation workflows`, `engine.test.js`, `Economy model`, `bot.mjs`, `getTierCost`, `navAttention.js`, `DiskArrayRow/index.jsx`, `Automation workflows`, `Constants (`src/game/layers.js`)`, `capacitor.settings.gradle`, `createInitialGameState`, `jsconfig.json`, `normalizePoolMemoryCapacity`, `isComputeCoreConversionUnlocked`, `Foundry multiplier bar: one diverging bar tried and dropped (2026-10)`, `simulate-daily-challenges.mjs`, `Faster autobuyer unlocks, 5× challenge unlocks, cheaper PP upgrades (2026-11)`, `Daily challenges (epic #1062)`, `Migration in `src/save-migration/`, runs on every load — 2026-08-22`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `MainPage()` (e.g. with `Byte Foundry` and `Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework`) actually correct?**
   _`MainPage()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
