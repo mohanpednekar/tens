@@ -22,8 +22,6 @@ import {
   DISK_LADDER_SIZE_MULTIPLIER,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
-  FILL_MULTIPLIER_MAX_PERCENT,
-  FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
   
@@ -284,12 +282,6 @@ describe('constants', () => {
 
   it('INTRO_CAPACITY_DOUBLING_STEP is 2 (shared binary Capacity ladder spacing)', () => {
     expect(INTRO_CAPACITY_DOUBLING_STEP).toBe(2)
-  })
-
-  it("FILL_MULTIPLIER_* span 10x down to 0.1x, centered on 100% (1x) at 50% full", () => {
-    expect(FILL_MULTIPLIER_MAX_PERCENT).toBe(1000)
-    expect(FILL_MULTIPLIER_MIN_PERCENT).toBe(10)
-    expect(Math.sqrt(FILL_MULTIPLIER_MAX_PERCENT * FILL_MULTIPLIER_MIN_PERCENT)).toBe(100)
   })
 
   it('FILL_MULTIPLIER_TAP_BONUS_PERCENT is 5 and FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND is 1', () => {

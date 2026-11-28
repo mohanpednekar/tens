@@ -23,8 +23,6 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
-  FILL_MULTIPLIER_MAX_PERCENT,
-  FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
@@ -3031,7 +3029,7 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
   // exactly 0.
   expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeLessThan(INTRO_BYTE_COMBINE_COST)
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-  expect(screen.getByText(/10 b\/s$/i)).toBeInTheDocument() // 1 B/s base x 1000% (empty buffer)
+  expect(screen.getByText(/1 b\/s$/i)).toBeInTheDocument()
 })
 
 test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer isn't full", () => {
@@ -3179,16 +3177,16 @@ test('the "Data Stream" label is shown on the balance card', () => {
 test('the Data Stream header shows the basis-derived rate — (basis in Bytes)^DATA_STREAM_SPEED_EXPONENT', () => {
   // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the same
   // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B -> 100,000^0.5 =
-  // 316 B/s, shown at the empty-buffer 1000% multiplier: about 3.08 KiB/s.
+  // 316 B/s. At KB the multiplier remains 1×.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   const { unmount } = render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/3\.08 KiB\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/316 B\/s$/i)).toBeInTheDocument()
   unmount()
 
   // Starting capacity (8 bits = 1 B) -> 1^0.5 = 1 B/s.
   seedIntroState({ bits: 0, byteCreated: true })
   render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/10 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1 B\/s$/i)).toBeInTheDocument()
 })
 
 test('Upgrade Data Stream shows its cost on its own line below the label, with no stray comma', () => {
@@ -3578,10 +3576,9 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   expect(screen.queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (1000%) of the pool's available fill rate, to 3 significant digits.
-  const expected = formatDiskSize(getPoolAvailableFillRate(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
+  const expected = formatDiskSize(getPoolAvailableFillRate(savedState, 1))
   const speed = within(pool1).getByTitle(/^Available fill bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Available fill bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
+  expect(speed).toHaveAttribute('title', `Available fill bandwidth at 100% fill multiplier`)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
@@ -3597,7 +3594,7 @@ test('a pool\'s speed shows the fill speed actually available, not its higher th
   const available = getPoolAvailableFillRate(savedState, 1)
   expect(available).toBeLessThan(getStoragePoolBandwidth(savedState, 1))
   const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill bandwidth at/)
-  const expected = formatDiskSize(available * FILL_MULTIPLIER_MAX_PERCENT / 100)
+  const expected = formatDiskSize(available * 2)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })

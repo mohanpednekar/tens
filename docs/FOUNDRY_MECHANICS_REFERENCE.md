@@ -128,14 +128,31 @@ page/feature only, not any entity) — are all permanent across every real Prest
 main-game-unlock gate once latched; only tier01's purchase-block progress resets (Data Stream balance is kept)
 each cycle. Nothing here ever fully freezes — every action stays live indefinitely, every cycle.
 
-**Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in `layers.js`; `getFillMultiplierPercent`/
-`getDataStreamEffectMultiplier`/`getPoolEffectMultiplier`/`tickFillMultiplierDecay`/`tapPoolBuffer` in
-`engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (1000%
-empty → 100% at 50% full → 10% at full buffer, log-linear) scales only the real per-tick amount delivered into the
-buffer. Tapping never boosts the fill: it adds a +5% bonus (decaying 1%/sec, capped at +100%) that speeds that buffer's consumers ×(1 + bonus%) — see `getDataStreamTapMultiplier`/`getPoolTapMultiplier`.
-`ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
-show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted
-red (10%) → blue (100%) → green (1000%) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed — or, while no bonus is active, "⏳ time to full" (`getBufferSecondsToFull`: (capacity/rate)·e^(−a)·(e^b − e^(b·fill))/b with a = ln(MAX/100), b = ln(MAX/MIN), the integral of the log-linear fill-multiplier curve, assuming nothing else draws from the buffer); bar and bonus text auto-hide at 0).
+**Foundry speed** (#1261). Before Compile each ping produces exactly one bit, capacity permitting.
+Provision Disk is visible from KB. Primary fill stays at 1× through KB. From MB onward, the slider
+selects `s` in 0.1 steps from 1 to the number of live pools. The Data Stream and every live pool
+fill at `s^(1 − 2·fill)` times the base rate. The speed display and isolated fill estimate use the
+same curve. At 1×, fills are linear. A higher setting gets partial data quickly but takes longer
+to finish an uninterrupted fill. Pings after KB still speed consumers, independent of fill speed.
+
+`intro.foundrySpeedSelection` is null for the current maximum, including on older saves, or a fixed
+numeric choice. Opening a new pool advances an active maximum. Save records
+`intro.foundrySpeedSavedAtMs`. Purge keeps the preference, cooldown, and completed comparison. Reformat and Reboot
+keep the preference and cooldown, and temporarily
+clamp the effective setting to the live maximum. Full Reset clears both. Only a manual changed
+selection restarts the cooldown. Achievement rewards shorten it immediately from the last save.
+
+- **Sprint and Spend** shortens 10 hours to 1 hour. Fill the test buffer to 10% at maximum ahead of
+  the 1× time, then spend 10% on the test disk before the buffer reaches half full. The trial is
+  repeatable and keeps real pool staging and disk funding separate.
+- **Slow Wins** shortens the cooldown to 10 minutes. Record a maximum-speed full fill, then beat it
+  at 1× in the same selected pool and staging capacity. The test buffer is isolated and its base
+  fill lasts 30 seconds. A completed benchmark survives reloads but resets with Reformat/Reboot.
+- **Perfect Handoff** shortens the cooldown to 1 minute. From TB, start with maximum selected and
+  Save available. Reach 25% within 3.6 seconds, save 1× after that split, and finish by 24.9 seconds.
+  With `a = ln(s)`, every fixed speed takes `30·sinh(a)/a ≥ 30s`. At 4×, the halfway switch
+  can finish in about 23.1 seconds. Reloads and offline catch-up cancel attempts.
+
 A collapsed pool card also shows its Data Lake title/action row (`DataLakePanel section="header"`; an
 expanded pool renders the full lake). Tap-bonus headroom clamping: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
 

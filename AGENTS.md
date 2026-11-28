@@ -162,8 +162,8 @@ Stream** (Buffer-capped, binary units — Disks/Data Lakes/caches stay SI); Comp
 permanent Byte generator grown via **Upgrade Capacity** / **Upgrade Bitrate** (one at a time, entirely
 OUTSIDE the forced priority order Disk Fill > Provision Disk > Compute Boost). Displayed Speed is
 *derived* (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`), not purchased.
-A fill-based multiplier scales real delivery only, never the displayed Speed/Bandwidth; taps never
-speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's
+Foundry fill speed is 1× through KB and adjustable from MB onward. Its reciprocal endpoints
+scale primary delivery only. Provision Disk appears at KB, and pings before Compile add one bit. Pings do not speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's
 consumers (disks, merges, provisioning, lake). Disks fill from their pool buffer and pull into Factory
 automatically (no redeem step; clicking an empty disk expedites it, drawing on smaller disks too), and
 each pool's overflow feeds its own Data Lake. Lake units buy Boosters/Cells for Power (`ComputePage`)

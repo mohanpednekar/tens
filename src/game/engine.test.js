@@ -398,7 +398,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { BUY_MAX_RUSH_CLICKS, BUY_MAX_RUSH_WINDOW_MS, CACHE_WARM_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { BUY_MAX_RUSH_CLICKS, BUY_MAX_RUSH_WINDOW_MS, CACHE_WARM_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -761,16 +761,16 @@ describe('tapIntroBit', () => {
   it('credits the current production rate (getIntroProductionRate), not a flat 1, once the rate has grown', () => {
     // 512-Byte capacity (4,096 bits) derives a 512^DATA_STREAM_SPEED_EXPONENT B/s Speed (about 108 B/s =
     // 861 bits/sec at 0.75) — still below the Storage-pool reveal threshold, so the tap credits bits directly.
-    const state = withIntro(createInitialGameState(), { capacity: 4096 })
+    const state = withIntro(createInitialGameState(), { capacity: 4096, byteCreated: true })
     const after = tapIntroBit(state)
     expect(after.intro.bits).toBe(Math.floor(getIntroProductionRate(state.intro)))
     expect(after.intro.bits).toBeCloseTo(Math.floor(512 ** DATA_STREAM_SPEED_EXPONENT * BITS_PER_BYTE), 0)
   })
 
-  it('credits one second of the derived rate at the starting capacity (8 bits/sec at 1 Byte)', () => {
+  it('credits one bit per ping until Compile', () => {
     const state = createInitialGameState()
     const after = tapIntroBit(state)
-    expect(after.intro.bits).toBe(8)
+    expect(after.intro.bits).toBe(1)
   })
 
   it('caps at capacity rather than overshooting', () => {
@@ -785,7 +785,7 @@ describe('tapIntroBit', () => {
   })
 
   it('keeps working after mainGameUnlocked — nothing about tapping ever freezes', () => {
-    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: 0, capacity: 8 })
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, byteCreated: true, bits: 0, capacity: 8 })
     const after = tapIntroBit(state)
     expect(after.intro.bits).toBe(8)
   })
@@ -794,7 +794,7 @@ describe('tapIntroBit', () => {
     // capacity clears getPoolCapacityUnlockThresholdBits(1) (8,192 bits = 1 KiB) — pool 1 is
     // "revealed" (getVisibleStoragePoolCount >= 1) the moment this threshold is crossed,
     // independent of disk-build progress (pool 1 is always structurally unlocked).
-    const state = withIntro(createInitialGameState(), { bits: 100, capacity: 10_000 })
+    const state = withIntro(createInitialGameState(), { bits: 100, capacity: 10_000, byteCreated: true })
     expect(getVisibleStoragePoolCount(state)).toBeGreaterThanOrEqual(1)
     const after = tapIntroBit(state)
     expect(after.intro.bits).toBe(100) // no direct bit credit in this mode
@@ -802,13 +802,13 @@ describe('tapIntroBit', () => {
   })
 
   it('stacks the Data Stream tap bonus across repeated taps once Storage pools are revealed', () => {
-    const state = withIntro(createInitialGameState(), { bits: 100, capacity: 10_000 })
+    const state = withIntro(createInitialGameState(), { bits: 100, capacity: 10_000, byteCreated: true })
     const after = tapIntroBit(tapIntroBit(state))
     expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_PERCENT * 2)
   })
 
   it('still grants the bonus on a full Buffer in the post-reveal tap mode (it speeds consumers)', () => {
-    const state = withIntro(createInitialGameState(), { bits: 10_000, capacity: 10_000 })
+    const state = withIntro(createInitialGameState(), { bits: 10_000, capacity: 10_000, byteCreated: true })
     const after = tapIntroBit(state)
     expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_PERCENT)
     expect(after.intro.bits).toBe(10_000)
@@ -818,7 +818,7 @@ describe('tapIntroBit', () => {
     // The bonus is its own 0..100 value — a tap has nothing left to add once it caps out,
     // regardless of the fill-based base reading.
     const state = withIntro(createInitialGameState(), {
-      bits: 0, capacity: 10_000,
+      bits: 0, capacity: 10_000, byteCreated: true,
       dataStreamTapBonusPercent: FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
     })
     expect(tapIntroBit(state)).toBe(state)
@@ -826,7 +826,7 @@ describe('tapIntroBit', () => {
 
   it('clamps the stored bonus to its own 0..100 cap, independent of the fill-based base', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: 0, capacity: 10_000,
+      bits: 0, capacity: 10_000, byteCreated: true,
       dataStreamTapBonusPercent: FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT - 2,
     })
     const after = tapIntroBit(state)
@@ -837,30 +837,30 @@ describe('tapIntroBit', () => {
 
 describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)', () => {
   describe('getFillMultiplierPercent', () => {
-    it('is FILL_MULTIPLIER_MAX_PERCENT when empty', () => {
-      expect(getFillMultiplierPercent(0)).toBe(FILL_MULTIPLIER_MAX_PERCENT)
+    it('uses the selected multiplier when empty', () => {
+      expect(getFillMultiplierPercent(0, 3)).toBe(300)
     })
 
     it('is exactly 100 at 50% full', () => {
       expect(getFillMultiplierPercent(0.5)).toBe(100)
     })
 
-    it('is FILL_MULTIPLIER_MIN_PERCENT once completely full', () => {
-      expect(getFillMultiplierPercent(1)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
+    it('uses the reciprocal when full', () => {
+      expect(getFillMultiplierPercent(1, 2)).toBe(50)
     })
 
     it('clamps a defensively out-of-range fraction', () => {
-      expect(getFillMultiplierPercent(-1)).toBe(FILL_MULTIPLIER_MAX_PERCENT)
-      expect(getFillMultiplierPercent(2)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
+      expect(getFillMultiplierPercent(-1, 2)).toBe(200)
+      expect(getFillMultiplierPercent(2, 2)).toBe(50)
     })
 
     it('getFillCurveDelta and getFillCurveSeconds invert each other', () => {
       const cap = 1000
       const rate = 10
       const start = 100
-      const dt = getFillCurveSeconds(start, 400, cap, rate)
+      const dt = getFillCurveSeconds(start, 400, cap, rate, 3)
       expect(dt).toBeGreaterThan(0)
-      expect(start + getFillCurveDelta(start, cap, rate, dt)).toBeCloseTo(400, 6)
+      expect(start + getFillCurveDelta(start, cap, rate, dt, 3)).toBeCloseTo(400, 6)
       expect(getFillCurveSeconds(cap, cap, cap, rate)).toBeNull()
       expect(getFillCurveDelta(cap, cap, rate, 1)).toBe(0)
     })
@@ -1019,7 +1019,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       const state = withIntro(baseState, { poolBuffers: { 1: getPoolBufferCapacity(baseState, 1) } })
       expect(tickFillMultiplierDecay(0)(state)).toBe(state)
       expect(tickFillMultiplierDecay(2)(state).intro.poolTapBonusPercents[1]).toBe(50 - 2 * FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND)
-      expect(getPoolMultiplierPercent(state, 1)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
+      expect(getPoolMultiplierPercent(state, 1)).toBe(100)
     })
 
     it('leaves a pool\'s tap bonus untouched at zero elapsed time while its buffer still has room', () => {
@@ -1035,10 +1035,10 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
   })
 
   describe('applied to the real per-tick delivery, never to the displayed rate', () => {
-    it('tickIntroProduction delivers 10x at an empty Buffer (FILL_MULTIPLIER_MAX_PERCENT)', () => {
-      const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 1_000_000 })
+    it('tickIntroProduction uses the selected curve at an empty MB Buffer', () => {
+      const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 8_388_608 })
       const after = tickIntroProduction(0.01)(state)
-      expect(after.intro.bits).toBeCloseTo(getFillCurveDelta(0, 1_000_000, getIntroProductionRate(state.intro), 0.01))
+      expect(after.intro.bits).toBeCloseTo(getFillCurveDelta(0, 8_388_608, getIntroProductionRate(state.intro), 0.01, 2))
       expect(after.intro.bits).toBeGreaterThan(getIntroProductionRate(state.intro) * 0.01)
     })
 
@@ -1050,7 +1050,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       )
     })
 
-    it('tickPoolBufferFill transfers more than the raw rate into an empty pool buffer (near FILL_MULTIPLIER_MAX_PERCENT)', () => {
+    it('tickPoolBufferFill transfers more than the raw rate into an empty pool buffer at MB', () => {
       const state = withIntro(createInitialGameState(), {
         byteCreated: true, bits: 1_000_000, capacity: 32_000_000,
       })
@@ -1058,7 +1058,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       const bufferCap = getPoolBufferCapacity(state, 1)
       const after = tickPoolBufferFill(0.01)(state)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate * 0.01)
-      expect(after.intro.poolBuffers[1]).toBeCloseTo(getFillCurveDelta(0, bufferCap, rawRate, 0.01))
+      expect(after.intro.poolBuffers[1]).toBeCloseTo(getFillCurveDelta(0, bufferCap, rawRate, 0.01, 2))
     })
 
     it('a 1s tickIntroProduction matches ten 0.1s ticks on an empty small buffer', () => {
@@ -1083,7 +1083,7 @@ describe('getDataStreamDeliveredRate', () => {
     })
     expect(getComputeBoostMultiplier(state.intro)).toBeGreaterThan(1)
     const delivered = getDataStreamDeliveredRate(state.intro)
-    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 10)
+    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro))
     const unmultiplied = getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro)
     expect(tickIntroProduction(0.01)(state).intro.bits).toBeCloseTo(
       Math.min(1000, getFillCurveDelta(0, 1000, unmultiplied, 0.01)),
@@ -1131,7 +1131,7 @@ describe('getPoolAvailableFillRate', () => {
     const after = tickPoolBufferFill(1)(state)
     const tapK = 1 + getPoolTapBonusPercent(state, 1) / 100
     expect(after.intro.poolBuffers[1]).toBeCloseTo(
-      getFillCurveDelta(0, getPoolBufferCapacity(state, 1), available * tapK, 1),
+      getFillCurveDelta(0, getPoolBufferCapacity(state, 1), available * tapK, 1, 2),
     )
   })
 })
@@ -1474,6 +1474,7 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
 
   it('normalizePoolMemoryCapacity does not arm diskBuildQueued for a stale, already-over-required pass count — nothing is left to auto-continue', () => {
     const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
       diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
     })
@@ -2158,7 +2159,7 @@ describe('pool buffers', () => {
     const pool2Transfer = after.intro.poolBuffers[2]
     const pool1Cap = getPoolBufferCapacity(state, 1)
     const pool1Rate = getPoolAvailableFillRate(state, 1)
-    expect(pool1Transfer).toBeCloseTo(getFillCurveDelta(400_000, pool1Cap, pool1Rate, 1))
+    expect(pool1Transfer).toBeCloseTo(getFillCurveDelta(400_000, pool1Cap, pool1Rate, 1, 2))
     expect(pool2Transfer).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - pool1Transfer - pool2Transfer)
   })
@@ -2171,8 +2172,9 @@ describe('pool buffers', () => {
 })
 
 describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
-  it('queueDiskBuild arms diskBuildQueued', () => {
-    const state = createInitialGameState()
+  it('queueDiskBuild arms diskBuildQueued after the KB pool is live', () => {
+    expect(queueDiskBuild(createInitialGameState()).intro.diskBuildQueued).toBe(false)
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY })
     const queued = queueDiskBuild(state)
     expect(queued).not.toBe(state)
     expect(queued.intro.diskBuildQueued).toBe(true)
@@ -2561,6 +2563,7 @@ describe('isProvisionDiskAvailable', () => {
     // isProvisionDiskAvailable's own buffer-size floor would gate out a disk that has nothing left
     // to fund, making provisionDisk's self-heal branch unreachable behind an empty buffer.
     const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
       diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
     })
@@ -2898,8 +2901,6 @@ describe('tickIntroProduction', () => {
   })
 
   it('delivers continuously — a fractional second banks a fractional share of the rate, with no separate accumulator', () => {
-    // An empty buffer's 1000% fill multiplier lifts the real delivery to 10x the derived rate;
-    // a large capacity keeps fill nearly 0 over 0.4s so the instantaneous 10× still holds.
     const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100000 })
     const after = tickIntroProduction(0.4)(state)
     expect(after.intro.bits).toBeCloseTo(getFillCurveDelta(0, 100000, getIntroProductionRate(state.intro), 0.4))
@@ -12428,6 +12429,7 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
   it('after a pool-local reset with a raised unlocked step, the rebuild is not "pending" and Provision Disk stays queueable', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
       unlockedDiskSteps: 4,
       dataLakes: { 1: { rebuilding: true } },
     })

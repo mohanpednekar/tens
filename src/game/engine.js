@@ -1,4 +1,6 @@
-import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, ACHIEVEMENT_STAR_PRODUCTION_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS, AUTO_PURGE_MAX_PP_EXPONENT, AUTO_PURGE_MIN_SECONDS_OPTIONS, AUTO_PURGE_BEST_MULTIPLIER_OPTIONS, EON_AMPLIFIER_AWARD_BASE, EON_UPGRADE_BY_ID, AUTO_HYPERSCALER_EON_COST, BUY_MAX_ACHIEVEMENT_ID, BUY_MAX_RUSH_CLICKS, BUY_MAX_RUSH_WINDOW_MS } from './layers.js'
+import { getFillCurveDelta, getFillCurveSeconds, getFillMultiplierPercent } from './foundryFillCurve.js'
+export { getFillCurveDelta, getFillCurveSeconds, getFillMultiplierPercent } from './foundryFillCurve.js'
+import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, ACHIEVEMENT_STAR_PRODUCTION_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS, AUTO_PURGE_MAX_PP_EXPONENT, AUTO_PURGE_MIN_SECONDS_OPTIONS, AUTO_PURGE_BEST_MULTIPLIER_OPTIONS, EON_AMPLIFIER_AWARD_BASE, EON_UPGRADE_BY_ID, AUTO_HYPERSCALER_EON_COST, BUY_MAX_ACHIEVEMENT_ID, BUY_MAX_RUSH_CLICKS, BUY_MAX_RUSH_WINDOW_MS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -439,6 +441,10 @@ export const createInitialGameState = () => ({
     // Stream" purchase (see upgradePoolCapacity — cost = current capacity). Speed is derived
     // from this, never stored (see getIntroProductionRate).
     capacity: INTRO_STARTING_CAPACITY,
+    foundrySpeedSelection: null, // null follows the maximum as new pools go live
+    foundrySpeedSavedAtMs: null,
+    foundrySpeedBenchmark: null,
+    foundrySpeedTrial: null,
     byteCreated: false,        // PERMANENT — one persistent Byte generator, a flag not a counter
     // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Provision
     // Disk, Capacity) after a Foundry wipe. null when inactive. Survives Prestige like other
@@ -1470,6 +1476,8 @@ const buildEraIntroReset = (state, initial) => {
   return {
     ...initial.intro,
     byteCreated,
+    foundrySpeedSelection: state.intro?.foundrySpeedSelection ?? null,
+    foundrySpeedSavedAtMs: state.intro?.foundrySpeedSavedAtMs ?? null,
     bits: 0,
     // PERMANENT, like computeMergePageUnlocked below — once the main game has ever been revealed,
     // Era ascension (a much bigger reset than an ordinary Prestige) still never re-gates it. See
@@ -1537,6 +1545,7 @@ export const isAchievementConditionMet = (state, condition) => {
   switch (condition.kind) {
     case 'counter': return (state.achievements?.counters?.[condition.key] ?? 0) >= condition.min
     case 'byteCreated': return Boolean(state.intro?.byteCreated)
+    case 'foundrySpeedUnlocked': return getFoundrySpeedMaximum(state.intro) >= condition.min
     case 'storageUnlocked': return Boolean(state.intro?.mainGameUnlocked) || isStorageUnlocked(state)
     case 'tierPurchased': return (state.purchased?.[condition.tierId] ?? 0) > 0 || (state.purchaseLevels?.[condition.tierId] ?? 1) > 1
     case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
@@ -2809,6 +2818,7 @@ export const getOfflineEffectiveSeconds = (elapsedRealSeconds, capSeconds = MAX_
 // (tickIntroProduction/tickIntroAutoInvest/tickStorage*), so this same speed and cadence apply to
 // the entire game, not just tiers.
 export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
+  state = cancelFoundrySpeedTrial(state)
   const effectiveSeconds = getOfflineEffectiveSeconds(elapsedRealSeconds, getMaxOfflineSeconds(state))
   let result = state
   for (let i = 0; i < effectiveSeconds; i++) {
@@ -2830,6 +2840,7 @@ export const getOfflineRewardBonusSeconds = (elapsedRealSeconds, capSeconds = MA
 // `capSeconds` is the cap the catch-up itself used (the notice summary's), so a Sleep mode upgrade bought
 // between catch-up and claim can't enlarge the bonus; defaults to the state's current cap.
 export const applyOfflineRewardBonus = (elapsedRealSeconds, autobuyerBatchSize = 1, capSeconds) => state => {
+  state = cancelFoundrySpeedTrial(state)
   const bonusSeconds = getOfflineRewardBonusSeconds(elapsedRealSeconds, capSeconds ?? getMaxOfflineSeconds(state))
   let result = state
   for (let i = 0; i < bonusSeconds; i++) {
@@ -3168,64 +3179,15 @@ export const getSpeedBasisBits = intro =>
 export const getIntroProductionRate = intro =>
   getDataStreamSpeedBytesPerSecond(getSpeedBasisBits(intro), getDataStreamSpeedExponent(intro)) * BITS_PER_BYTE
 
-// --- Fill-based Speed/Bandwidth multiplier (see FILL_MULTIPLIER_* in layers.js) --- Displayed
-// rates (getIntroProductionRate above, getStoragePoolBandwidth below) never change; this
-// multiplier scales only the REAL per-tick amount tickIntroProduction/tickPoolBufferFill actually
-// deliver, "primary fill only" (see layers.js for the full scope note).
-//
-// Percent value (100 = "no change") from a 0..1 fill fraction: FILL_MULTIPLIER_MAX_PERCENT when
-// empty, exactly 100 at 50% full, FILL_MULTIPLIER_MIN_PERCENT once completely full. Shared by the
-// Data Stream itself and every pool's own local buffer below — same log-linear "1000% down to 10%"
-// curve either way. fillFraction is clamped defensively — both real callers already clamp their
-// own fraction to at most 1 before calling this, so this only guards a corrupted/hand-edited save.
-export const getFillMultiplierPercent = fillFraction => {
-  const clampedFraction = Math.min(1, Math.max(0, fillFraction))
-  // Log-linear: 10x at empty, exactly 1x at 50%, 0.1x when full (MAX/MIN are 1000/10 percent).
-  const maxLog = Math.log10(FILL_MULTIPLIER_MAX_PERCENT)
-  const minLog = Math.log10(FILL_MULTIPLIER_MIN_PERCENT)
-  return 10 ** (maxLog - clampedFraction * (maxLog - minLog))
-}
-
-// Natural-log form of the same curve: m(f) = e^(a − b·f) with a = ln(MAX/100), b = ln(MAX/MIN).
-// Instantaneous Euler (rate × m(start) × dt) overstates a 1s offline tick vs live 0.1s ticks once
-// MAX/MIN is this steep; these two invert each other so production, pool fill, and tile ETAs
-// follow the continuous ODE. Upgrade drains stay a constant 1× Speed. ByteFoundryPage's
-// getBufferSecondsToFull is the start→cap special case of getFillCurveSeconds.
-const FILL_CURVE_LN_A = Math.log(FILL_MULTIPLIER_MAX_PERCENT / 100)
-const FILL_CURVE_LN_B = Math.log(FILL_MULTIPLIER_MAX_PERCENT / FILL_MULTIPLIER_MIN_PERCENT)
-
-export const getFillCurveSeconds = (startAmount, endAmount, capAmount, unmultipliedRate) => {
-  if (!(capAmount > 0) || !(unmultipliedRate > 0)) return null
-  const start = Math.max(0, startAmount)
-  const end = Math.min(capAmount, endAmount)
-  if (end <= start) return null
-  const fill0 = start / capAmount
-  const fill1 = end / capAmount
-  return (capAmount / unmultipliedRate) * Math.exp(-FILL_CURVE_LN_A)
-    * (Math.exp(FILL_CURVE_LN_B * fill1) - Math.exp(FILL_CURVE_LN_B * fill0)) / FILL_CURVE_LN_B
-}
-
-export const getFillCurveDelta = (startAmount, capAmount, unmultipliedRate, elapsedSeconds) => {
-  if (!(capAmount > 0) || !(unmultipliedRate > 0) || !(elapsedSeconds > 0)) return 0
-  const start = Math.max(0, startAmount)
-  if (start >= capAmount) return 0
-  const fill0 = start / capAmount
-  const inside = Math.exp(FILL_CURVE_LN_B * fill0)
-    + (FILL_CURVE_LN_B * unmultipliedRate / capAmount) * Math.exp(FILL_CURVE_LN_A) * elapsedSeconds
-  const next = capAmount / FILL_CURVE_LN_B * Math.log(inside)
-  return Math.min(capAmount, next) - start
-}
-
 // The Data Stream Buffer's own fill fraction (0..1) — intro.bits over intro.capacity.
 export const getDataStreamFillFraction = intro =>
   intro.capacity > 0 ? Math.min(1, intro.bits / intro.capacity) : 0
 
 // The Data Stream's fill-based multiplier percent, before any tap bonus.
 export const getDataStreamBaseMultiplierPercent = intro =>
-  getFillMultiplierPercent(getDataStreamFillFraction(intro))
+  getFillMultiplierPercent(getDataStreamFillFraction(intro), getFoundrySpeed(intro))
 
-// The Data Stream's fill multiplier percent — the fill-based value only. The fill curve already reaches
-// FILL_MULTIPLIER_MAX_PERCENT on its own, so the Data Stream's tap bonus never scales this fill; it
+// The Data Stream's fill multiplier percent — the fill-based value only. The Data Stream's tap bonus never scales this fill; it
 // speeds the stream's CONSUMERS instead (getDataStreamTapMultiplier). What ByteFoundryPage displays
 // alongside the Speed figure, and what getDataStreamEffectMultiplier turns into the production scale.
 export const getDataStreamMultiplierPercent = intro =>
@@ -3263,8 +3225,7 @@ export const getRunningUpgradeDraw = intro => {
 }
 
 // Manual tap. Before Storage pools are revealed at 1 KiB (getVisibleStoragePoolCount below), this
-// credits "one second's worth" at the Byte generator's current rate (see getIntroProductionRate),
-// capped at capacity — the original flat 1-bit tap at the starting rate. Once Storage pools ARE
+// credits one bit per ping until Compile, then one second of base production, capped at capacity. Once Storage pools ARE
 // revealed, this direct-credit effect is REPLACED (see FILL_MULTIPLIER_* in layers.js): a tap
 // instead adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to the Data Stream's own decaying consumer bonus
 // (dataStreamTapBonusPercent, see getDataStreamTapMultiplier) — tickFillMultiplierDecay drains it back
@@ -3276,7 +3237,7 @@ const tapIntroBitCore = state => {
   // Fill-multiplier-bonus mode once Storage itself has been revealed — isStorageUnlocked directly
   // (NOT getVisibleStoragePoolCount(state) >= 1, which pool 1's own special-case always satisfies
   // regardless of actual Capacity — see that function's own doc comment).
-  if (isStorageUnlocked(state)) {
+  if (state.intro.byteCreated && isStorageUnlocked(state)) {
     // The manual tap bonus is its OWN 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT value, clamped
     // independently of the fill-based reading — a tap at the cap has nothing left to add (same
     // "nothing left to gain" reasoning as tapping an already-full Buffer).
@@ -3290,11 +3251,8 @@ const tapIntroBitCore = state => {
       },
     }
   }
-  // Math.max(1, …) is a defensive floor (the derived rate is always >= BITS_PER_BYTE at the
-  // starting 1-Byte capacity — but guards against a corrupted/hand-edited save where that
-  // invariant doesn't hold) — the same posture as clampNonNegative elsewhere in this file.
   if (state.intro.bits >= state.intro.capacity) return state
-  const tapAmount = Math.max(1, Math.floor(getIntroProductionRate(state.intro)))
+  const tapAmount = state.intro.byteCreated ? Math.max(1, Math.floor(getIntroProductionRate(state.intro))) : 1
   return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + tapAmount) } }
 }
 
@@ -3427,12 +3385,172 @@ export const getVisibleStoragePoolCount = state => {
   // getPoolCapacityUnlockThresholdBits(1)'s own doc comment), but keeps every pool-1-scoped query
   // (Bandwidth, buffer fill fraction, tap bonus, …) answerable at any capacity, matching how pool 1
   // behaved before this function existed.
+  return getFoundrySpeedMaximum(state.intro)
+}
+
+export const getFoundrySpeedMaximum = intro => {
   let count = 1
   for (let poolIndex = 2; poolIndex <= getStoragePoolCount(); poolIndex += 1) {
-    if ((state.intro?.capacity ?? 0) < getPoolCapacityUnlockThresholdBits(poolIndex)) break
+    if ((intro?.capacity ?? 0) < getPoolCapacityUnlockThresholdBits(poolIndex)) break
     count = poolIndex
   }
   return count
+}
+
+// A saved maximum is represented by null. A concrete selection survives temporary
+// capacity loss during Reformat/Reboot and is clamped until its pool comes online again.
+export const getFoundrySpeed = (intro, maximum = getFoundrySpeedMaximum(intro)) =>
+  Number.isFinite(intro?.foundrySpeedSelection)
+    ? Math.min(maximum, Math.max(1, intro.foundrySpeedSelection))
+    : maximum
+
+export const FOUNDRY_SPEED_STEP = 0.1
+const FOUNDRY_SPEED_COOLDOWNS = [
+  ['foundryHandoff', 60],
+  ['foundrySlowWins', 600],
+  ['foundrySprint', 3600],
+]
+
+export const getFoundrySpeedCooldownSeconds = state =>
+  FOUNDRY_SPEED_COOLDOWNS.find(([id]) => isAchievementEarned(state, id))?.[1] ?? 36000
+
+export const getFoundrySpeedRemainingSeconds = (state, nowMs) => {
+  const saved = state.intro?.foundrySpeedSavedAtMs
+  if (!Number.isFinite(saved)) return 0
+  const cooldown = getFoundrySpeedCooldownSeconds(state)
+  return Math.min(cooldown, Math.max(0, cooldown - (nowMs - saved) / 1000))
+}
+
+export const saveFoundrySpeed = (selection, nowMs) => state => {
+  const maximum = getFoundrySpeedMaximum(state.intro)
+  if (!Number.isFinite(selection) || !Number.isFinite(nowMs) || maximum < 2 ||
+    selection < 1 || selection > maximum || getFoundrySpeedRemainingSeconds(state, nowMs) > 0) return state
+  const speed = Math.round(selection / FOUNDRY_SPEED_STEP) / (1 / FOUNDRY_SPEED_STEP)
+  if (speed === getFoundrySpeed(state.intro, maximum)) return state
+  const trial = state.intro.foundrySpeedTrial
+  const switched = trial?.kind === 'handoff' && trial.pool === maximum &&
+    !trial.switched && speed === 1 && trial.earlySeconds != null &&
+    trial.earlySeconds <= FOUNDRY_HANDOFF_EARLY_SECONDS && trial.result == null
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      foundrySpeedSelection: speed === maximum ? null : speed,
+      foundrySpeedSavedAtMs: nowMs,
+      foundrySpeedTrial: switched ? { ...trial, switched: true } : trial?.result != null ? trial : null,
+    },
+  }
+}
+
+// Repeatable isolated fills use a separate test buffer for the highest live pool. Fix
+// the base time so players get a reaction window regardless of live production/drains.
+const FOUNDRY_TRIAL_BASE_SECONDS = 30
+export const FOUNDRY_SPRINT_FILL_FRACTION = 0.1
+const FOUNDRY_HANDOFF_MIN_POOL = 4
+export const FOUNDRY_HANDOFF_EARLY_FRACTION = 0.25
+export const FOUNDRY_HANDOFF_EARLY_SECONDS = 3.6
+export const FOUNDRY_HANDOFF_TOTAL_SECONDS = 24.9
+
+export const getFoundrySpeedTrialOffer = (state, nowMs) => {
+  if (!ACHIEVEMENTS_FEATURE.enabled || isAchievementEarned(state, 'foundryHandoff')) return null
+  const pool = getFoundrySpeedMaximum(state.intro)
+  if (pool < 2) return null
+  const speed = getFoundrySpeed(state.intro, pool)
+  if (!isAchievementEarned(state, 'foundrySprint')) return { kind: 'sprint', ready: speed === pool }
+  if (!isAchievementEarned(state, 'foundrySlowWins')) {
+    const benchmark = state.intro.foundrySpeedBenchmark
+    if (speed === 1 && benchmark?.pool === pool && benchmark?.capacity === getPoolBufferCapacity(state, pool)) {
+      return { kind: 'baseline', ready: true }
+    }
+    return { kind: 'benchmark', ready: speed === pool }
+  }
+  if (pool < FOUNDRY_HANDOFF_MIN_POOL) return null
+  return { kind: 'handoff', ready: speed === pool && getFoundrySpeedRemainingSeconds(state, nowMs) === 0 }
+}
+
+export const startFoundrySpeedTrial = nowMs => state => {
+  const offer = getFoundrySpeedTrialOffer(state, nowMs)
+  const current = state.intro.foundrySpeedTrial
+  if (!Number.isFinite(nowMs) || !offer?.ready || (current && current.result == null)) return state
+  const pool = getFoundrySpeedMaximum(state.intro)
+  const capacity = getPoolBufferCapacity(state, pool)
+  if (!(capacity > 0)) return state
+  const trial = { kind: offer.kind, pool, capacity, bits: 0, seconds: 0, earlySeconds: null, switched: false, result: null }
+  return { ...state, intro: { ...state.intro, foundrySpeedTrial: trial } }
+}
+
+export const cancelFoundrySpeedTrial = state => !state.intro.foundrySpeedTrial ? state : ({
+  ...state, intro: { ...state.intro, foundrySpeedTrial: null },
+})
+
+export const canSpendFoundrySprintData = state => {
+  const trial = state.intro.foundrySpeedTrial
+  return trial?.kind === 'sprint' && trial.result == null &&
+    getFoundrySpeedMaximum(state.intro) === trial.pool &&
+    getPoolBufferCapacity(state, trial.pool) === trial.capacity &&
+    trial.earlySeconds != null && trial.earlySeconds < FOUNDRY_TRIAL_BASE_SECONDS * FOUNDRY_SPRINT_FILL_FRACTION &&
+    trial.bits >= trial.capacity * FOUNDRY_SPRINT_FILL_FRACTION && trial.bits < trial.capacity / 2
+}
+
+export const spendFoundrySprintData = state => {
+  if (!canSpendFoundrySprintData(state)) return state
+  const trial = state.intro.foundrySpeedTrial
+  const next = {
+    ...state,
+    intro: {
+      ...state.intro,
+      foundrySpeedTrial: {
+        ...trial,
+        bits: trial.bits - trial.capacity * FOUNDRY_SPRINT_FILL_FRACTION,
+        result: 'passed',
+      },
+    },
+  }
+  return bumpAchievementCounter(next, 'foundrySprint', 1, 'max')
+}
+
+export const tickFoundrySpeedTrial = elapsed => state => {
+  const trial = state.intro.foundrySpeedTrial
+  if (!trial || trial.result != null || !(elapsed > 0)) return state
+  if (getFoundrySpeedMaximum(state.intro) !== trial.pool ||
+    getPoolBufferCapacity(state, trial.pool) !== trial.capacity) return cancelFoundrySpeedTrial(state)
+
+  const rate = trial.capacity / FOUNDRY_TRIAL_BASE_SECONDS
+  const speed = trial.kind === 'baseline' || trial.switched ? 1 : trial.pool
+  const remaining = getFillCurveSeconds(trial.bits, trial.capacity, trial.capacity, rate, speed)
+  const seconds = trial.seconds + Math.min(elapsed, remaining)
+  const full = elapsed >= remaining
+  const bits = full ? trial.capacity : trial.bits + getFillCurveDelta(trial.bits, trial.capacity, rate, elapsed, speed)
+  const earlyFraction = trial.kind === 'sprint' ? FOUNDRY_SPRINT_FILL_FRACTION : FOUNDRY_HANDOFF_EARLY_FRACTION
+  const earlyTarget = earlyFraction * trial.capacity
+  const earlySeconds = trial.earlySeconds ?? (bits >= earlyTarget
+    ? trial.seconds + getFillCurveSeconds(trial.bits, earlyTarget, trial.capacity, rate, speed)
+    : null)
+
+  let result = null
+  let achievement
+  let benchmark = state.intro.foundrySpeedBenchmark
+  if (trial.kind === 'sprint') {
+    if (bits >= trial.capacity / 2) result = 'missed'
+  } else if (trial.kind === 'handoff') {
+    if (full && trial.switched && seconds <= FOUNDRY_HANDOFF_TOTAL_SECONDS) {
+      result = 'passed'
+      achievement = 'foundryHandoff'
+    } else if (seconds >= FOUNDRY_HANDOFF_TOTAL_SECONDS ||
+      (!trial.switched && seconds >= FOUNDRY_HANDOFF_EARLY_SECONDS &&
+        (earlySeconds == null || earlySeconds > FOUNDRY_HANDOFF_EARLY_SECONDS))) {
+      result = 'missed'
+    }
+  } else if (full && trial.kind === 'benchmark') {
+    result = 'recorded'
+    benchmark = { pool: trial.pool, capacity: trial.capacity, seconds }
+  } else if (full) {
+    result = seconds < benchmark?.seconds ? 'passed' : 'missed'
+    if (result === 'passed') achievement = 'foundrySlowWins'
+  }
+  const next = { ...state, intro: { ...state.intro, foundrySpeedBenchmark: benchmark,
+    foundrySpeedTrial: { ...trial, bits, seconds, earlySeconds, result } } }
+  return achievement ? bumpAchievementCounter(next, achievement, 1, 'max') : next
 }
 
 // Storage pools display Capacity/Bandwidth in SI units (formatDiskSize); intro.capacity itself
@@ -3653,7 +3771,7 @@ export const getPoolBufferFillFraction = (state, poolIndex) => {
 
 // The pool's fill-based multiplier percent, before any tap bonus.
 export const getPoolBaseMultiplierPercent = (state, poolIndex) =>
-  getFillMultiplierPercent(getPoolBufferFillFraction(state, poolIndex))
+  getFillMultiplierPercent(getPoolBufferFillFraction(state, poolIndex), getFoundrySpeed(state.intro))
 
 export const getPoolTapBonusPercent = (state, poolIndex) =>
   state.intro?.poolTapBonusPercents?.[poolIndex] ?? 0
@@ -3786,6 +3904,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
   if (unlockedCount < 1) return state
 
   let bits = state.intro.bits
+  const speed = getFoundrySpeed(state.intro, unlockedCount)
   const poolBuffers = { ...(state.intro.poolBuffers ?? {}) }
   const dataLakes = { ...state.intro.dataLakes }
   let changed = false
@@ -3812,7 +3931,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // docs/DESIGN_HISTORY.md.
     let overflowSeconds = elapsedSeconds
     if (room > 0) {
-      const rawTransfer = getFillCurveDelta(current, bufferCap, unmultipliedRate, elapsedSeconds)
+      const rawTransfer = getFillCurveDelta(current, bufferCap, unmultipliedRate, elapsedSeconds, speed)
       const transfer = Math.min(rawTransfer, room, bits)
       if (transfer > 0) {
         bits -= transfer
@@ -3825,7 +3944,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
       // Time along the fill curve to actually fill the remaining room, so the overflow formula
       // below — deliberately UNmultiplied, see this function's own doc comment above — applies to
       // the genuinely-leftover portion of the interval.
-      const usedSeconds = getFillCurveSeconds(current, bufferCap, bufferCap, unmultipliedRate) ?? elapsedSeconds
+      const usedSeconds = getFillCurveSeconds(current, bufferCap, bufferCap, unmultipliedRate, speed) ?? elapsedSeconds
       overflowSeconds = Math.max(0, elapsedSeconds - usedSeconds)
     }
     if (overflowSeconds <= 0) continue
@@ -4185,6 +4304,7 @@ export const isProvisionDiskInProgress = state =>
   isProvisionDiskAvailable(state) && Boolean(state.intro?.diskBuildQueued)
 
 export const isProvisionDiskAvailable = state => {
+  if (!isStorageUnlocked(state)) return false
   if (state.intro.diskBuild) return false
   // Smaller sizes below the newest unlocked one are rebuilt automatically instead (one buffer fill per disk, no provisioning cost).
   if (isLowerDiskSizePending(state)) return false
@@ -4712,7 +4832,7 @@ export const tickIntroProduction = elapsedSeconds => state => {
   // tap bonus speeds consumers, not this fill — getDataStreamTapMultiplier).
   // getDataStreamDeliveredRate remains the instantaneous reading ByteFoundryPage displays.
   const unmultipliedRate = getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro)
-  const bitsToAdd = getFillCurveDelta(state.intro.bits, state.intro.capacity, unmultipliedRate, elapsedSeconds)
+  const bitsToAdd = getFillCurveDelta(state.intro.bits, state.intro.capacity, unmultipliedRate, elapsedSeconds, getFoundrySpeed(state.intro))
 
   if (bitsToAdd <= 0) return state
 
@@ -4984,6 +5104,7 @@ export const provisionDisk = state => {
 // (tickQueuedDiskBuild). Same-reference no-op once armed, during a legacy diskBuild, a lower-size rebuild, or an
 // exhausted ladder.
 export const queueDiskBuild = state => {
+  if (!isStorageUnlocked(state)) return state
   if (state.intro?.diskBuildQueued) return state
   if (isLowerDiskSizePending(state)) return state
   if (state.intro.diskBuild) return state
@@ -8079,6 +8200,8 @@ const resetByteFoundryCore = state => {
       dataLakes,
       mainGameUnlocked: keepMainUnlocked,
       foundryResetCaps,
+      foundrySpeedSelection: prev.foundrySpeedSelection ?? null,
+      foundrySpeedSavedAtMs: prev.foundrySpeedSavedAtMs ?? null,
       // Unlocked disk sizes (and so the speed exponent) survive a Foundry reset.
       unlockedDiskSteps: getUnlockedDiskSteps(prev),
       poolExponentBonuses: { ...(prev.poolExponentBonuses ?? {}) },
@@ -8184,6 +8307,11 @@ const resetFactoryCycle = (state, awardPurge) => {
       mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
       capacity: state.intro?.capacity ?? initial.intro.capacity,
       byteCreated: state.intro?.byteCreated ?? initial.intro.byteCreated,
+      // Factory resets preserve the Foundry setting, cooldown, and test data.
+      foundrySpeedSelection: state.intro?.foundrySpeedSelection ?? null,
+      foundrySpeedSavedAtMs: state.intro?.foundrySpeedSavedAtMs ?? null,
+      foundrySpeedBenchmark: state.intro?.foundrySpeedBenchmark ?? null,
+      foundrySpeedTrial: state.intro?.foundrySpeedTrial ?? null,
       // The Data Stream balance survives a Factory-cycle reset (Purge / challenge enter/exit) — Prestige never empties it.
       bits: state.intro?.bits ?? initial.intro.bits,
       // Convenience caps from resetByteFoundry — permanent across Prestige so auto-replay keeps

@@ -1,3 +1,4 @@
+import { getFoundrySpeedMaximum } from 'game/engine'
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
 import {
@@ -28,8 +29,6 @@ import {
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
   EON_AMPLIFIER_AWARD_BASE,
   ERA_ELIGIBILITY_PP,
-  FILL_MULTIPLIER_MAX_PERCENT,
-  FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
   FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
@@ -316,7 +315,8 @@ const InfoPage = ({ game }) => {
         <ManualSub title="The loop">
         <ul>
           <li>
-            <strong>Ping</strong> the Data Stream to add one second of its production. Once Storage
+            <strong>Ping</strong> the Data Stream to make one bit per ping until you Compile. After Compile,
+            pings add one second of base production. Once Storage
             appears (at {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} Capacity), a ping
             instead adds a temporary ping bonus to what it feeds (below).
           </li>
@@ -327,15 +327,12 @@ const InfoPage = ({ game }) => {
             Capacity upgrade, up to the last storage pool’s limit.
           </li>
           <li>
-            <strong>Fill multiplier</strong> — the Data Stream’s Bitrate and each pool’s Bandwidth are shown
-            as the rate actually delivered: the base rate times a multiplier that depends on how full
-            that buffer is. (A pool’s buffer is called its Staging.) It is {FILL_MULTIPLIER_MAX_PERCENT / 100}× when empty, 1× at half full and{' '}
-            {FILL_MULTIPLIER_MIN_PERCENT / 100}× when full; the color runs red (slow) → blue → green
-            (fast). Pinging the Data Stream (once Storage appears) or a pool’s Staging tile adds a +
+            <strong>Fill speed</strong> stays at 1× through KB. The Data Stream’s Bitrate and each
+            pool’s Bandwidth show what’s being delivered into the buffer at its current fill level.
+            Pinging the Data Stream (once Storage appears) or a pool’s Staging tile adds a +
             {FILL_MULTIPLIER_TAP_BONUS_PERCENT}% ping bonus (up to {FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%),
             which fades by {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}% per second and shows as a
-            thin bar and “+x% 👆”. A ping never speeds the fill itself (it already reaches{' '}
-            {FILL_MULTIPLIER_MAX_PERCENT / 100}×); it speeds what that buffer feeds — on the Data Stream,
+            thin bar and “+x% 👆”. Pings speed what the buffer feeds. On the Data Stream, that’s
             Upgrade Capacity / Bitrate; on a pool, disk provisioning, disk fills and merges, rebuilds and
             the Data Lake.
           </li>
@@ -364,6 +361,20 @@ const InfoPage = ({ game }) => {
         </ul>
 
         </ManualSub>
+
+        {getFoundrySpeedMaximum(state?.intro) >= 2 && (
+          <ManualSub title="Foundry speed">
+            <p>Higher settings deliver data faster at the start and slow it sharply near full.
+              At 2× / 0.5×, the buffer fills twice as fast when empty, at 1× when half full,
+              and at half speed near full. Go higher when you need a partial fill quickly.
+              Go lower when you want to fill up sooner.</p>
+            <p>The slider starts at 1× and its maximum rises by 1× with every new pool.
+              If you were already using the maximum, the new maximum applies automatically.
+              Preview the active and pending pairs, then Save to apply your choice. The wait
+              between changes starts at 10 hours. Foundry speed achievements shorten it to
+              1 hour, 10 minutes, then 1 minute.</p>
+          </ManualSub>
+        )}
 
         <ManualSub title="What resets vs. what stays">
         <ul>

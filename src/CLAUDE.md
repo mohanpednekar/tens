@@ -179,10 +179,10 @@ entity (Cell → … → Fusion) are PERMANENT across real Prestige; only tier01
 progress resets per cycle (the Data Stream balance is kept). Nothing here ever fully freezes.
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
-- **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
-  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
-  real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
-  **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
+- **Foundry fill speed** (`foundryFillCurve.js`): 1× through KB, then selectable from 1× to the live pool count.
+  The selected speed and its reciprocal are the empty and full endpoints of the log-linear primary fill.
+  Save starts a 10-hour cooldown, reducible by three achievements. Before Compile, each ping adds one bit.
+  Provision Disk appears at KB. **Tap bonuses speed consumers** ×(1 + bonus%),
   decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool ping →
   Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);

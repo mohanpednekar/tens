@@ -23,8 +23,6 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
-  FILL_MULTIPLIER_MAX_PERCENT,
-  FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
@@ -247,7 +245,8 @@ describe('pool speed details popover', () => {
     for (const label of ['Fill bandwidth now', 'Available (before multiplier)', 'Bandwidth (theoretical)', 'Data Stream bitrate', 'Fill multiplier', 'Staging', 'Time to full']) {
       expect(within(dialog).getByText(label)).toBeInTheDocument()
     }
-    expect(within(dialog).getByText(speed.textContent.replace(/^⚡ /, ''))).toBeInTheDocument()
+    const deliveredRate = within(dialog).getByText('Fill bandwidth now').nextElementSibling
+    expect(deliveredRate).toHaveTextContent(speed.textContent.replace(/^⚡ /, ''))
     expect(screen.queryByLabelText('pool 1 fill-based bandwidth multiplier ping bonus')).not.toBeInTheDocument()
   })
 
@@ -315,7 +314,7 @@ describe('pool speed details popover', () => {
   })
 })
 
-test('a pool\'s speed tints red at the full-buffer 10% floor', () => {
+test('a full pool stays at neutral speed at KB', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -327,8 +326,8 @@ test('a pool\'s speed tints red at the full-buffer 10% floor', () => {
   render(<App />)
 
   const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Available fill bandwidth at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
-  expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
+  expect(speed).toHaveAttribute('title', `Available fill bandwidth at 100% fill multiplier`)
+  expect(speed).toHaveStyle({ color: 'rgb(59, 130, 246)' })
 })
 
 test('the pool tap tile stays tappable and grants the bonus while the Data Lake drains a half-full buffer', () => {
@@ -774,13 +773,30 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
-  test('Provision Disk is available as soon as the Byte exists, before Storage is revealed — clicking it queues the build', () => {
+  test('Provision Disk stays hidden after Compile until the KB pool unlocks', () => {
     seedIntroState({ bits: 0, byteCreated: true })
     render(<App />)
-    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(provisionButton).toBeEnabled()
-    fireEvent.click(provisionButton)
-    expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
+    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('slider', { name: /start speed/i })).not.toBeInTheDocument()
+  })
+
+  test('Foundry speed previews a choice and saves it at MB', () => {
+    seedIntroState({ bits: 0, capacity: 8_388_608, byteCreated: true })
+    render(<App />)
+    const card = screen.getByRole('region', { name: 'Foundry speed' })
+    const slider = within(card).getByRole('slider', { name: /start speed/i })
+    const save = within(card).getByRole('button', { name: 'Save', exact: true })
+    expect(slider).toHaveAttribute('aria-valuetext', '2× / 0.5×')
+    expect(save).toBeDisabled()
+    fireEvent.change(slider, { target: { value: '1.5' } })
+    expect(slider).toHaveAttribute('aria-valuetext', '1.5× / 0.667×')
+    expect(card).toHaveTextContent('Active 2× / 0.5×')
+    expect(card).toHaveTextContent('Pending 1.5× / 0.667×')
+    fireEvent.click(save)
+    expect(card.isConnected).toBe(false)
+    const saved = screen.getByRole('region', { name: 'Foundry speed' })
+    expect(saved).toHaveTextContent('Active 1.5× / 0.667×')
+    expect(within(saved).getByRole('slider')).toBeDisabled()
   })
 
   test('after a Foundry reset the button presents only the newest unlocked size, disabled while smaller sizes rebuild automatically', () => {
@@ -2913,13 +2929,13 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
 describe('getBufferSecondsToFull (tile time-to-full)', () => {
   it('integrates the 1000% → 10% fill multiplier curve', () => {
     const expected = fill => 100 * (10 - 10 ** (2 * fill - 1)) / (2 * Math.LN10)
-    expect(getBufferSecondsToFull(0, 1000, 10)).toBeCloseTo(expected(0))
-    expect(getBufferSecondsToFull(500, 1000, 10)).toBeCloseTo(expected(0.5))
-    expect(getBufferSecondsToFull(900, 1000, 10)).toBeCloseTo(expected(0.9))
+    expect(getBufferSecondsToFull(0, 1000, 10, 10)).toBeCloseTo(expected(0))
+    expect(getBufferSecondsToFull(500, 1000, 10, 10)).toBeCloseTo(expected(0.5))
+    expect(getBufferSecondsToFull(900, 1000, 10, 10)).toBeCloseTo(expected(0.9))
   })
 
   it('is not the old linear 150% → 50% integral', () => {
-    const geometric = getBufferSecondsToFull(0, 1000, 10)
+    const geometric = getBufferSecondsToFull(0, 1000, 10, 10)
     const oldLinear = 100 * Math.log(1.5 / 0.5)
     expect(geometric).not.toBeCloseTo(oldLinear, 1)
   })
