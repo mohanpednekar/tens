@@ -1,5 +1,28 @@
 # Design history & rationale
 
+### PR follow-up/merge workflows replaced by a scheduled routine — 2026-11-21
+
+Removed `pr-auto-merge.yml`, `pr-conflict-sweep.yml`, `autonomous-pr-followup.yml`,
+`dependabot-pr-followup.yml`, the `#60` stalled-PR sweep step (`scripts/sweep-stalled-auto-prs.sh`,
+which only existed to re-trigger the follow-up workflow) and `scripts/pr-head-guard.sh` (used only by
+the follow-ups). Maintainer decision: PR babysitting should not be a workflow at all. A daily Claude
+Code Remote scheduled routine now does the whole job in one session — refresh with `main`, fix CI,
+adversarial review, resolve threads, and merge directly in ascending PR-number order — so there is one
+place that owns PR state instead of four event-driven workflows racing each other on the same PR.
+Trade-offs accepted: feedback and conflicts now wait for the next daily run instead of being handled
+within minutes, and a human GitHub approval no longer auto-enables auto-merge (the old Path 1).
+GitHub auto-merge is no longer enabled by anyone (*superseded 2026-11-27: the PR babysitter may arm it
+again — see "PR babysitter may enable auto-merge" below*) (and `scripts/pr-low-risk-eligible.sh` /
+`scripts/enable-auto-merge-if-eligible.sh` were removed): an armed auto-merge fires on green checks,
+out of the PR-number merge order the maintainer wants; only the routine (or a maintainer-driven
+interactive session) merges.
+Workflow-file PRs follow the maintainer's no-loop tenet: no workflow may update workflows, directly or
+indirectly, without human approval; an upstream actor that workflows never update can't form a loop.
+So the routine (whose prompt no workflow can edit) may merge workflow-file PRs that no workflow
+authored, but a workflow-authored one (e.g. `autonomous-maintenance.yml` editing a workflow) would be
+workflows updating themselves through the routine, so it still needs the maintainer's approval. Current behavior: `docs/AUTOMATION.md` "PR babysitter" /
+"Auto-merge".
+
 ### PP over actual powers, not excess (2026-11-23)
 
 `getPrestigePointsAwarded` used `1 + floor(excessPowers / powersPerPp)` (excess over Googol's 100), so Compression did nothing at a frozen Googol Purge (always 1 PP). The maintainer's rule: PP follow the ACTUAL powers — `floor(powers / powersPerPp)` — so one Compression takes the first Purge from 100/64 = 1 to 100/32 = 3 PP. The numerator is held at 100 until Overflow mode (`unbounded`), then grows without bound. The Reboot sim's earlier "PP stuck at 1 per Purge" finding was an artifact of the old formula.
@@ -9511,13 +9534,13 @@ The basic slice drew only a start and a target exponent from fixed per-format ra
 
 The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`LAST_TIER_TICKSPEED_SPEND_FRACTION`); it now spends the full power-of-ten cost like every tier (requirement `cost + 1`). To offset, `tickGame` credits the last tier 1 unit per completed purchase level every 10 s (`lastTierLevelCreditAccumulator`), regardless of balance. Side effect: F20 Burn Rate ("spends its full requirement") is now a no-op rule and needs a redesign.
 
-## Spent QB gates last-tier credit; last tier may spend to 0 (2026-11)
+## Quetta broke gates last-tier credit; last tier may spend to 0 (2026-11)
 
-The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Spent QB achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
+The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Quetta broke achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
 
-## Spent QB keys off a Restage clicked at 0 QB, not a 0 QB balance (2026-11)
+## Quetta broke keys off a Restage clicked at 0 QB, not a 0 QB balance (2026-11)
 
-`lastTierSpent` (QB held this run + 0 balance, run-scoped `lastTierEarnedThisRun`) rewarded a state that is never a stall on its own: QB rebuilds through normal play. The real stall is a Restage at 0 owned QB, which wipes every tier and Bits with nothing left producing. Manual Restage (`restageManually`) now allows that and counts `achievements.counters.emptyRestages`, earning Spent QB; Auto Restage keeps the 0-owned guard so automation never self-stalls. Rejected: a state predicate "Restage ready but 0 QB" (`isRestageStalledByEmptyLastTier`) — it fired for free about a second after the 10th Scale Up (which empties QB and unlocks Restage, and 1 XP returns at once), with no player choice; the maintainer asked for the click. `lastTierEarnedThisRun` was removed (stale copies in old saves are inert).
+`lastTierSpent` (QB held this run + 0 balance, run-scoped `lastTierEarnedThisRun`) rewarded a state that is never a stall on its own: QB rebuilds through normal play. The real stall is a Restage at 0 owned QB, which wipes every tier and Bits with nothing left producing. Manual Restage (`restageManually`) now allows that and counts `achievements.counters.emptyRestages`, earning Quetta broke; Auto Restage keeps the 0-owned guard so automation never self-stalls. Rejected: a state predicate "Restage ready but 0 QB" (`isRestageStalledByEmptyLastTier`) — it fired for free about a second after the 10th Scale Up (which empties QB and unlocks Restage, and 1 XP returns at once), with no player choice; the maintainer asked for the click. `lastTierEarnedThisRun` was removed (stale copies in old saves are inert).
 
 ## Single-line tier rows; exponential notation from 10,000 (2026-11)
 
@@ -9686,3 +9709,74 @@ The four Factory feature cards (#1137's side-by-side pairs of tall, bottom-pinne
 ## Level power off-by-one fix (2026-11-24)
 
 - The achievements fired at `purchaseLevels ≥ N` (N−1 completed levels) while the UI shows completed levels, so "level 5" unlocked at 4. The condition is now `purchaseLevels ≥ N+1` and progress counts completed levels. The bot's isolated daily games earn these achievements, so `DAILY_GENERATOR_VERSION` was bumped 8 → 9 (sampled definitions changed). Not re-simulated for first-Purge pacing.
+
+## Progressive reveal on every screen (2026-11-26)
+
+Maintainer request: progressive reveal for every screen (Dev Mode excepted), a Manual that no longer
+needs long scrolling, and spoiler-masked (not secret) achievements. Superseded: Firmware's "every
+Global Automation row / all ten Tier Autobuyer rows always listed" — now owned rows plus the next one
+to unlock (unlock history is still kept, since owned rows never hide). The
+Manual reuses the achievement condition grammar for its reveal gates instead of a second predicate
+set, so both latch on the same progress. Achievement series steps reveal one at a time (previous step
+earned) rather than all at once with their group. Challenges' Factory tab was left as is: locked tiles
+already hide the codename and rule.
+Maintainer follow-up: no "🔒 N more" counts anywhere (they were added first and removed), and spoiler
+achievements show their names everywhere — including not-yet-revealed series levels and "Next:" — with
+only the requirement, reward and progress withheld (no "???" placeholder).
+Review follow-up: the Overclock step group reveals when the last tier is bought (the Overclock card is visible
+before any claim), not on the first claim — Patient Overclock counts only the first claim of a Purge, so
+revealing it after that claim would be too late. Always-visible Manual topics (Overview, Sleep mode) hold
+back bullets about later mechanics (Buy max, Overflow mode, PP Sleep upgrades); the Milestones topic is
+Purge-gated.
+
+## Automatic versioning and the retroactive per-day split (2026-11, #1236)
+
+**Before:** versions were cut by hand with `yarn bump-version` on some PR. Nobody did after v0.5.0
+(2026-07-14), so `## [Unreleased]` grew to ~1,600 lines / 533 entries over four months while
+`package.json` stayed at 0.5.0, and milestones were named by guessed future versions (v0.6.0, v0.7.0).
+
+**Maintainer decision:** semver always, decided automatically, never asked; breaking changes go out as
+minor while 0.y.z; ideal semver from the first public release (1.0.0); fix the old numbers too.
+
+**Retroactive split:** each Unreleased bullet was dated by `git blame --first-parent -M` on
+`origin/main` (the main commit that introduced its earliest line), grouped by IST calendar day, and each
+day became one version, bumped from 0.5.0 by the same `determineBumpType` rules — 84 versions,
+0.5.1 → 0.43.0. Per day rather than per merge because 0.1.0–0.5.0 were already roughly daily and per-merge
+would have made ~340 versions; content was verified unchanged (sorted-line diff). Caveat: a bullet
+reworded later keeps its original date only if one of its lines survived; a fully rewritten bullet is
+dated by the rewrite. Backfilled tags point at the last main commit of that day, so each tag contains
+everything its notes list.
+
+**Forward automation — rejected alternatives:** (1) a workflow committing the bump straight to main —
+impossible, the `Main` ruleset requires PRs with no bypass for automation; (2) bumping inside every
+feature PR — concurrent PRs would all claim the same next version and conflict on every merge; (3)
+deriving the version at build time without committing — CHANGELOG would never show versions. Chosen:
+one rolling `release/next` PR the workflow keeps current, merged by the babysitter on a mechanical
+`verify-pr` check (so a pure bump needs no model review).
+
+**Milestones** are now named by feature, since versions can no longer be predicted: v0.6.0 → `UI
+revamp`, v0.7.0 → `Era ascension / Reboot` (both closed, fully shipped), v0.8.0/v0.9.0 → the guide-screen
+milestones (#1228).
+
+**Android versionCode (same PR):** first widened from `major*10000 + minor*100 + patch` (collides past
+minor 99, which automatic bumps would hit) to `*1e6/*1e3`, then — maintainer decision, since all
+development is on main and only monotonicity matters — replaced by a date code, first `YYMMDD × 1000 + n`
+(n = releases already that day), then `YYDDDHHMM` (year, day of year, IST time; the maintainer asked
+for YYMMDDHHMM, which exceeds Play's 2,100,000,000 cap already in 2026 — day-of-year keeps it under it
+until 2099), computed once by `bump-version` into `package.json`'s `versionCode`
+so Gradle, the Fastfile and `store-release-notes.mjs` read one value instead of three formula copies.
+A git commit count was considered and rejected by the maintainer in favour of a readable date code.
+CalVer for the version name itself was considered and rejected: the maintainer kept SemVer.
+
+
+## PR babysitter may enable auto-merge (2026-11)
+
+Reverses the 2026-11-21 decision near the top of this file ("GitHub auto-merge is no longer enabled
+by anyone", for PR-number merge order). The maintainer's babysitter scheduled-task prompt had since
+been changed to arm auto-merge on approved PRs, and the maintainer asked for the repo docs to follow
+it. Only the babysitter arms it, merge method `merge`, and only on PRs it could merge directly (all
+direct-merge exclusions apply) with a current-head `APPROVE` (or passing `verify-pr` for
+`release/next`), no conflicts and no unresolved threads; workflows, autonomous runs and other agents
+still never do. Accepted trade-offs, documented in `docs/AUTOMATION.md` "Auto-merge": only required
+checks gate it, PRs can land out of PR-number order, and a write-access push doesn't disarm it before
+the next daily run. "Allow auto-merge" must stay on (it was previously described as best turned off).

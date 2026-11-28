@@ -1,5 +1,5 @@
 // Verifies the GitHub-API-checkable items on issue #62 (the maintainer action-item checklist) and
-// strikes through any that now pass (#63). Read-only checks; the only write is editing #62's body.
+// strikes through any that now pass (#63). Read-only checks; the only write is editing #62's body (`--dry-run` skips it and prints a table).
 // Never touches the "Tracked separately" section, and never checks `Workflows: write` (only a real
 // push outcome proves it — a settings read has been wrong before; see docs/AUTOMATION.md).
 import { execFileSync } from 'node:child_process';
@@ -12,7 +12,6 @@ const MANUAL_SECTION_HEADING = '## Tracked separately';
 // check couldn't run (API error) — null leaves the line untouched.
 export const CHECKS = [
   { key: 'secret', match: '`GH_AUTOMATION_PAT` repo secret exists' },
-  { key: 'autoMerge', match: '"Allow auto-merge" is enabled' },
   { key: 'branchProtectionTest', match: 'Branch protection on `main` requires the `test` check' },
   { key: 'codeOwners', match: 'Enable **"Require review from Code Owners"**' },
   { key: 'discussions', match: 'Enable **Discussions**' },
@@ -59,6 +58,21 @@ export function allVerifiableChecked(body) {
   });
 }
 
+/** Pure: render a pass/fail/unknown table from `results` ({key: boolean|null}); used by `--dry-run`. */
+export function formatReport(results) {
+  const rows = CHECKS.map((c) => {
+    const r = results[c.key];
+    const status = r === true ? 'PASS' : r === false ? 'FAIL' : 'UNKNOWN';
+    return `${status.padEnd(8)}${c.key.padEnd(24)}${c.match}`;
+  });
+  return ['STATUS  CHECK                   ITEM', ...rows].join('\n');
+}
+
+/** Pure: classify a failed `gh project list` — auth/scope/permission denials are a definite FAIL, anything else UNKNOWN. */
+export function classifyProjectsError(text) {
+  return /scope|permission|forbidden|unauthori[sz]ed|not accessible|\b40[13]\b/i.test(text) ? false : null;
+}
+
 function gh(args) {
   return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
@@ -79,8 +93,9 @@ function runChecks(repo) {
   try {
     gh(['project', 'list', '--owner', repo.split('/')[0], '--limit', '1']);
     projectsScope = true;
-  } catch {
-    projectsScope = false;
+  } catch (e) {
+    // Auth/scope/permission denials are a definite FAIL (see classifyProjectsError); network/other errors stay UNKNOWN.
+    projectsScope = classifyProjectsError(`${e?.stderr ?? ''}${e?.message ?? ''}`);
   }
   const contexts = protection?.required_status_checks
     ? [
@@ -90,7 +105,6 @@ function runChecks(repo) {
     : null;
   return {
     secret: secrets ? secrets.secrets.some((s) => s.name === 'GH_AUTOMATION_PAT') : null,
-    autoMerge: repoInfo ? repoInfo.allow_auto_merge === true : null,
     branchProtectionTest: protection ? (contexts ?? []).includes('test') : null,
     codeOwners: protection
       ? protection.required_pull_request_reviews?.require_code_owner_reviews === true
@@ -102,6 +116,11 @@ function runChecks(repo) {
 
 function main() {
   const repo = process.env.GITHUB_REPOSITORY ?? 'mohanpednekar/tens';
+  if (process.argv.includes('--dry-run')) {
+    // Read-only: same checks, printed as a table; never reads or edits #62.
+    console.log(formatReport(runChecks(repo)));
+    return;
+  }
   const issue = JSON.parse(gh(['issue', 'view', String(CHECKLIST_ISSUE), '--repo', repo, '--json', 'body']));
   const results = runChecks(repo);
   console.log('Checklist verification results:', JSON.stringify(results));

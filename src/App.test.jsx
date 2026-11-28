@@ -42,7 +42,7 @@ import {
 } from 'game/layers'
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
-import App from './App'
+import App, { loadWithReload, RELOAD_FLAG } from './App'
 import DiskArrayRow from 'components/DiskArrayRow'
 import ByteFoundryPage, { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
@@ -122,6 +122,9 @@ const expandSettingsSections = () => {
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
 }
 
@@ -178,7 +181,7 @@ test('shows the app version only on the Manual page', async () => {
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open manual/i }))
-  expect(screen.getByText(`v${version}`)).toBeInTheDocument()
+  expect(await screen.findByText(`v${version}`)).toBeInTheDocument()
 
   await openSettings(user)
   expect(screen.queryByText(`v${version}`)).not.toBeInTheDocument()
@@ -251,20 +254,26 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/milestones category/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/supporter pack section/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/save slots section/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/system log section/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/task manager section/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /dummy supporter checkout/i })).toBeInTheDocument()
+  // Progressive reveal: rows for layers a fresh save hasn't reached stay hidden.
+  expect(screen.queryByLabelText(/system log section/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/task manager section/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^reboot section$/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /dummy supporter checkout/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /redeem supporter unlock code/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open manual/i }))
@@ -416,22 +425,13 @@ test('the Manual nav item opens the Info page and Factory returns, preserving ga
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open manual/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — manual/i })).toBeInTheDocument()
-  // Manual sections covering the Byte Foundry pre-game (Data Stream/tapping/Speed, Storage,
-  // and Compute — including the full merge chain) render alongside the pre-existing main-game
-  // sections (Tickspeed, Scale Up, …) plus Prestige.
-  expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^power$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^purge$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^prestige ladder$/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/prestige ladder section/i)).not.toHaveTextContent(
-    /the Production speed bonus/i,
-  )
+  // Progressive reveal: topics this save has reached are listed collapsed; later ones stay hidden
+  // (full coverage in pages/InfoPage/index.test.jsx).
+  expect(screen.getByRole('button', { name: /^byte foundry topic$/i })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByRole('button', { name: /^storage topic$/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^reboot topic$/i })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /^byte foundry topic$/i }))
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
-  expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
-  expect(screen.getByLabelText(/power section/i)).toHaveTextContent(/queue/i)
-  expect(screen.getByLabelText(/compute flops section/i)).toHaveTextContent(/kflops/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open byte factory/i }))
@@ -466,6 +466,9 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
@@ -778,8 +781,8 @@ test('reaching 8 lifetime purchases of a tier multiplies its displayed productio
   render(<App />)
 
   // Crossing the 8-purchase milestone completes level 1: owned(10) × 1 B/tick × 1.25 = 12.5 B/tick
-  // (the displayed amount floors to match tickGame's own floored credit).
-  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +12 B')
+  // × 1.05 for the five earned achievements' stars (+1% each) = 13.1 B/tick (the displayed amount floors to match tickGame's own floored credit).
+  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +13 B')
 })
 
 test('a tier shows its full per-tick production amount, not a reduced rate', async () => {
@@ -1168,7 +1171,9 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   })
   render(<App />)
 
-  expect(screen.getByRole('dialog', { name: /purge required/i })).toBeInTheDocument()
+  const overlay = screen.getByRole('dialog', { name: /purge required/i })
+  expect(within(overlay).getByRole('heading', { name: /disk full/i })).toBeInTheDocument()
+  expect(within(overlay).getByLabelText(/^purge reward$/i)).toHaveTextContent(/^\+1 Purge Point$/)
   const purgeButton = screen.getByRole('button', { name: /purge now/i })
   expect(purgeButton).toBeEnabled()
 
@@ -2147,7 +2152,7 @@ test.each([
   expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('Global Automation lists every step with its Purge milestone while locked', async () => {
+test('Global Automation lists the next step with its Purge milestone and hides later locked ones (no count)', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2157,9 +2162,14 @@ test('Global Automation lists every step with its Purge milestone while locked',
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  for (const [name, milestone] of [['Auto Accelerate', 8], ['Auto Scale Up', 16], ['Auto Restage', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
-    expect(screen.getByLabelText(`${name} unlocks at Purge ${milestone}`)).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Accelerate unlocks at Purge 8')).toBeInTheDocument()
+  for (const name of ['Auto Scale Up', 'Auto Restage', 'Auto Overclock', 'Auto Purge']) {
+    expect(screen.queryByLabelText(new RegExp(`^${name} unlocks at Purge`))).not.toBeInTheDocument()
   }
+  expect(screen.queryByText(/🔒 \d+ more/)).not.toBeInTheDocument()
+  // Tier autobuyers: owned tiers plus the next one to unlock are listed.
+  expect(within(screen.getByLabelText('tier autobuyers category')).getByLabelText(`${TIER_DEFINITIONS[0].name} automation`)).toBeInTheDocument()
+  expect(within(screen.getByLabelText('tier autobuyers category')).queryByLabelText(`${TIER_DEFINITIONS.at(-1).name} automation`)).not.toBeInTheDocument()
 })
 
 test('Firmware lists global automations in one order: Auto Accelerate → Scale Up → Restage → Overclock → Purge', async () => {
@@ -2190,6 +2200,10 @@ test('Auto Purge offers no speed upgrade or interval until it is bought', async 
   seedMainGameState({
     resources: { base: 10 },
     purge: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+    autoGlobalTickspeed: true,
+    autoScaleUp: true,
+    autoXpTickspeed: true,
+    autoOverclock: true,
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
@@ -2285,7 +2299,7 @@ test('Firmware → Prestige upgrade names expand their description; values show 
 
   expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('Time away: up to 4h → 8h')
   expect(screen.getByLabelText(/^cache warm value$/i)).toHaveTextContent('Start runs with KB level 1 done')
-  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Buy every affordable level in one tap')
+  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Locked: earn the Click fast, buy max achievement')
   expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
   const toggle = screen.getByRole('button', { name: /^sleep mode details$/i })
   await user.click(toggle)
@@ -2296,7 +2310,6 @@ test('Firmware → Prestige upgrade names expand their description; values show 
 })
 
 test.each([
-  ['Buy max', /unlock buy max for 2 purge points/i, 2, /buy max mode toggle|buy max/i],
   ['Cache Warm', /unlock cache warm for 20 purge points/i, 20, /cache warm unlocked/i],
 ])('%s is bought with PP on Firmware → Prestige', async (_name, button, cost, ownedLabel) => {
   const user = userEvent.setup()
@@ -2307,6 +2320,69 @@ test.each([
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
   expect(screen.queryByRole('button', { name: button })).not.toBeInTheDocument()
   expect(screen.getAllByLabelText(ownedLabel).length).toBeGreaterThan(0)
+})
+
+// Fast clicks on a controlled clock (50 ms apart) so these tests never depend on how fast the machine renders.
+let fakeNow = 1_000_000
+const clickAt = element => {
+  fakeNow += 50
+  const spy = vi.spyOn(Date, 'now').mockReturnValue(fakeNow)
+  try {
+    fireEvent.click(element)
+  } finally {
+    spy.mockRestore()
+  }
+}
+
+test('clicking the same button 10 times in a second (any screen) unlocks Buy max; a different button in between does not', () => {
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  const factory = screen.getByRole('button', { name: /^open byte factory$/i })
+  const foundry = screen.getByRole('button', { name: /^open byte foundry$/i })
+  for (let i = 0; i < 5; i += 1) clickAt(factory)
+  clickAt(foundry)
+  for (let i = 0; i < 5; i += 1) clickAt(factory)
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+  for (let i = 0; i < 10; i += 1) clickAt(factory)
+  expect(screen.getByRole('button', { name: /^open firmware$/i })).toBeInTheDocument()
+})
+
+test('clicking one real Factory Buy button 10 times in a second unlocks Buy max (its label changes between clicks)', () => {
+  seedMainGameState({ resources: { base: 1e12 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  for (let i = 0; i < 10; i += 1) clickAt(screen.getAllByRole('button', { name: /^Buy.*completed level/i })[0])
+  expect(screen.getByRole('button', { name: /^open firmware$/i })).toBeInTheDocument()
+})
+
+test('a held key (auto-repeating clicks) does not count as fast clicking', () => {
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  const factory = screen.getByRole('button', { name: /^open byte factory$/i })
+  for (let i = 0; i < 12; i += 1) {
+    fireEvent.keyDown(factory, { key: 'Enter', repeat: true })
+    clickAt(factory)
+  }
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+})
+
+test('Firmware appears with an unlocked Buy max before any Purge, showing only what is unlocked', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 }, achievements: { earned: { buyMaxRush: true }, counters: { pings: 0 } } })
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /^open firmware$/i }))
+  expect(screen.queryByRole('tab', { name: /open automation/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /open prestige/i })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByLabelText('buy max toggle')).toBeInTheDocument()
+  expect(screen.queryByLabelText('purge points category')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^purge points display$/i)).not.toBeInTheDocument()
+  // Challenges keeps its own reveal (first Purge).
+  expect(screen.queryByRole('button', { name: /^open challenges$/i })).not.toBeInTheDocument()
+})
+
+test('Firmware stays hidden before any Purge without Buy max', () => {
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
 })
 
 test('Sleep mode levels are bought with PP until the 24h maximum', async () => {
@@ -3526,3 +3602,30 @@ test('a pool\'s speed shows the fill speed actually available, not its higher th
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
 
+describe('loadWithReload', () => {
+  const reload = vi.fn()
+  beforeEach(() => {
+    sessionStorage.clear()
+    reload.mockReset()
+    vi.stubGlobal('location', { ...window.location, reload })
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  test('returns the module and clears the guard on success', async () => {
+    sessionStorage.setItem(RELOAD_FLAG, '1')
+    await expect(loadWithReload(() => Promise.resolve({ default: 1 }))).resolves.toEqual({ default: 1 })
+    expect(sessionStorage.getItem(RELOAD_FLAG)).toBeNull()
+  })
+
+  test('first failure reloads once and stays pending; second rethrows', async () => {
+    const fail = () => Promise.reject(new Error('404'))
+    const pending = loadWithReload(fail)
+    const settled = vi.fn()
+    pending.then(settled, settled)
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve()
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(settled).not.toHaveBeenCalled()
+    await expect(loadWithReload(fail)).rejects.toThrow('404')
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+})

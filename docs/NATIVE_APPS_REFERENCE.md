@@ -25,7 +25,7 @@ Android and iOS apps wrap the same web build via Capacitor 8 (not yet store-sign
   `viewport-fit=cover` + per-page `env(safe-area-inset-*)` padding.
 - **Release:** compile/target SDK 36; `android/app/build.gradle` signs release from
   `TENS_UPLOAD_*` Gradle props/env/`android/keystore.properties` (gitignored; release tasks fail if
-  unset), runs R8 (`minifyEnabled` + `shrinkResources`), derives versionName/versionCode from
+  unset), runs R8 (`minifyEnabled` + `shrinkResources`), reads versionName/versionCode (`YYDDDHHMM`) from
   `package.json`, and fails if Play Billing < 8 resolves. Manifest declares only `INTERNET`.
   Full steps: `docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`; automated
   pipeline (fastlane + `store-release.yml`, generated store images/notes): `docs/STORE_RELEASE.md`.

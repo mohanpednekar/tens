@@ -860,10 +860,21 @@ describe('supporter unlock + save slots', () => {
     expect(listSaveSlots().every(s => s.unlocked)).toBe(true)
   })
 
-  it('dummy purchase grants the same entitlement', () => {
-    expect(completeDummySupporterPurchase().ok).toBe(true)
-    expect(isSupporterUnlocked()).toBe(true)
-    expect(completeDummySupporterPurchase().already).toBe(true)
+  it('isolates the dummy purchase from regular Supporter entitlements', () => {
+    const regularMeta = loadSavesMeta()
+    expect(completeDummySupporterPurchase().ok).toBe(false)
+    setDevModeActive(true)
+    expect(redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE).ok).toBe(false)
+    expect(completeDummySupporterPurchase()).toEqual({ ok: true, already: false })
+    expect(completeDummySupporterPurchase()).toEqual({ ok: true, already: true })
+    setDevModeActive(false)
+    expect(loadSavesMeta()).toEqual(regularMeta)
+    expect(redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE).ok).toBe(true)
+    const unlockedMeta = loadSavesMeta()
+    setDevModeActive(true)
+    expect(completeDummySupporterPurchase()).toEqual({ ok: true, already: true })
+    setDevModeActive(false)
+    expect(loadSavesMeta()).toEqual(unlockedMeta)
   })
 
   it('keeps slot 0 on the legacy tens_game_state key and isolates other slots', () => {

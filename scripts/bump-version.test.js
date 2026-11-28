@@ -3,6 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   bumpSemver,
+  computeVersionCode,
+  istHhmm,
   determineBumpType,
   extractVersionSection,
   planChangelogBump,
@@ -104,6 +106,51 @@ describe('bump-version', () => {
     expect(released.body).toContain('### Fixed');
     expect(released.body).toContain('### Changed');
     expect(released.body).toContain('### Security');
+  });
+
+  it('bumpSemver applies major', () => {
+    expect(bumpSemver('0.43.2', 'major')).toBe('1.0.0');
+    expect(bumpSemver('1.2.3', 'major')).toBe('2.0.0');
+  });
+
+  // 0.y.z: breaking changes go out as minor; ≥1.0.0: ideal semver.
+  it.each([
+    ['Fixed', '- **Breaking:** save format changed.', '0.5.0', 'minor'],
+    ['Changed', '- **breaking** renamed X.', '0.5.0', 'minor'],
+    ['Removed', '- Old button.', '0.5.0', 'minor'],
+    ['Deprecated', '- Old flag.', '0.5.0', 'patch'],
+    ['Fixed', '- **Breaking:** save format changed.', '1.2.3', 'major'],
+    ['Removed', '- Old button.', '1.2.3', 'major'],
+    ['Added', '- New feature.', '1.2.3', 'minor'],
+    ['Deprecated', '- Old flag.', '1.2.3', 'minor'],
+    ['Changed', '- Tweak.', '1.2.3', 'patch'],
+    ['Fixed', '- Not **Breaking:** mid-line.', '1.2.3', 'patch'],
+    ['Changed', '- **Breaking**: colon outside the bold.', '1.2.3', 'major'],
+  ])('### %s "%s" from %s → %s', (sub, bullet, from, expected) => {
+    const body = extractVersionSection(makeChangelog(`### ${sub}\n${bullet}\n`), 'Unreleased').body;
+    expect(determineBumpType(body, from)).toBe(expected);
+    expect(planChangelogBump(makeChangelog(`### ${sub}\n${bullet}\n`), from, '2026-11-27').bumpType).toBe(expected);
+  });
+
+  it('computeVersionCode is YYDDDHHMM, above the floor', () => {
+    expect(computeVersionCode('2026-11-27', '1330')).toBe(263311330);
+    expect(computeVersionCode('2026-01-01', '0000')).toBe(260010000);
+    expect(computeVersionCode('2028-12-31', '2359')).toBe(283662359); // leap year: day 366
+    expect(computeVersionCode('2099-12-31', '2359')).toBeLessThan(2100000000); // Play's cap
+    expect(computeVersionCode('2027-01-01', '0000')).toBeGreaterThan(computeVersionCode('2026-12-31', '2359'));
+    // a manual-upload code recorded in package.json is a floor: never reused
+    expect(computeVersionCode('2026-11-27', '1330', 263311330)).toBe(263311331);
+    expect(computeVersionCode('2026-11-27', '1400', 263311330)).toBe(263311400);
+    expect(() => computeVersionCode('27-1-2', '1330')).toThrow(/invalid release date/);
+    expect(() => computeVersionCode('2026-02-30', '1330')).toThrow(/invalid release date/);
+    expect(() => computeVersionCode('2026-11-27', '2460')).toThrow(/invalid release time/);
+    expect(istHhmm(new Date('2026-11-27T08:00:00Z'))).toBe('1330');
+  });
+
+  it('forceMajor promotes 0.y.z to 1.0.0', () => {
+    const plan = planChangelogBump(makeChangelog('### Fixed\n- A fix.\n'), '0.43.0', '2026-11-27', { forceMajor: true });
+    expect(plan.nextVersion).toBe('1.0.0');
+    expect(plan.nextText).toContain('## [1.0.0] - 2026-11-27');
   });
 
   it('runBumpVersion writes package.json + CHANGELOG.md (and supports dry-run)', () => {

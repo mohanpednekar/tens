@@ -2,7 +2,7 @@ import Button from 'components/Button'
 import styled, { css } from 'styled-components'
 
 // Segmented choice (full width, equal-width labeled buttons) for how a manual Factory Buy sizes a purchase:
-// Level (default — fills up to the level boundary) or Single (one unit per click). Per-device preference
+// Bytes (default, id 'level' — fills up to the level boundary) or Bits (id 'single' — one unit per click). Per-device preference
 // (useIncrementalGame's buyUnitMode); sits beside Buy max on Firmware → Prestige.
 const Row = styled.div`
   display: grid;
@@ -24,8 +24,8 @@ const ChoiceButton = styled(Button)`
 `
 
 const OPTIONS = [
-  { id: 'level', unit: false, icon: '📶', label: 'Level', title: 'Buy level: each Buy fills as many units as you can afford, up to the end of the current level.' },
-  { id: 'single', unit: true, icon: '1️⃣', label: 'Single', title: 'Buy single: each Buy — and each autobuyer attempt, at the same interval — purchases exactly one unit, so autobuying is much slower (bulk-level upgrades are suspended).' },
+  { id: 'level', unit: false, icon: '📶', label: 'Bytes', title: 'Buy Bytes: each Buy fills as many units as you can afford, up to the end of the current level.' },
+  { id: 'single', unit: true, icon: '1️⃣', label: 'Bits', title: 'Buy Bits: each Buy — and each autobuyer attempt, at the same interval — purchases exactly one unit, so autobuying is much slower (bulk-level upgrades are suspended).' },
 ]
 
 const BuyModeToggle = ({ game }) => (

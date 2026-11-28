@@ -48,12 +48,11 @@ platform :android do
     fraction < 1 ? { status: 'inProgress', rollout: rollout } : { status: status, rollout: nil }
   end
 
-  # The checkout's own version code (mirrors android/app/build.gradle and scripts/store-release-notes.mjs),
-  # so a dispatch promotes the same release the iOS job of that run ships.
+  # The checkout's own version code (package.json "versionCode", as android/app/build.gradle and
+  # scripts/store-release-notes.mjs read it), so a dispatch promotes the same release the iOS job ships.
   def checkout_version_code
     return ENV['TENS_VERSION_CODE'].to_i unless ENV['TENS_VERSION_CODE'].to_s.empty?
-    major, minor, patch = package_version.split('.').map(&:to_i)
-    major * 10_000 + minor * 100 + patch
+    JSON.parse(File.read(File.join(ROOT, 'package.json'))).fetch('versionCode').to_i
   end
 
   # Version codes testers actually receive on a track: releases that are completed or rolling out.

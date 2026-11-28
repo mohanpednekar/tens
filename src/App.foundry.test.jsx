@@ -122,6 +122,9 @@ const seedMainGameState = (overrides = {}) => {
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
 }
 
@@ -2178,7 +2181,7 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
   vi.useRealTimers()
 })
 
-test('a Prestige firing while on the Manual page does not disrupt the page — mainGameUnlocked stays permanently true', () => {
+test('a Prestige firing while on the Manual page does not disrupt the page — mainGameUnlocked stays permanently true', async () => {
   vi.useFakeTimers()
 
   // autoPurgeAttemptBudget seeded at 1 (the fire threshold) so the very next tick's elapsed
@@ -2194,6 +2197,8 @@ test('a Prestige firing while on the Manual page does not disrupt the page — m
 
   fireEvent.click(screen.getByRole('button', { name: /open more menu/i }))
   fireEvent.click(screen.getByRole('button', { name: /open manual/i }))
+  // Fake timers: findBy* can't poll, so flush the lazy Manual chunk inside act instead.
+  await act(async () => { await import('pages/InfoPage') })
   expect(screen.getByRole('heading', { level: 1, name: /tens — manual/i })).toBeInTheDocument()
 
   // Auto-Prestige fires in the background — the Manual page stays exactly where it was regardless
@@ -2323,7 +2328,7 @@ test.each([
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
-  expect(screen.getByLabelText(/^milestones category$/i)).toBeInTheDocument()
+  expect(await screen.findByLabelText(/^milestones category$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^the first kilobyte milestone reached$/i)).toHaveTextContent('The first Kilobyte')
   expect(screen.getByLabelText(reached ? /^go googol milestone reached$/i : /^go googol milestone not yet reached$/i)).toBeInTheDocument()
   // No version numbers on the timeline (#1143).
@@ -2401,7 +2406,7 @@ test('Settings Reboot confirms, resets Foundry assets, and keeps automation', as
   render(<App />)
   await openSettings(user)
 
-  expect(screen.getByLabelText(/^reboot section$/i)).toBeInTheDocument()
+  expect(await screen.findByLabelText(/^reboot section$/i)).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /reboot — open confirmation/i }))
   await user.click(screen.getByRole('button', { name: /^reboot$/i }))
 
@@ -2434,7 +2439,7 @@ test('full Reset clears Era and Eons meta progress', async () => {
   })
   render(<App />)
   await openSettings(user)
-  await user.click(screen.getByRole('button', { name: /reset game/i }))
+  await user.click(await screen.findByRole('button', { name: /reset game/i }))
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.era.count).toBe(0)
@@ -2483,6 +2488,9 @@ test('Reboot survives a page reload', async () => {
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  // Settings is a React.lazy chunk: its first import in a test file can exceed the 1 s default
+  // under CI load (the cause of intermittent 'Unable to find role="heading"' failures).
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i }, { timeout: 10000 })
   expandSettingsSections()
   expect(screen.getByLabelText(/^reboot section$/i)).toHaveTextContent('1 Kernel')
 })
@@ -2532,8 +2540,37 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
     expect(isDevModeActive()).toBe(false)
+  })
+
+  it('offers dummy checkout only while active and leaves the real Supporter pack locked', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await openSettings(user)
+
+    expect(screen.queryByRole('button', { name: /redeem supporter unlock code/i })).not.toBeInTheDocument()
+    const setItem = Storage.prototype.setItem
+    const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+      if (key === 'tens_dev_supporter_unlocked') throw new Error('Storage is full')
+      return setItem.call(this, key, value)
+    })
+    await user.click(screen.getByRole('button', { name: /dummy supporter checkout/i }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/couldn’t save the test unlock/i)
+    storage.mockRestore()
+
+    await user.click(screen.getByRole('button', { name: /dummy supporter checkout/i }))
+    expect(screen.getByText('Unlocked for the Dev Mode save.')).toBeInTheDocument()
+    expect(screen.queryByText(/couldn’t save the test unlock/i)).not.toBeInTheDocument()
+
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await openSettings(user)
+    expect(screen.queryByLabelText(/test supporter section/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /redeem supporter unlock code/i })).toBeInTheDocument()
   })
 
   it('enabling switches to an isolated save and disabling resumes the real one untouched', async () => {

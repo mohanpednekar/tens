@@ -13,11 +13,11 @@ powers of ten. No routing library, no backend — state lives in React and persi
 (Foundry → Power → Compute → Factory → Firmware → Challenges → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder), `PerksPage` (Firmware, after first Prestige: 🤖 Automation / ✦ Prestige icon
+`MainPage` (tier ladder), `PerksPage` (Firmware, after first Prestige or once Buy max is unlocked: 🤖 Automation / ✦ Prestige icon
 tabs — one row per automation spanning unlock → pause → speed; Prestige: Speed bonus, Sleep mode cap, Compression, Cache Warm, Playtime bonus, Overflow mode; Purchasing: Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
-second-level tabs). More (Manual / Milestones / Achievements / Settings) is always available, including during the
+second-level tabs). More (Manual / Milestones / Stats / Achievements / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A further More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
@@ -58,7 +58,7 @@ yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--
 yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738),
                   # then fail on any git conflict marker in a tracked text file (#945)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
-                  # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
+                  # (semver rules in "Changelog convention"; run only by release.yml — versioning is automatic)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
 ```
 
@@ -96,18 +96,15 @@ one first. This applies to every change made in this repo.
 
 PRs are opened as drafts by default, but stay draft only while real, known work is pending (a queued
 commit, a fix in progress, unrun tests). Always mark ready the moment it reflects genuinely finished work
-(local checks pass, nothing further planned — maintainer standing rule) — a draft isn't reviewed or auto-merge-eligible, so
+(local checks pass, nothing further planned — maintainer standing rule) — a draft isn't reviewed or merged, so
 leaving a finished one draft just stalls it. Applies to every PR, autonomous or interactive.
 
 **Verification effort scales with how public the PR is**: minimal testing (one `yarn test` after a
 coherent batch of changes, not after every edit) before anything is opened; one full local check at
 draft creation; multiple rounds of adversarial review (Claude plus any bots/humans) once marked ready,
-looping until nothing new turns up. None of this slows `pr-auto-merge.yml`'s three immediate paths
-(below and "Automation workflows": qualifying human approval; low-risk diff on green checks; adversarial `APPROVE` on a low-risk diff)
-nor the agent-enabled auto-merge on any non-workflow `APPROVE` (below). The 10-minute quiet period
-applies only when none of those fires and a session merges directly (e.g. `gh pr merge`): wait for CI
-green plus 10 minutes with no further review activity. Detail: `docs/AUTOMATION.md`'s "PR review &
-testing cadence".
+looping until nothing new turns up. No GitHub workflow reviews, fixes or merges PRs — that is the
+daily **PR babysitter** scheduled routine's job (Claude Code Remote, not a workflow; don't add one).
+Detail: `docs/AUTOMATION.md`'s "PR babysitter" / "PR review & testing cadence".
 
 **After the final commit** on a finished PR (nothing further planned; local checks green), always
 run the adversarial `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) against that head
@@ -117,35 +114,30 @@ SHA before considering the session done. Post its machine-readable marker as a P
 <!-- adversarial-review sha=<headOid> verdict=APPROVE|NEEDS_CHANGES|BLOCK -->
 ```
 
-Then:
+Then: **`APPROVE`** → mark ready; **`NEEDS CHANGES` / `BLOCK`** → fix (or stop) and re-run the reviewer
+after the next final commit so the marker matches the new HEAD. **Only the PR babysitter routine
+enables GitHub auto-merge** (maintainer standing rule, reversing the 2026-11-21 "nobody arms it"
+decision; merge method `merge`, repo setting "Allow auto-merge" must stay on). It arms it only on a PR it
+could also merge directly ("Direct merge" below — every exclusion applies: workflow-control fail-closed
+rule, `revert-deploy/*`, hold labels, drafts) that has an `APPROVE` marker for the current head (for
+`release/next`: a passing `verify-pr`), no conflicts and no unresolved threads. Accepted trade-offs
+(`docs/AUTOMATION.md` "Auto-merge"): an armed PR lands when *required* checks pass (not every check),
+possibly out of PR-number order, and a later push by a write-access agent doesn't disarm it before the
+next daily run. Workflows, autonomous runs and other agents never enable it; maintainer-driven
+interactive sessions merge directly (below). Never force-merge, push to `main`, or GitHub-approve your own PR.
 
-- **`APPROVE` + meets the low-risk bar** (`scripts/pr-low-risk-eligible.sh` / `docs/AUTOMATION.md`):
-  **always** enable GitHub auto-merge — run
-  `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (marks ready if
-  still draft, then `gh pr merge --auto --merge`). This is a standing authorization to *enable*
-  auto-merge on `APPROVE`d PRs (this bullet and the next) only; it is not permission to force-merge, push to `main`, approve
-  the PR as a GitHub review, or bypass CODEOWNERS on `.github/workflows/**`.
-- **`APPROVE` but not low-risk, diff touches no `.github/workflows/**` file**: mark ready and enable
-  GitHub auto-merge (`gh pr ready <pr>` then `gh pr merge <pr> --auto --merge`) — maintainer standing
-  rule. The `main` ruleset currently requires no human approval, so this merges on green required
-  checks with no human review; the adversarial `APPROVE` is the gate.
-- **`APPROVE` but diff touches `.github/workflows/**`**: mark ready for the maintainer's review; never
-  enable auto-merge (CODEOWNERS isn't enforced by the ruleset yet, so this exclusion is the only gate).
-- **`NEEDS CHANGES` / `BLOCK`**: fix (or stop); do not enable auto-merge; re-run the reviewer after
-  the next final commit so the marker matches the new HEAD.
-
-`pr-auto-merge.yml` Path 3 also reacts to that APPROVE marker on its own (belt-and-suspenders with
-the script). Path 2 (green checks, no review marker) still auto-merges low-risk bot/Dependabot PRs
-as before — it does not mark drafts ready.
-
-**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
-maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
+**Direct merge (maintainer standing rule):** in
+maintainer-driven interactive sessions and the PR babysitter routine, for every PR in this repo: once the PR is
 green — mergeable (no conflicts; bring a "behind" branch up to date first, then re-run the reviewer for the new head), every required check complete
 and passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for
 the **current head SHA** — merge it directly (`gh pr merge --merge` / `merge_pull_request`) instead of
-waiting for GitHub. The 10-minute quiet period does not apply. Never for `.github/workflows/**` diffs,
-never over a failing/pending check. Autonomous runs (`autonomous-maintenance.yml`, Devin, dev-team
-roles) keep their never-self-merge rule.
+waiting for GitHub. Never for workflow-control diffs (`.github/workflows/**`, `.github/actions/**`, `.github/CODEOWNERS`, scripts workflows
+run with the automation token, `.claude/agents/code-reviewer.md`) — no workflow may update workflows, directly or indirectly,
+without human approval; the babysitter routine may merge one only when it is positively attributable to a human or interactive
+session (fails closed; `docs/AUTOMATION.md` "PR babysitter") — never for `revert-deploy/*` PRs,
+never over a failing/pending check. Autonomous workflow runs (`autonomous-maintenance.yml`, Devin, dev-team
+roles) keep their never-self-merge rule. The babysitter processes PRs in ascending PR-number order (armed
+auto-merges can land out of order — "Auto-merge" trade-off above).
 
 **Merge-when-met rule (maintainer standing rule):** whenever the requested behavior is delivered and the green-and-`APPROVE` conditions above hold, proceed to merge rather than holding for further polish — anything left over becomes a follow-up PR, not a reason to wait.
 
@@ -167,8 +159,7 @@ Keep PRs green through genuine fixes only — never `--no-verify`, never disable
 test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
 needs updating, fix the workflow/check definition instead of routing around it.
 
-Auto-merge silently sits inert once a PR (any auto-merge source) falls out of sync with its base — GitHub
-won't merge a conflicted PR however green its checks. Check `mergeable_state` whenever there's reason to
+GitHub won't merge a PR that has fallen out of sync with its base, however green its checks. Check `mergeable_state` whenever there's reason to
 look (a "merge conflict" notice, a push to base, a routine check-in) and, if conflicted, resolve
 immediately: merge (or rebase, matching repo convention) the base into the PR branch, resolve for real
 (never blindly take one side wholesale on a file with actual logic), rerun `yarn test`, push. Prefer merge
@@ -230,23 +221,21 @@ land with the code is deferred.
 
 ### GitHub Milestones (release grouping)
 
-Milestones group player-facing work toward a named release target; they complement (do not replace) the
-Project's `Track` field from #53 (a `Track` answers "what's related to what" across releases; a
-Milestone answers "what's targeted for this release", with a native due-date and X/Y-closed progress).
-Interactive sessions and Planning (#53) should assign player-facing feature/economy issues to the next
-release's milestone; process and infrastructure `claude-task` issues typically stay off a versioned
-milestone. `v0.6.0` (UI-revamp chain #138/#139/#140) has fully shipped; the current next-release
-milestone is `v0.7.0`, targeting Era ascension / Reboot (`#407` / `#411–#414`, in progress).
-`scripts/sync-release-milestones.sh` keeps milestones and assignments idempotent, running on every
-`autonomous-maintenance.yml` invocation.
+Milestones group player-facing work toward a feature target; they complement (do not replace) the
+Project's `Track` field from #53 (a `Track` answers "what's related to what"; a Milestone answers
+"what ships together", with a native due-date and X/Y-closed progress). Milestones are **named by
+feature, never by version** — versions are computed automatically at release time (below), so a future
+number can't be promised. Interactive sessions and Planning (#53) assign player-facing feature/economy
+issues to the matching milestone; process/infrastructure `claude-task` issues typically stay off one.
+Shipped and closed: `UI revamp`, `Era ascension / Reboot`; open: `Guide screens` (#1228),
+`Guide screens — spotlights & What's new`. `scripts/sync-release-milestones.sh` keeps milestones and
+assignments idempotent, running on every `autonomous-maintenance.yml` invocation.
 
 ## Automation workflows
 
-Claude/GitHub automation under `.github/workflows/` runs unattended: it opens and fixes PRs, and merges only
-past an approval boundary — a low-risk diff on an allowlisted bot-authored branch
-(`scripts/pr-low-risk-eligible.sh`) merges with no human approval, on green checks alone or via an adversarial
-`APPROVE` marker. Sessions (interactive and autonomous) also enable auto-merge on any adversarially-`APPROVE`d PR
-not touching `.github/workflows/**` (see "Pull requests"); every other PR waits for human approval. Git/GitHub
+Claude/GitHub automation under `.github/workflows/` runs unattended and opens PRs, but no workflow follows up
+on, refreshes or merges PRs (the PR babysitter routine does; "Pull requests"), and no workflow enables GitHub
+auto-merge (only the babysitter routine may). Git/GitHub
 writes authenticate via the `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (its pushes/merges can't trigger other
 workflows; read-only guard steps, the deploy-failure alert, and `devin-workflow-health.yml`/`deploy.yml` use
 `GITHUB_TOKEN`). The PAT has `Workflows: write`, so autonomous runs may push `.github/workflows/**` changes when a
@@ -261,10 +250,9 @@ it mid-run; untracked guard-step code/secret-scanning alerts get the same (Depen
 Phase A may weigh Impact to reorder *within* a priority tier (`priority:high` still jumps), saying so when it
 deviates from lowest-number order.
 
-Shared helpers (`.github/actions/setup-node-yarn` — trusted refs only; `scripts/pr-head-guard.sh`;
-`scripts/claude-deny-settings.sh`), every other workflow (`devin-*`, `pr-conflict-sweep`, `release`, `main-ci-heal`,
-`revert-deploy`, `*-pr-followup`, `pr-auto-merge`, `automation-self-heal`, `codeql`, `mutation-testing`,
-`mobile-build`), the slot schedule, the #62 maintainer checklist verification (#63; a new manual-only prerequisite
+Shared helpers (`.github/actions/setup-node-yarn` — trusted refs only; `scripts/claude-deny-settings.sh`), the PR
+babysitter routine, every other workflow (`devin-*`, `release`, `main-ci-heal`, `revert-deploy`,
+`automation-self-heal`, `codeql`, `mutation-testing`, `mobile-build`), the slot schedule, the #62 maintainer checklist verification (#63; a new manual-only prerequisite
 adds a line to #62 and, if API-checkable, to `scripts/verify-maintainer-checklist.mjs`'s `CHECKS`), the `## RUN SUMMARY`
 job-summary step (#74), the Ideas-discussion feed (#66), and guard-feed bounds (any new feed passes an explicit
 `--limit` + display cap with a "+N more" note, titles/labels only, never bodies — #81) are in
@@ -322,19 +310,22 @@ user-facing and behaviorally-relevant changes going forward from `v0.5.0`. Every
 behavior adds an entry to `## [Unreleased]` at the top, under the matching subheading — `### Added`
 for new features, `### Changed` for behavior changes, `### Fixed` for bug fixes (`### Removed`/
 `### Security`/`### Deprecated` as needed). Purely internal changes (docs-only, CI/workflow tweaks with
-no user-visible effect) don't need an entry. `package.json`'s `"version"` field (currently `0.5.0`) and
-future git tags (`v0.1.0`–`v0.5.0` retroactively, then onward) mirror this file's version sections —
-see `docs/DESIGN_HISTORY.md` for why versioning/tagging started here rather than at project inception.
+no user-visible effect) don't need an entry. Mark a breaking change (e.g. a save-format or removed
+behavior) by starting its bullet with `**Breaking:**`. `package.json`'s `"version"` and the `v<x.y.z>` git
+tags/GitHub Releases mirror this file's version sections (everything since `v0.5.0` was split
+retroactively into one version per merge day, #1236; `docs/DESIGN_HISTORY.md`).
 
-**Version bump before release:** when a PR is ready to cut the accumulated `## [Unreleased]` entries
-into a dated release section, run `yarn bump-version` (`scripts/bump-version.mjs`) as a final step on
-that PR's own branch — it reads Unreleased, chooses **minor** if `### Added` or `### Removed` has
-entries (otherwise **patch**; major is never auto-selected), writes the new `package.json` version,
-moves Unreleased into `## [x.y.z] - YYYY-MM-DD`, and resets Unreleased to empty subheadings. No-op
-(exit 0) when Unreleased has no bullet entries. The bump lands in the PR diff like any other change
-(never a direct commit to `main`). Once that PR merges, `release.yml` (push-to-`main`,
-`paths: ['package.json']`, deterministic — no agent) pushes the annotated `v<x.y.z>` tag and creates
-the GitHub Release from that version's changelog section; see `docs/AUTOMATION.md`'s "Release" entry.
+**Versioning is automatic — never ask, never pick a number by hand, never run `yarn bump-version` in a
+feature PR.** Semver rules (`determineBumpType` in `scripts/bump-version.mjs`): while `0.y.z`, a
+breaking change, `### Added` or `### Removed` → **minor**, anything else → patch (no major before 1.0.0);
+from `1.0.0` (the first public release — set repo variable `RELEASE_MAJOR=true` once) ideal semver:
+breaking or `### Removed` → major, `### Added`/`### Deprecated` → minor, else patch. `release.yml`
+keeps one open `release/next` PR (main + `yarn bump-version`) whenever main's Unreleased has entries; the
+The bump also writes `package.json` `versionCode` (Android: `YYDDDHHMM` — year, day of year,
+IST time of the bump — never below the previous code + 1; `computeVersionCode`; Gradle/Fastfile read it). The PR babysitter merges it once `node <base-checkout>/scripts/release-automation.mjs verify-pr origin/main origin/release/next` (`--allow-major` only while `RELEASE_MAJOR` is set) passes and CI
+is green (no adversarial review needed — the check proves the diff is the pure bump). The merge tags
+`v<x.y.z>` + creates the Release; a backfill job tags any untagged version. Detail:
+`docs/AUTOMATION.md` "Release".
 
 ## Model delegation
 
@@ -385,14 +376,15 @@ src/
     navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Factory cues muted while their automation is enabled and <1 s; Storage cues fold into Foundry;
                             Compute Flops affordability → `compute`)
     dailyChallenges.js    ← Daily-challenge logic ("Daily challenges")
+    stats.js              ← Stats page selectors (`getStatsOverview`/`getStatsSections`/`getProductionBonusFactors`), pure
     challengeUi.js        ← pure player-facing helpers for Factory challenge mode (goal/readout formatting), shared
                             by Firmware and the Factory banner
     useIncrementalGame.js ← React hook: engine ↔ useState + localStorage + tick timer
     storage.js            ← localStorage read/write; every load goes through save-migration/, then forward field
-                            merge (`mergeState`); multi-slot saves + Supporter entitlement (unlock code / dummy
-                            checkout), clearSaveSlot / clearAllSaveProgress (never revokes unlock), separately keyed
+                            merge (`mergeState`); multi-slot saves + regular Supporter entitlement (web unlock
+                            code), clearSaveSlot / clearAllSaveProgress (never revokes unlock), separately keyed
                             last-save timestamp for offline progress (slot 0 keeps legacy `tens_game_state` keys).
-                            Owns Dev Mode's isolated `'dev'` slot ("Dev Mode").
+                            Owns Dev Mode's isolated `'dev'` slot and test Supporter entitlement ("Dev Mode").
     storagePrefix.js      ← `createPrefixedStorage`: `dev:` key namespace so the dev build's saves never mix with
                             production's on the shared origin (no-op prefix elsewhere)
     save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on every
@@ -400,7 +392,7 @@ src/
   components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
     AppNav                ← fixed bottom bar Foundry → Power → Compute → Factory → Firmware → Challenges → More; Factory omitted
                             during the Foundry gate; attention dots via navAttention.js
-    AppMenu               ← More sheet — Manual / Milestones / Settings (always reachable; Reset / Reformat Byte
+    AppMenu               ← More sheet — Manual / Milestones / Stats / Achievements / Settings (always reachable; Reset / Reformat Byte
                             Foundry only in Settings → Danger zone)
     Button (`.jsx`)       ← semantic `variant` prop → theme tokens; deprecated raw `color` still supported
     DiskArrayRow          ← one Disk array's status `{ actions, size, state }`; only click = empty write-cache-size
@@ -414,11 +406,11 @@ src/
     COMPONENTS_REFERENCE
     IncompatibleSaveNotice ← blocking overlay when a load cleared a pre-schema save; single **Start fresh** action;
                             rendered by `App.jsx` when `incompatibleSaveReason` is set
-  pages/                  ← ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), AchievementsPage (`'achievements'`, More entry), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
+  pages/                  ← StatsPage (`'stats'`, More entry), ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), AchievementsPage (`'achievements'`, More entry), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
                             InfoPage, MilestonesPage, SettingsPage, DevModePage (+ `stateFields.js`: pure
                             Variables-tree helpers) — roles in `src/CLAUDE.md`; layout in MAINPAGE_REFERENCE.
                             Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
-                            `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'info'`, `'settings'`, `'dev'`
+                            `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'stats'`, `'info'`, `'settings'`, `'dev'`
   theme/                  ← tokens.js (design-token source of truth: per-mode color/shadow/tier-accent +
                             mode-independent space/radius/motion/breakpoints/font/type; `buildTheme(mode)`, `themes.{dark,light}`),
                             layout.js (pure layout classes + `media`), LayoutContext.jsx (`LayoutProvider`/`useLayoutClass`),
@@ -431,7 +423,7 @@ src/
                             `getMonetizationService()`), cloudSave/ (Firebase Auth email/password + Firestore `saves/{uid}`,
                             `deleteAccountAndData`: reauth → data → user), nativeShell.js (hide splash, init monetization)
   App.jsx                 ← root; owns the single `useIncrementalGame()` call, wraps <ThemeProvider><GlobalStyle/>,
-                            switches pages via local `page` useState (default `'game'`; legacy `'storage'` →
+                            switches pages via local `page` useState (Manual/Settings/Milestones/Stats/Achievements are `React.lazy` chunks under one `Suspense`; default `'game'`; legacy `'storage'` →
                             `'foundry'`) — not a router — plus shared `AppNav` and `AppMenu`.
                             `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked ||
                             page === 'foundry')`; `intro.mainGameUnlocked` is a permanent latch, so the gate exists
@@ -447,7 +439,7 @@ firestore.rules           ← owner-only `saves/{uid}` rules; stryker.config.jso
 playwright.config.js, e2e/ ← real-browser suite, specs in docs/TESTING_REFERENCE.md
 scripts/                  ← automation, release, lint and simulation helpers (`ls scripts/`; most have a sibling `*.test.js`;
                             roles in docs/AUTOMATION.md or each script's header). Named elsewhere here: bump-version.mjs,
-                            adversarialReviewMarker.js, pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh,
+                            adversarialReviewMarker.js,
                             lint-workflow-shell.mjs, lint-conflict-markers.mjs, simulate-challenges.mjs,
                             simulate-daily-challenges.mjs, verify-maintainer-checklist.mjs, sync-release-milestones.sh.
                             resolve-pr-threads.sh: `list` read-only; `resolve` takes explicit IDs, never bulk.
@@ -473,8 +465,8 @@ Strict three-layer separation:
    up from MainPage so `ByteFoundryPage` shares the save/tick loop). Owns the `setInterval` tick timer
    and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
    resetByteFoundry, offlineProgress, dismissOfflineProgress, incompatibleSaveReason,
-   dismissIncompatibleSaveNotice, achievementBaseline, buyMaxMode, setBuyMaxMode, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
-   redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress,
+   dismissIncompatibleSaveNotice, achievementBaseline, buyMaxMode, setBuyMaxMode, buyUnitMode, setBuyUnitMode, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
+   redeemUnlockCode, purchaseSupporterDummy, supporterUnlocked, opsSamples, clearSlot, eraseAllSaveProgress,
    exportSaveJson, applyCloudSave, claimOfflineAdReward, devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five back
    Dev Mode; always present on the return value (not gated by `import.meta.env.DEV`) but consumed only
    by `DevModePage`, whose rendering *is* dev-build-gated, so unreachable from any shipped UI. Every

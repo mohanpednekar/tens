@@ -1,7 +1,6 @@
 import AchievementToasts from 'components/AchievementToasts'
 import AppMenu from 'components/AppMenu'
 import { ACHIEVEMENTS_FEATURE } from 'game/layers'
-import AchievementsPage from 'pages/AchievementsPage'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
 import ChallengesPage from 'pages/ChallengesPage'
@@ -9,18 +8,50 @@ import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 import ComputePage from 'pages/ComputePage'
 import DevModePage from 'pages/DevModePage'
-import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
-import MilestonesPage from 'pages/MilestonesPage'
 import PerksPage from 'pages/PerksPage'
-import SettingsPage from 'pages/SettingsPage'
-import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
+import { isComputeCoreConversionUnlocked, isChallengesPageRevealed, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, loadThemePreference, saveThemePreference } from 'game/storage'
 import { GlobalStyle, LayoutProvider, ThemeProvider, resolveThemeMode } from 'theme'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import styled from 'styled-components'
+
+// Rarely-visited pages load on demand so the entry chunk stays small (perf pass, #1144).
+
+export const RELOAD_FLAG = 'tens_chunk_reload'
+
+// Wraps a dynamic page import: a deploy can delete an old tab's hashed chunks, so on a failed load
+// reload once (sessionStorage-guarded) to pick up the new build. A successful load clears the guard
+// so a later deploy in the same tab is also recoverable.
+export const loadWithReload = loader =>
+  loader().then(
+    module => {
+      try { sessionStorage.removeItem(RELOAD_FLAG) } catch { /* storage unavailable */ }
+      return module
+    },
+    error => {
+      try {
+        if (!sessionStorage.getItem(RELOAD_FLAG)) {
+          sessionStorage.setItem(RELOAD_FLAG, '1')
+          window.location.reload()
+          return new Promise(() => {})
+        }
+      } catch {
+        // storage unavailable: surface the error
+      }
+      throw error
+    },
+  )
+
+export const lazyPage = loader => lazy(() => loadWithReload(loader))
+
+const AchievementsPage = lazyPage(() => import('pages/AchievementsPage'))
+const InfoPage = lazyPage(() => import('pages/InfoPage'))
+const MilestonesPage = lazyPage(() => import('pages/MilestonesPage'))
+const SettingsPage = lazyPage(() => import('pages/SettingsPage'))
+const StatsPage = lazyPage(() => import('pages/StatsPage'))
 
 const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
@@ -29,7 +60,7 @@ const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 // exempt for the same reason Settings/Milestones are — Dev Mode has to be reachable precisely
 // when you want to seed past the gate, and it's a dev-build-only destination regardless (see
 // AppMenu's `import.meta.env.DEV` guard).
-const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'achievements', 'settings', 'dev'])
+const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'achievements', 'stats', 'settings', 'dev'])
 
 const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
@@ -67,7 +98,7 @@ function App() {
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
   const showPerks = mainGameUnlocked && isPerksPageRevealed(game.state)
-  const showChallenges = showPerks
+  const showChallenges = mainGameUnlocked && isChallengesPageRevealed(game.state)
 
   const navigate = nextPage => {
     if (nextPage === 'boosters' && !showBoosters) return
@@ -105,6 +136,30 @@ function App() {
     if (page === 'boosters') setPage('foundry')
   }
 
+  // Click-fast achievement: every real click on a button, on any screen after the Foundry gate, feeds the same-button counter. Autobuyers and
+  // other automation never click, so they cannot count. Non-button clicks are ignored.
+  const { recordButtonClick } = game.actions
+  useEffect(() => {
+    // Key = the button's DOM node (React keeps it for a given row; labels embed live values and would change per click).
+    // A held Enter auto-repeats clicks on a focused button (Space clicks once, on keyup), so a click that follows a repeating keydown is ignored.
+    let ignoreNextClick = false
+    const onKeyDown = event => { if (event.repeat && event.key === 'Enter' && event.target?.closest?.('button, [role="button"]')) ignoreNextClick = true }
+    const onClick = event => {
+      if (ignoreNextClick) {
+        ignoreNextClick = false
+        return
+      }
+      const button = event.target?.closest?.('button, [role="button"]')
+      if (button) recordButtonClick(button)
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    document.addEventListener('click', onClick, true)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+      document.removeEventListener('click', onClick, true)
+    }
+  }, [recordButtonClick])
+
   useEffect(() => {
     if (!menuOpen) return undefined
     const onKey = event => {
@@ -134,7 +189,7 @@ function App() {
   if (showingFoundry) {
     content = <ByteFoundryPage focusNonce={foundryFocusNonce} game={game} />
   } else if (page === 'info') {
-    content = <InfoPage />
+    content = <InfoPage game={game} />
   } else if (page === 'boosters') {
     content = <ComputePage game={game} />
   } else if (page === 'compute') {
@@ -145,6 +200,8 @@ function App() {
     content = <ChallengesPage focusNonce={challengesFocusNonce} game={game} />
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
+  } else if (page === 'stats') {
+    content = <StatsPage game={game} />
   } else if (page === 'achievements' && ACHIEVEMENTS_FEATURE.enabled) {
     content = <AchievementsPage game={game} />
   } else if (page === 'dev') {
@@ -162,7 +219,7 @@ function App() {
       <GlobalStyle />
       <LayoutProvider>
         <PageShell>
-          {content}
+          <Suspense fallback={null}>{content}</Suspense>
         </PageShell>
         <AppNav
           attention={navAttention}

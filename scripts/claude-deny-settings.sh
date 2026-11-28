@@ -13,8 +13,8 @@
 # these files is the always-open-a-PR + CODEOWNERS human-review gate instead.
 # Callers pass their
 # OWN workflow file (and any other agent-restricted files) as extra args —
-# e.g. the PR-follow-up workflows forbid all workflow edits, so they pass every
-# workflow file; automation-self-heal passes none of the healable ones.
+# e.g. main-ci-heal passes itself and autonomous-maintenance.yml;
+# automation-self-heal passes none of the healable ones.
 #
 # Prints compact JSON on stdout, shaped for `with.settings` of
 # anthropics/claude-code-action.

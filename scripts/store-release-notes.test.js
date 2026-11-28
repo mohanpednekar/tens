@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { APP_STORE_LIMIT, PLAY_LIMIT, changelogSection, formatNotes, isPlayerFacing, releaseBullets, versionCode } from './store-release-notes.mjs'
 
 const CHANGELOG = `# Changelog
@@ -27,10 +28,16 @@ const CHANGELOG = `# Changelog
 `
 
 describe('store-release-notes', () => {
-  test('versionCode matches the Gradle formula', () => {
-    expect(versionCode('0.5.0', '')).toBe(500)
-    expect(versionCode('1.2.3', '')).toBe(10203)
-    expect(versionCode('1.2.3', '10299')).toBe(10299)
+  test('Gradle, the Fastfile and this script all read package.json versionCode', () => {
+    expect(readFileSync('android/app/build.gradle', 'utf8')).toMatch(/packageJson\.versionCode/)
+    expect(readFileSync('fastlane/Fastfile', 'utf8')).toMatch(/fetch\('versionCode'\)/)
+    expect(Number.isInteger(JSON.parse(readFileSync('package.json', 'utf8')).versionCode)).toBe(true)
+  })
+
+  test('versionCode reads package.json, with the TENS_VERSION_CODE override', () => {
+    expect(versionCode({ version: '0.43.0', versionCode: 263311330 }, '')).toBe(263311330)
+    expect(versionCode({ version: '0.43.0', versionCode: 263311330 }, '10299')).toBe(10299)
+    expect(() => versionCode({ version: '0.43.0' }, '')).toThrow(/versionCode/)
   })
 
   test('isPlayerFacing drops tooling entries', () => {

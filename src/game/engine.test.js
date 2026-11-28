@@ -199,7 +199,9 @@ import {
   buyPrestigeSpeedBonus,
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
-  buyBuyMaxUnlock,
+  recordRapidClick,
+  resetRapidClicks,
+  withRapidClickBest,
   buyCacheWarm,
   applyCacheWarm,
   getCacheWarmTier,
@@ -396,7 +398,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { BUY_MAX_RUSH_CLICKS, BUY_MAX_RUSH_WINDOW_MS, CACHE_WARM_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -11845,7 +11847,7 @@ describe('purgeGame unboundedUnlocked latch', () => {
 describe('Buy max mode', () => {
   const blockCost = level => getTierCost(tensTier, level) * DEFAULT_PURCHASE_BLOCK_SIZE
 
-  it('unlocks only through the one-time 2 PP purchase, not by Purge or Era count', () => {
+  it('unlocks only through the Buy-max rush achievement (or the legacy flag), not by Purge or Era count', () => {
     const state = createInitialGameState()
     expect(isBuyMaxUnlocked(state)).toBe(false)
     expect(isBuyMaxUnlocked({ ...state, purge: { ...state.purge, count: 1 } })).toBe(false)
@@ -11853,14 +11855,29 @@ describe('Buy max mode', () => {
     expect(isBuyMaxUnlocked({ ...state, buyMaxUnlocked: true })).toBe(true)
   })
 
-  it('buyBuyMaxUnlock spends BUY_MAX_UNLOCK_COST PP once; no-ops when unaffordable or owned', () => {
-    const state = withPrestigePoints(createInitialGameState(), BUY_MAX_UNLOCK_COST + 1)
-    const after = buyBuyMaxUnlock(state)
-    expect(after.buyMaxUnlocked).toBe(true)
-    expect(after.purge.points).toBe(1)
-    expect(buyBuyMaxUnlock(after)).toBe(after)
-    const poor = withPrestigePoints(createInitialGameState(), BUY_MAX_UNLOCK_COST - 1)
-    expect(buyBuyMaxUnlock(poor)).toBe(poor)
+  it('the Buy-max rush achievement unlocks Buy max', () => {
+    const state = createInitialGameState()
+    expect(isBuyMaxUnlocked(state)).toBe(false)
+    const after = withRapidClickBest(BUY_MAX_RUSH_CLICKS)(state)
+    expect(after.achievements.earned.buyMaxRush).toBe(true)
+    expect(isBuyMaxUnlocked(after)).toBe(true)
+  })
+
+  describe('recordRapidClick', () => {
+    const run = (keys, step = 50) => {
+      let rush = resetRapidClicks()
+      let hit = false
+      keys.forEach((key, i) => { ({ rush, hit } = recordRapidClick(rush, key, i * step)) })
+      return hit
+    }
+    it('hits on 10 clicks of one button within the window', () => {
+      expect(run(Array(BUY_MAX_RUSH_CLICKS).fill('a'))).toBe(true)
+    })
+    it('misses on 9 clicks, a different button in between, or a slow run', () => {
+      expect(run(Array(BUY_MAX_RUSH_CLICKS - 1).fill('a'))).toBe(false)
+      expect(run([...Array(5).fill('a'), 'b', ...Array(5).fill('a')])).toBe(false)
+      expect(run(Array(BUY_MAX_RUSH_CLICKS).fill('a'), BUY_MAX_RUSH_WINDOW_MS / 5)).toBe(false)
+    })
   })
 
   it('keeps the unlock through Purge and Reboot', () => {
@@ -13007,7 +13024,7 @@ describe('last-tier level credit', () => {
     expect(credited(10, 20)).toBe(4)
     expect(credited(100, 20)).toBe(6)
     expect(credited(0, 10)).toBe(0)
-    expect(credited(10, 20, false)).toBe(0) // gated behind the Spent QB achievement
+    expect(credited(10, 20, false)).toBe(0) // gated behind the Quetta broke achievement
     // Whole units only, one per interval: nothing until the first interval elapses, then exactly 1.
     expect(credited(10, 4)).toBe(0)
     expect(credited(10, 5)).toBe(1)

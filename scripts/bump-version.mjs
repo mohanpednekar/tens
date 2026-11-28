@@ -1,13 +1,16 @@
 /**
  * Semver bump from CHANGELOG.md's ## [Unreleased] section (Part of #52).
  *
- * Rules:
+ * Rules (semver; a breaking change is a bullet starting `- **Breaking:**` in any subsection):
  * - No bullet entries under Unreleased → no-op (exit 0).
- * - ### Added or ### Removed has ≥1 entry → minor bump.
- * - Otherwise (only Changed/Fixed/Security/Deprecated/…) → patch bump.
- * - Major is never auto-selected.
+ * - 0.y.z (initial development): breaking, ### Added or ### Removed → minor; otherwise patch.
+ *   Major is never auto-selected before 1.0.0 — breaking changes go out as minor.
+ * - ≥ 1.0.0 (after the first public release): breaking or ### Removed → major;
+ *   ### Added or ### Deprecated → minor; otherwise (Changed/Fixed/Security/…) → patch.
+ * - Also writes package.json `versionCode` (Android): YYDDDHHMM of the release stamp (IST), > previous.
+ * - `--major` promotes to the next major explicitly (e.g. 0.x → 1.0.0 at the first public release).
  *
- * Usage: yarn bump-version
+ * Usage: yarn bump-version [--major] [--date=YYYY-MM-DD] [--time=HHMM] [--dry-run]
  * Pure helpers are exported for unit tests and for the future release.yml
  * CHANGELOG extraction (tag message / GitHub Release body).
  */
@@ -53,8 +56,8 @@ export const EMPTY_UNRELEASED_BODY = [
 const SUBHEADING_RE = /^### (.+)\s*$/;
 const BULLET_RE = /^\s*-\s+\S/;
 
-/** Subheadings that trigger a minor (not patch) bump when they have entries. */
-const MINOR_BUMP_SUBHEADINGS = new Set(['Added', 'Removed']);
+/** Bullets marking a breaking change, in any subsection. */
+export const BREAKING_BULLET_RE = /^\s*-\s+\*\*Breaking(?::\*\*|\*\*:?)/i;
 
 /**
  * @param {string} version
@@ -70,11 +73,12 @@ export function parseSemver(version) {
 
 /**
  * @param {string} version
- * @param {'minor' | 'patch'} bumpType
+ * @param {'major' | 'minor' | 'patch'} bumpType
  * @returns {string}
  */
 export function bumpSemver(version, bumpType) {
   const { major, minor, patch } = parseSemver(version);
+  if (bumpType === 'major') return `${major + 1}.0.0`;
   if (bumpType === 'minor') return `${major}.${minor + 1}.0`;
   if (bumpType === 'patch') return `${major}.${minor}.${patch + 1}`;
   throw new Error(`invalid bump type: ${bumpType}`);
@@ -193,13 +197,20 @@ export function unreleasedHasEntries(unreleasedBody) {
 
 /**
  * @param {string} unreleasedBody
- * @returns {'minor' | 'patch' | null}  null when nothing to bump
+ * @param {string} [currentVersion]  version being bumped from (selects 0.y.z vs ≥1.0.0 rules)
+ * @returns {'major' | 'minor' | 'patch' | null}  null when nothing to bump
  */
-export function determineBumpType(unreleasedBody) {
+export function determineBumpType(unreleasedBody, currentVersion = '0.0.0') {
   const subs = parseSubheadings(unreleasedBody);
   const withEntries = subs.filter((s) => subsectionHasEntries(s.lines));
   if (withEntries.length === 0) return null;
-  if (withEntries.some((s) => MINOR_BUMP_SUBHEADINGS.has(s.name))) return 'minor';
+  const has = (name) => withEntries.some((s) => s.name === name);
+  const breaking = withEntries.some((s) => s.lines.some((l) => BREAKING_BULLET_RE.test(l)));
+  if (parseSemver(currentVersion).major === 0) {
+    return breaking || has('Added') || has('Removed') ? 'minor' : 'patch';
+  }
+  if (breaking || has('Removed')) return 'major';
+  if (has('Added') || has('Deprecated')) return 'minor';
   return 'patch';
 }
 
@@ -261,16 +272,17 @@ export function assertUnreleasedWellFormed(unreleasedBody) {
 
 /**
  * Apply a bump to changelog text: move Unreleased → ## [next] - date, reset Unreleased.
- * @returns {{ nextText: string, bumpType: 'minor' | 'patch', nextVersion: string, dateStr: string } | { noop: true }}
+ * @returns {{ nextText: string, bumpType: 'major' | 'minor' | 'patch', nextVersion: string, dateStr: string } | { noop: true }}
  */
-export function planChangelogBump(changelogText, currentVersion, date = new Date()) {
+export function planChangelogBump(changelogText, currentVersion, date = new Date(), { forceMajor = false } = {}) {
   const unreleased = extractVersionSection(changelogText, 'Unreleased');
   if (!unreleased) {
     throw new Error('CHANGELOG.md has no ## [Unreleased] section');
   }
   assertUnreleasedWellFormed(unreleased.body);
-  const bumpType = determineBumpType(unreleased.body);
-  if (!bumpType) return { noop: true };
+  const detected = determineBumpType(unreleased.body, currentVersion);
+  if (!detected) return { noop: true };
+  const bumpType = forceMajor ? 'major' : detected;
 
   const nextVersion = bumpSemver(currentVersion, bumpType);
   const dateStr = typeof date === 'string' ? date : formatChangelogDate(date);
@@ -301,6 +313,41 @@ export function planChangelogBump(changelogText, currentVersion, date = new Date
 
   const nextText = joinChangelog(preamble, [newUnreleased, newReleased, ...rest]);
   return { nextText, bumpType, nextVersion, dateStr };
+}
+
+/**
+ * Android versionCode for a release stamped `dateStr` at `hhmm` (IST): **YYDDDHHMM** — 2-digit year,
+ * 3-digit day of year, 24-hour time. E.g. 2026-11-27 13:30 → 263311330. Fits Play's 2,100,000,000 cap
+ * until 2099 (max 993662359); all development is on main, so release stamps only move forward and
+ * the code only grows. Never below `floor + 1` (the current package.json versionCode), so a code used
+ * by a manual TENS_VERSION_CODE upload (recorded by raising package.json versionCode) is never reused.
+ * Written to package.json's `versionCode`.
+ * @param {string} dateStr  YYYY-MM-DD
+ * @param {string} hhmm  HHMM, 24-hour
+ * @param {number} [floor]  current package.json versionCode
+ */
+export function computeVersionCode(dateStr, hhmm, floor = 0) {
+  const prefix = versionCodeDayPrefix(dateStr);
+  if (!/^([01]\d|2[0-3])[0-5]\d$/.test(String(hhmm))) throw new Error(`invalid release time: ${hhmm}`);
+  return Math.max(prefix * 10000 + Number(hhmm), (Number.isInteger(floor) ? floor : 0) + 1);
+}
+
+/** YYDDD for a YYYY-MM-DD date (day of year 1–366), the versionCode prefix above HHMM. */
+export function versionCodeDayPrefix(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (!m) throw new Error(`invalid release date: ${dateStr}`);
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const t = Date.UTC(y, mo - 1, d);
+  const back = new Date(t);
+  if (back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) throw new Error(`invalid release date: ${dateStr}`);
+  if (y < 2000 || y > 2099) throw new Error(`versionCode supports 2000–2099 only: ${dateStr}`);
+  const dayOfYear = Math.round((t - Date.UTC(y, 0, 1)) / 86400000) + 1;
+  return (y % 100) * 1000 + dayOfYear;
+}
+
+/** Current IST wall-clock time as HHMM. */
+export function istHhmm(now = new Date()) {
+  return new Date(now.getTime() + 5.5 * 3600 * 1000).toISOString().slice(11, 16).replace(':', '');
 }
 
 /**
@@ -342,7 +389,9 @@ export function runBumpVersion(opts = {}) {
   const changelogPath = opts.changelogPath || path.join(rootDir, 'CHANGELOG.md');
   const packagePath = opts.packagePath || path.join(rootDir, 'package.json');
   const date = opts.date ?? new Date();
+  const time = opts.time ?? istHhmm();
   const dryRun = Boolean(opts.dryRun);
+  const forceMajor = Boolean(opts.forceMajor);
 
   const pkgRaw = fs.readFileSync(packagePath, 'utf8');
   const pkg = JSON.parse(pkgRaw);
@@ -352,7 +401,7 @@ export function runBumpVersion(opts = {}) {
   }
 
   const changelogText = fs.readFileSync(changelogPath, 'utf8');
-  const plan = planChangelogBump(changelogText, currentVersion, date);
+  const plan = planChangelogBump(changelogText, currentVersion, date, { forceMajor });
   if (plan.noop) {
     const latest = latestReleasedVersionId(changelogText);
     if (latest && latest !== currentVersion) {
@@ -364,7 +413,7 @@ export function runBumpVersion(opts = {}) {
     return { noop: true, currentVersion };
   }
 
-  const nextPkg = { ...pkg, version: plan.nextVersion };
+  const nextPkg = { ...pkg, version: plan.nextVersion, versionCode: computeVersionCode(plan.dateStr, time, pkg.versionCode) };
   // Preserve trailing newline style of the original package.json.
   const pkgOut = `${JSON.stringify(nextPkg, null, 2)}\n`;
 
@@ -393,8 +442,18 @@ function isMainModule() {
 
 function main() {
   const dryRun = process.argv.includes('--dry-run');
+  const forceMajor = process.argv.includes('--major');
+  const dateArg = process.argv.find((a) => a.startsWith('--date='));
+  const date = dateArg ? dateArg.slice('--date='.length) : undefined;
+  if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    console.error(`bump-version: --date must be YYYY-MM-DD (got ${date})`);
+    process.exitCode = 1;
+    return;
+  }
+  const timeArg = process.argv.find((a) => a.startsWith('--time='));
+  const time = timeArg ? timeArg.slice('--time='.length) : undefined;
   try {
-    const result = runBumpVersion({ dryRun });
+    const result = runBumpVersion({ dryRun, forceMajor, date, time });
     if (result.noop) {
       console.log(`bump-version: nothing to do (Unreleased is empty; still at ${result.currentVersion})`);
       process.exitCode = 0;

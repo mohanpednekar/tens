@@ -8,79 +8,153 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+
+## [0.44.0] - 2026-11-27
+
+### Removed
+- **Breaking:** Remove the dummy Supporter checkout from normal play. Dev Mode retains an isolated test checkout, and the unlock code remains available in normal web play.
+
+## [0.43.0] - 2026-11-27
+
+### Added
+- **Manual → Achievements**: fine print and nuances for achievements that have some (e.g. autobuyer clicks do not count), listed only for achievements you can already see. The Achievements screen now shows the short requirement text.
+- **Click fast, buy max** achievement (Early Factory): click the same button 10 times within one second, on any screen (clicking a different button in between starts over; automation does not count; the screen shows your best so far) to unlock Buy max.
+- **Quetta broke achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
+
+### Changed
+- **Faster first load**: the Manual, Settings, Milestones, Stats and Achievements screens now load on demand, trimming first-load JavaScript by about 11% (entry chunk 687 kB → 609 kB).
+- Achievements you can see now show a one-line summary without expanding: the requirement until earned, then the reward. Expanding shows both; fine print lives only in the Manual. Self-explanatory titles skip the requirement line.
+- Achievements with plain names got fitting ones: the five Reclamation levels (Flush with success … The Great Flushening), the ten Level power levels (High five … Perfect ten, matching each level count) and Spent QB → Quetta broke. Series and other achievement names are unchanged.
+- Buy mode options are now named **Bytes** (default, fills up to the level boundary) and **Bits** (exactly one unit per Buy and per autobuyer attempt).
+- **Firmware appears as soon as it has something usable** (e.g. an unlocked Buy max, even before the first Purge). Its tabs and sections stay hidden until their own content is reached: Automation and Purge Points after the first Purge, Prestige once Buy max is unlocked or after the first Purge. Challenges still appears with the first Purge.
+- **Stricter spoilers**: the Achievements screen lists a group only once its layer is reached (names and star totals included), and the Manual no longer mentions Reboot, Kernels, Flops, Power, Overflow mode or future layers before you reach them.
+- **Buy max is now unlocked by the Click fast, buy max achievement** instead of the 2 PP Firmware purchase (saves that already bought it keep it).
+
+### Fixed
+- Achievement toasts no longer cover the page title; they now sit just below it.
+
+## [0.42.0] - 2026-11-26
+
+### Added
+- **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
+- **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
+- **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, bonus multiplier) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
+- **Achievement stars boost production**: every star adds +1% production speed, additively (shown on the Achievements page and the Factory info list).
+- 25 more **achievements** in four new sections, effect-free except for their stars (each star adds +1% production; other bonuses come later): **Power** (Power user, Batteries included, Turbo button, Stack Overflow, Cold fusion), **First Purge and after** (Just Googol it, Remind me later, Wait do I start all over?, There are 10 types of people, Script kiddie, 0x10, Cron job, Look ma no hands, Oh it's still a clicker game!), **Late Purge layer** (Lossless, Middle-out, Zip bomb, while (true), It's not a bug it's a feature, 64-bit upgrade, The cloud is just someone else's computer) and **Reboot** (Have you tried turning it off and on again?, rm -rf, Kernel panic, Popcorn). Purge counts are lifetime (they survive Reboot); saves that already did these things earn them on load.
+
+### Changed
+- First-time **Disk full** screen is shorter and centered: the Purge Point reward up front, a two-column Resets / Keeps summary, and a full-width Purge button; the backdrop is lighter and blurred.
+
+## [0.41.0] - 2026-11-24
+
+### Added
 - **Auto Purge conditions** (Firmware → Automation, once Auto Purge is owned): *Purge at PP* (wait until a Purge would award 10^N PP), *Minimum time* (wait until a set time has passed since the last Purge — together with reaching Googol Bytes, whichever is later) and *Best PP multiple* (wait until the award is a multiple of your best Purge award since the last Reboot). The two PP conditions apply in Overflow mode; all default to Off.
 - **Kernel shop** (Firmware → ⏻ Kernels, after your first Reboot): Hyperscaler (buy), Hyperscaler efficiency (10 levels), Kernel amplifier (each level ×10 Kernels per Reboot, 9 levels) and Auto Hyperscaler (100 Kernels, with a pause switch).
-- 25 more **achievements** in four new sections, effect-free for now (bonuses come later): **Power** (Power user, Batteries included, Turbo button, Stack Overflow, Cold fusion), **First Purge and after** (Just Googol it, Remind me later, Wait do I start all over?, There are 10 types of people, Script kiddie, 0x10, Cron job, Look ma no hands, Oh it's still a clicker game!), **Late Purge layer** (Lossless, Middle-out, Zip bomb, while (true), It's not a bug it's a feature, 64-bit upgrade, The cloud is just someone else's computer) and **Reboot** (Have you tried turning it off and on again?, rm -rf, Kernel panic, Popcorn). Purge counts are lifetime (they survive Reboot); saves that already did these things earn them on load.
-- Long achievement series (Reclamation) list one short line per level instead of repeating text.
-- Achievements page shows each requirement's current progress (e.g. 100/256, 4/10, Capacity doublings) while unearned, and its actual reward (the bonus it grants, when it has one) both before and after earning; collapsed series rows show a very short next requirement and reward; the unlock toast shows the reward too.
-- **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page; a section shows only its completion bonus (⭐ +N) once complete.
-
-- Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels. They are earned in order (each counts only after the previous one), from new claims only (not retroactive).
-- Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
-
 - Ten **Level power** achievements (complete 5 levels on each of the first five tiers, then 6, 7, 8, 9 and 10 on the next five; earned on the next tick if a save already meets them) each add 0.05 to the per-level production multiplier. It now starts at ×1.0 (was ×1.25) and reaches ×1.5 once all ten are earned, so the first Purge is slower and later ones faster. Daily challenges' fallback start balance rose to 1,000,000 B (generator version 6).
-
-- Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
 - **Challenge balance (#1043):** retuned run-wide levers to the difficulty bands — F3 cost ×6→×3, F7 ×5→×3, F16 ×30→×20, F6 Scale Up ^3→^2 / Accelerate ^2→^1.5 (was faster than a normal run), F21 now also costs ×30 (it was inert), F24 adds costs ×40, F25 adds costs ×30.
 - **Purge Points now follow the actual powers of ten in your balance** instead of the excess over 1 Googol: 100 powers ÷ 64 = 1 PP at Googol, and each Compression halves the divisor (100 ÷ 32 = 3 PP after one Compression, then 6, 12, 25, 50, 100). The power count stays at 100 until Overflow mode, then keeps growing.
 - Hyperscalers now build their Flops boost up every second of a cycle on every tier (about +36% per hour each, until the next Purge, Scale Up or Overclock) instead of a flat +0.01%. Kernels per Reboot are now ×10 per Kernel amplifier level (was +1).
+
+### Fixed
+- **Level power achievements** now unlock after *completing* the stated number of levels (previously one level early); progress bars count completed levels. Daily challenge definitions regenerate (generator v9).
+
+## [0.40.1] - 2026-11-23
+
+### Changed
 - PWA manifest declares `orientation: 'any'` so installed tablets can rotate (groundwork for large-screen layouts; no visible layout change).
 - **Reclamation achievements reduced from 20 to 5.** They now track how many different Storage pools you have flushed (1, 3, 6, 8, and every pool), and they reward you: levels I and II raise the Bitrate exponent step of every disk size without a Flush Pool upgrade from 1% to 2% and 3% of the remaining gap to 1.0 (a replacement, not a stack), levels III and IV each make every Data Lake fill +5% faster (a share of its pool's Bandwidth, added to the +10% per flush), and level V (flush every pool) is the grand reward: Bitrate is synced to Capacity, so Upgrade Bitrate disappears and one Upgrade does both. The per-pool Bitrate exponent upgrades no longer come from achievements: a pool's first two Flush Pool flushes upgrade its disk-size steps directly, exactly as before (retained across Reformat, Purge, and Reboot). Existing saves keep every upgrade; Reclamation achievements are re-evaluated from the pools already flushed.
 - The Bitrate exponent readout on the Byte Foundry page shows three decimals (e.g. 0.505 instead of 0.51), so small disk-size steps are visible.
 
-- **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, Reclamation (one 20-level row: each pool I then II), First purchase of each tier, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.
-
-- Each Overclock after the first now needs 4 more completed last-tier levels than the previous claim (was 3) until the Overclock step achievements are earned.
-
-- Factory tier level costs now widen: the gap between consecutive levels' costs (in powers of ten) starts at the tier number and grows by 1 after every 10 levels at the same gap.
-
-- Firmware speed-upgrade costs now sit on the clean 1‑2‑4‑8…64‑125‑250‑500 series (×1000 per ten) throughout — no more 5.12e17 / 1.6e13; Tier *n*'s autobuyer / tickspeed upgrades start at 10·n / 100·n PP (10, 20, 30… / 100, 200, 300…) instead of 10 / 100 for every tier; the chains use the 10×/100× variant (…640 → 1,250, …6,400 → 12,500). Tier-row cost pills no longer truncate (they wrap instead).
-- Clock Speed is renamed **Accelerate** (a verb, like Restage, Scale Up and Overclock), and the four cards are now short full-width rows aligned with the tier rows instead of tall half-width tiles.
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
-- Nav attention dots no longer light for Factory cues (affordable levels, Accelerate, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
-- Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
-
-### Fixed
-
-- **Level power achievements** now unlock after *completing* the stated number of levels (previously one level early); progress bars count completed levels. Daily challenge definitions regenerate (generator v9).
-- Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
-
-- A cost within float error of a clean multiple of 8 Bits (e.g. `8e92 b`) now reads `1e92 B` instead of `9.999e91 B`.
+## [0.40.0] - 2026-11-22
 
 ### Added
-
-- **Spent QB achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
-
-### Added
-
-- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete for the tier of your highest Storage pool being filled (e.g. Terabytes once the TB pool is unlocked, even with no disks there yet and the GB pool unfinished).
+- Long achievement series (Reclamation) list one short line per level instead of repeating text.
+- Achievements page shows each requirement's current progress (e.g. 100/256, 4/10, Capacity doublings) while unearned, and its actual reward (the bonus it grants, when it has one) both before and after earning; collapsed series rows show a very short next requirement and reward; the unlock toast shows the reward too.
+- **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page; a section shows only its completion bonus (⭐ +N) once complete.
+- Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels. They are earned in order (each counts only after the previous one), from new claims only (not retroactive).
 
 ### Changed
+- **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, Reclamation (one 20-level row: each pool I then II), First purchase of each tier, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.
+- Each Overclock after the first now needs 4 more completed last-tier levels than the previous claim (was 3) until the Overclock step achievements are earned.
 
+## [0.39.0] - 2026-11-21
+
+### Added
+- Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
+
+### Changed
+- Factory tier level costs now widen: the gap between consecutive levels' costs (in powers of ten) starts at the tier number and grows by 1 after every 10 levels at the same gap.
+- Firmware speed-upgrade costs now sit on the clean 1‑2‑4‑8…64‑125‑250‑500 series (×1000 per ten) throughout — no more 5.12e17 / 1.6e13; Tier *n*'s autobuyer / tickspeed upgrades start at 10·n / 100·n PP (10, 20, 30… / 100, 200, 300…) instead of 10 / 100 for every tier; the chains use the 10×/100× variant (…640 → 1,250, …6,400 → 12,500). Tier-row cost pills no longer truncate (they wrap instead).
+- Clock Speed is renamed **Accelerate** (a verb, like Restage, Scale Up and Overclock), and the four cards are now short full-width rows aligned with the tier rows instead of tall half-width tiles.
+- Nav attention dots no longer light for Factory cues (affordable levels, Accelerate, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
+- **Restage moved up** from below the tiers to sit under Accelerate above them (the four feature cards are full-width rows; see Changed).
+
+### Fixed
+- Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
+
+## [0.38.0] - 2026-11-20
+
+### Added
+- Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
+
+### Changed
+- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
+- Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
 - **Challenges are compact**: the Factory tab is a 5×5 grid of F1–F25 tiles (done / ready / locked at a glance, with a legend); tap a tile for its rule and Start in one panel below. The Daily tab is one row per format (objective, status, Start / Resume); tap the format for its conditions and Restart / Forfeit.
 - **Firmware automation is compact**: each tier autobuyer pair fits on one line under ⚙ Tickspeed / 🤖 Buy column headers, with its challenge or upgrade inline. Once every tier is fully upgraded the list becomes a 5×2 grid of pause toggles, and Compute autobuyers are a 5×2 grid too (🔒 R<n> until their Reboot).
-- **Restage moved up** from below the tiers to sit under Accelerate above them (the four feature cards are full-width rows; see Changed).
 - **Settings is a grouped list**: Game / Data / Display / Danger zone, each entry one line with its key value (e.g. your Kernels, the active save slot); tap an entry to open it. Theme is chosen inline.
 - **Releases is renamed back to Milestones** and shows a timeline of milestones without version numbers, with Reboots and Kernels on one line.
 - **Foundry disks are compact**: an open pool's disk and cache rows each state their size once (e.g. `1 Kb` cache, `1 KB` disks) instead of on every circle, cache blocks are thin bars, full disks and cache blocks are tinted, and a lake's buffer is a thin full-width bar. Pool headers, the Data Stream and Provision Disk are unchanged.
 - **Power is a merge chain**: each tier is one compact node (held count as dots, its Charger as a 🔌 n/8 badge on the same line), and the 8→1 Charge up / ⚡ Charge button sits on a small pill on the link to the next tier. Only the selected tier shows its Boost presets.
 - **A Power tier's Charger unlocks from its first 10 charges**: until a step is automated, each 8→1 charge goes into its Charger (🔓 n/10) instead of making the next tier, and the 10th unlocks it — nothing is sacrificed any more. Saves already holding 10 of the next tier keep the old instant unlock.
 - **Compute (Flops) is compact**: each tier is one row like the Factory tiers (symbol, owned, boosted tier ×, PP Buy). Tap the symbol for its full name and effect.
+
+### Fixed
+- A cost within float error of a clean multiple of 8 Bits (e.g. `8e92 b`) now reads `1e92 B` instead of `9.999e91 B`.
+
+## [0.37.0] - 2026-11-19
+
+### Added
+- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete for the tier of your highest Storage pool being filled (e.g. Terabytes once the TB pool is unlocked, even with no disks there yet and the GB pool unfinished).
+
+### Changed
 - **Firmware → ✦ Prestige rows are terse**: each upgrade shows a one-line summary (usually its value now → after buying); tap an upgrade's name for its description.
 - **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Existing saves must buy it too.
 - **No more free unlocks on load**: a save that never bought the Speed bonus no longer gets it for having 10+ Purges, and 100+ Purges no longer unlock Overflow mode by themselves (it needs Auto Purge at 1 s or faster).
 - **Sleep mode is capped at 4 h of time away by default** (was 24 h). New Firmware → ✦ Prestige upgrade adds 4 h per level for 4, 40, 400, 4,000 and 40,000 PP, back up to 24 h.
+
+## [0.36.4] - 2026-11-18
+
+### Changed
 - **Exponential notation from 10,000**: amounts switch to the `1.23e4` form after 9,999 (was after 999,999), everywhere in the game. The shown figure is cut off rather than rounded up, so 19,999 reads `1.999e4`, never `2e4`.
 - **Compact Factory tier rows**: each tier now fits on one line (symbol, owned amount, tickspeed and Buy buttons), about 45% shorter. The Buy button shows the tier's completed levels, with Buy max's `+n` right after it. Production moved into the row's details (tap the tier symbol).
 - **Faster automation unlocks and cheaper PP upgrades** — the nth tier's autobuyer now unlocks at Purge n (was 2n) and its tickspeed autobuyer at Purge n + 10 (was 20 + 2n); global automations are unchanged. Each challenge now unlocks at 5× the Purges its automation needed (e.g. F1 at Purge 5, F21 at 40); until then Firmware shows a locked 🔒 Fn in place of the 🏁 start button). Tier autobuyer speed upgrades start at 10 PP (was 100), and Compression costs 10, 100, 1,000, … PP (was 100, 10,000, …).
 - **Achievements page is compact** — groups start collapsed and each achievement shows only its name and status; tap a group or achievement name to expand its trigger and bonus text.
+
+## [0.36.3] - 2026-11-17
+
+### Changed
 - **Automation resets now run before spends, biggest first** — within a tick, Auto-Prestige (Purge) > Auto Overclock > Auto Scale Up > Auto Restage, then the tickspeed autobuyers. A same-tick reset can no longer be pre-empted by a spend (or by a smaller reset), e.g. Auto Scale Up no longer lets the Quettabytes autobuyer empty QB first. Daily challenge definitions regenerate (generator version 5), so an in-progress daily run from before the update is dropped.
 - **Screen titles yield to top banners** — Factory hides its title (kept for screen readers) while a challenge banner, purge-available banner, daily-run header, or boost timer sits at the top; Power skips its title while a boost timer is shown.
-
 - **Daily challenges are real challenges now** — each day's three runs get seeded modified conditions (e.g. Production ×2, Costs ×5, Clock Speed ^1.5), a seeded starting balance (1,000 B up to 5e9 B), a seeded head start (Scale Ups / Overclock already earned) and a seeded objective — reach a balance, own an amount of one tier, complete a number of levels of one tier, reach a Clock Speed level, or Overclock at a given Quettabytes level — whose target is calculated from a simulated ideal run, calibrated so that ideal play wins in the second half of the time limit (5–9 min, 30–50 min, 5–8 h). Runs now have automations, by format: the 10-minute run a seeded mix (some are always missing, so it needs active play), the 1-hour run automatic buying with manual Scale Up / Overclock, the 10-hour run everything, with a switch for each automation — Auto Scale Up, Restage and Overclock start paused, and when to release or hold them is the run's key decision. Every challenge also shows a slightly lower attempt mark: reaching it counts the run as attempted even without a win, and it can never be reached by starting a run and leaving it. Challenges are the same for every player, whatever their progress. Runs advance in steps of 1 s / 5 s / 2 min. A daily run in progress from the previous version is dropped.
 - **Daily runs use the Factory screen** — a daily run is now played on the same Factory page as the main game (tier rows, Clock Speed, per-tier tickspeed, Scale Up, Overclock), with only its progress tracked separately.
+
+## [0.36.2] - 2026-11-16
+
+### Changed
 - **Quettabytes tickspeed upgrades spend their full power-of-ten cost** again (previously only 10% of it).
 - **F6 Address Space now matches its tier** — it targeted Exabytes (the F6 slot) but its rule capped the ladder at Ronnabytes. Exabytes is now the top tier (six tiers; 64-bit address-space theme) and the run's Scale Up is raised to the 3rd power and Clock Speed (which carries Overclock's bonus) to the 2nd to offset the smaller ladder (simulated ≈1.34× a normal run, in the F1–F10 band).
 - **Shorter UI copy** — trimmed descriptive text and challenge rule wording on the Challenges start dialog, Daily tab (removed per-format style lines and footnotes, compact credits line) and the Purge Points tutorial.
@@ -89,85 +163,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **F9 Bit Rot is now completable** — it was effectively unbeatable: Scale Up and Overclock drop your Bits back to the start amount, so any soft reset after the grace period instantly restarted the cycle. They now restart the grace period instead, and F9 also weakens Scale Up bonuses (power 0.85).
 - **Challenges are now meant to bite (#1043)**: simulation showed most tier challenges changed a well-played run by under 1.1×, so most challenges now also carry run-wide nerfs on top of their named rule (tier purchases cost ×N, Clock Speed or Scale Up bonuses raised to a power below 1, all production ×0.5). F1–F10 target a 1×–2× longer run than a normal one, F11–F20 2×–10×, F21–F25 10×–100×. F25's goal is 10^120 Bytes.
 - **First Purge is about 20× faster** — Factory tier level costs now grow by a constant per tier after the first two levels (Kilobytes +1 order of magnitude per level, Megabytes +2, … Quettabytes +10) instead of an ever-growing increment, which removes the ~20-day late-cycle crawl. For an ideal player the first Purge drops from ~21 days to ~1 day 6 hours. The upper tiers now top out at fewer levels (fewer Overclocks per run).
+
+## [0.36.1] - 2026-11-15
+
+### Changed
 - **Every automation now unlocks by Purge count instead of PP**: Auto Clock Speed at 8 Purges, Auto Restage 16, Auto Scale Up 32, Auto Overclock 64, Auto Purge 128 (no unlock cost; the PP speed-upgrade ladders are unchanged). Tier autobuyers and tier tickspeed autobuyers (and the challenges they unlock) now need twice as many Purges: autobuyers at 2, 4, … 20; tickspeed autobuyers at 22, 24, … 40.
 - **Purge speed bonus is now a 1 PP purchase, taught as the PP tutorial** — Firmware → Prestige opens with a short tutorial and a "Speed bonus" row (replacing the 10,000 PP unlock / +1%-per-unspent-PP bonus): your first 1 PP permanently multiplies production by a bonus that grows with your Purge count: ×1.1 after your first Purge, then ×(1 + log₁₀ Purges) — ×2 at 10, ×3 at 100, ×4 at 1,000 and so on. Nothing is applied until you buy it. Saves with 10+ Purges (which had the old bonus for free) keep it, applied once on first load.
 - **Prestige no longer empties the Data Stream** — the Data Stream balance is kept through Purge, challenge enter/exit/completion and the Bit Rot restart (Reboot still resets it); the Manual now says so.
-- **Data Lakes rebuilt as a real disk hierarchy (#1087):** every lake now has one permanent 1-unit buffer (1 KB for the KB lake) that the pool feeds first; a full buffer is moved into a ×1 disk, and 9 disks of every smaller size + a full buffer are consolidated into the next size (10 KB, 100 KB and — after a Flush opens the slot — 1000 KB) as timed transfers at Storage's disk-transfer speeds, with every bit conserved mid-transfer. Booster purchases are paid with whole disks (a full buffer counts as one ×1 unit) summing to exactly the cost — disks are never broken; the lake keeps filling until exact change exists, and partial buffer fill and in-flight transfers are never disturbed. A collapsed pool's lake now reads the next Booster's affordability as a percentage (capped at 100%) instead of the raw balance; the expanded lake shows the buffer, the transfer in progress and the ×1000 disk squares. Only the start of filling toward the next Booster waits for a full pool buffer; once started it no longer waits for the pool to refill to full (it still yields to disk filling, provisioning and the read cache) until that Booster is bought. Older saves migrate without losing or duplicating any stored data.
-- **Ordinary disk fills draw straight from their pool (#1087):** a disk above a pool's smallest size no longer goes through a write-cache flush stage — it lands the moment its pool buffer has funded it. Expediting a disk keeps its faster timed transfer.
+
+## [0.36.0] - 2026-11-14
 
 ### Added
 - **Foundry Reclamation achievements (#1085):** Earn two per Storage pool (20 total) on its first and second successful Compact Pool. Each permanently upgrades that pool's respective within-pool disk-size Bitrate exponent step to close 10% of the remaining gap to 1.0. The badges and rewards survive Reformat, Purge, and Reboot; older saves with recorded pool resets are grandfathered.
-- New **Challenges** destination in the bottom nav (after Firmware) with a top tab per challenge type — 🏁 Factory and 📅 Daily; the Factory challenges moved off Firmware.
-- Daily challenges (after your first Purge; epic #1062 basic slice): Challenges → 📅 Daily offers three UTC-dated, seeded Factory challenges (10 min / 1 h / 10 h). Each is an isolated run that ticks alongside the main game (including while backgrounded); start, open, restart (until UTC midnight), forfeit, replay for a local personal best, and earn up to 4 credits per day. Not yet: server time, reward Boosters, weekly/monthly milestones, streak, Checkpoints, Antimatter.
-
-- Challenge mode: the tier challenges F1–F20 (one per tier autobuyer and tier tickspeed autobuyer — e.g. F2 Write Lock, F5 Hard Refresh, F9 Bit Rot, F15 Clock Drift) are live. Each unlocks at its Purge milestone and gates that automation's speed upgrades; the Factory banner shows rule readouts (halt timer, refresh/drift countdowns, Duty Cycle phase, Bit Rot corruption).
 - Achievements (epic #1046): More → 🏆 Achievements lists three groups — First session, Tier ladder, Early Factory — with earned/locked rows and per-group counts. Earned achievements and the lifetime Ping count survive every reset except a full Reset. Other achievement bonuses are deferred; the new Foundry Reclamation rewards below are functional.
 
-- Challenge mode: the new Challenges page has a 🏁 Factory tab. Beat a nerfed Factory run (F21 Base Clock, F22 Scale Out, F23 Code Freeze, F24 Stock Cooling, F25 Scope Creep) to unlock that automation's speed upgrades; a banner on Factory shows the active challenge with Exit. Saves that already upgraded an automation's speed have its challenge completed.
-- Power: one tier is always selected (switch it, never clear it) — the "pick a tier" prompt is gone. On arrival it is the highest tier whose charge is automated, else the active boost's tier, else Cells.
+### Changed
+- **Data Lakes rebuilt as a real disk hierarchy (#1087):** every lake now has one permanent 1-unit buffer (1 KB for the KB lake) that the pool feeds first; a full buffer is moved into a ×1 disk, and 9 disks of every smaller size + a full buffer are consolidated into the next size (10 KB, 100 KB and — after a Flush opens the slot — 1000 KB) as timed transfers at Storage's disk-transfer speeds, with every bit conserved mid-transfer. Booster purchases are paid with whole disks (a full buffer counts as one ×1 unit) summing to exactly the cost — disks are never broken; the lake keeps filling until exact change exists, and partial buffer fill and in-flight transfers are never disturbed. A collapsed pool's lake now reads the next Booster's affordability as a percentage (capped at 100%) instead of the raw balance; the expanded lake shows the buffer, the transfer in progress and the ×1000 disk squares. Only the start of filling toward the next Booster waits for a full pool buffer; once started it no longer waits for the pool to refill to full (it still yields to disk filling, provisioning and the read cache) until that Booster is bought. Older saves migrate without losing or duplicating any stored data.
+- **Ordinary disk fills draw straight from their pool (#1087):** a disk above a pool's smallest size no longer goes through a write-cache flush stage — it lands the moment its pool buffer has funded it. Expediting a disk keeps its faster timed transfer.
+- **Achievement-driven Bitrate progression (#1085):** Supersedes the flat 10%-per-disk progression below. Pool transitions close 10% of the remaining gap to 1.0; disk-size transitions initially close 10% of the gap toward the *next pool's* exponent, upgrading to 10% toward 1.0 as their pool earns Reclamation achievements. No upgrade prices or reset eligibility changed.
 
-- Power: a tier's bottom row of 8 slots is now called the **Charger** (labels, Manual and docs).
-
-- Power: the Charge button sits on the left with no "Auto-charge" label on the slot row; the pre-unlock Merge button shows tier symbols on both sides (`⬡ 8→1 🔗`) and the unlock button reads `🔓 Charger 🔗 n/10` (the symbol is the next tier up, the 10 units it costs). The Power nav dot now lights only for merge/Charge availability and the Auto-charge unlock — not for Boost availability.
-
-- **Power: explicit Charge button (#1033).** On a tier with Auto-charge unlocked, a ⚡ Charge button moves units from the top row into the bottom row one per second, then merges 8→1 instantly (the automatic timed charge at 18 held still happens and waits while a Charge runs).
-
-- Factory header shows the exact Bits balance in small text under the Bytes headline once it switches to Bytes.
-
-- **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline, background catch-up, and hidden-tab ticks don't count; it persists across Purge and Reboot.
-
-- **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache then takes full smaller disks from the same pool while Staging keeps filling it, so not every smaller disk is used.
-
-- **Auto Restage (16 PP, Perks → Unlocks).** Once bought, XP is spent on Restage automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
-- **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game, and, like Dev Mode itself, carries no backward-compatibility burden (any save loads; missing fields are filled in, no "incompatible save" notice).
-- Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
-
-### Fixed
-
-- **Backup / Restore save textarea shows a keyboard focus ring.** Settings → Backup / Restore now uses the same accent `:focus-visible` outline as other interactive controls.
-- A Data Lake's enabled **buy 1 Cells** button no longer does nothing on older saves that unlocked Cells before building that pool's first disk — an already-affordable Cell now buys immediately (#1002).
-- Leftover mixed labels from the #988 rename: Provision Disk again says "tap to queue" (Ping is only the Data Stream / pool tap), Auto-charge status says "Auto-charging" rather than "Auto-merging", the Data Lake's own fill is "buffer" again (Staging is the pool buffer), Upgrade Bitrate's tooltip says Bitrate throughout, the Guide no longer calls the lake fill "staging" or "Ping" the Power reserve slots, a locked MB+ lake unlocks Batteries (not Cells), a full entity says "charge it up" (not "merge it down"), and Auto Boost waits on an in-flight charge.
-- Upgrade Capacity / Upgrade Bitrate and the selected Auto Boost preset buttons regain their prestige color.
-- **Player-facing text reviewed for accuracy and clarity.** The Guide was rewritten to match current mechanics: it no longer describes removed features (the multiplier bars, the manual transfer row, paid-up-front disks, "array offline" rebuilds), now covers pool resets, Data Lake draining and auto-buying, the Production speed bonus and offline progress, and no longer calls Scale Up's bonus permanent. The first-Prestige prompt no longer promises +1% production per unspent PP (that needs the Production speed bonus perk). The Foundry reset confirmation/tooltip and Settings → Reset Byte Foundry now say Data Lakes are replayed, not lost. Provision Disk's tooltip says full disks are pulled automatically (no "redeem"). Compute (Flops) hides its "Unlocks at 100 PP" hint once unlocked. Smaller wording fixes ("The first Kilobyte" chapter, Perks tooltips, Latency tooltip).
-- Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
+## [0.35.1] - 2026-11-13
 
 ### Changed
-- **Achievement-driven Bitrate progression (#1085):** Supersedes the flat 10%-per-disk progression below. Pool transitions close 10% of the remaining gap to 1.0; disk-size transitions initially close 10% of the gap toward the *next pool's* exponent, upgrading to 10% toward 1.0 as their pool earns Reclamation achievements. No upgrade prices or reset eligibility changed.
 - **Faster Reformat-earned Bitrate progression (#1083).** The Data Stream Bitrate / pool Bandwidth exponent still begins at 0.5, but each newly unlocked disk size closes 10% of its remaining gap to 1.0 (0.5 → 0.55 → 0.595 → …, approximately 0.97645 at size 30) instead of adding a flat 0.01. Upgrade costs and disk-size unlock requirements are unchanged.
 - Compute Boost timer bars are re-laid out as three aligned columns: boost count on the left (`3x`), covered tiers + preset + multiplier centred (`KB–GB 💥 ×20`), time left on the right (Pop / Forfeit / Stack share one width); queued boosts funded by a different tier than the running one are shown as separate rows; the "Boosting" label and the `+` prefix on queue buttons are gone (it made the duration truncate on narrow screens).
 - Compute Boosts: boosts of different multipliers (Turbo / Balanced / Eco) now run in parallel and their multipliers add up; boosts of the same multiplier queue behind the running one (strongest tier first, running one never interrupted). Each multiplier has its own timer bar with Pop / Forfeit / Stack; the confirmed forfeit-and-switch is gone. Auto Boost queues or starts its preset alongside other running boosts.
+
+## [0.35.0] - 2026-11-12
+
+### Added
+- New **Challenges** destination in the bottom nav (after Firmware) with a top tab per challenge type — 🏁 Factory and 📅 Daily; the Factory challenges moved off Firmware.
+- Daily challenges (after your first Purge; epic #1062 basic slice): Challenges → 📅 Daily offers three UTC-dated, seeded Factory challenges (10 min / 1 h / 10 h). Each is an isolated run that ticks alongside the main game (including while backgrounded); start, open, restart (until UTC midnight), forfeit, replay for a local personal best, and earn up to 4 credits per day. Not yet: server time, reward Boosters, weekly/monthly milestones, streak, Checkpoints, Antimatter.
+- Challenge mode: the tier challenges F1–F20 (one per tier autobuyer and tier tickspeed autobuyer — e.g. F2 Write Lock, F5 Hard Refresh, F9 Bit Rot, F15 Clock Drift) are live. Each unlocks at its Purge milestone and gates that automation's speed upgrades; the Factory banner shows rule readouts (halt timer, refresh/drift countdowns, Duty Cycle phase, Bit Rot corruption).
+- Challenge mode: the new Challenges page has a 🏁 Factory tab. Beat a nerfed Factory run (F21 Base Clock, F22 Scale Out, F23 Code Freeze, F24 Stock Cooling, F25 Scope Creep) to unlock that automation's speed upgrades; a banner on Factory shows the active challenge with Exit. Saves that already upgraded an automation's speed have its challenge completed.
+
+## [0.34.0] - 2026-11-11
+
+### Added
+- Power: one tier is always selected (switch it, never clear it) — the "pick a tier" prompt is gone. On arrival it is the highest tier whose charge is automated, else the active boost's tier, else Cells.
+- Power: a tier's bottom row of 8 slots is now called the **Charger** (labels, Manual and docs).
+- Power: the Charge button sits on the left with no "Auto-charge" label on the slot row; the pre-unlock Merge button shows tier symbols on both sides (`⬡ 8→1 🔗`) and the unlock button reads `🔓 Charger 🔗 n/10` (the symbol is the next tier up, the 10 units it costs). The Power nav dot now lights only for merge/Charge availability and the Auto-charge unlock — not for Boost availability.
+- **Power: explicit Charge button (#1033).** On a tier with Auto-charge unlocked, a ⚡ Charge button moves units from the top row into the bottom row one per second, then merges 8→1 instantly (the automatic timed charge at 18 held still happens and waits while a Charge runs).
+
+### Changed
 - A collapsed pool card's Data Lake row shows the bar text (`X/N KB` — progress on the lake disk being filled) instead of the lake balance.
 - **Data Lakes: a lake disk only starts filling while its pool's Staging is full, and is never interrupted once started.** The check happens only at the start; a lake disk under way keeps filling through empty disks, provisioning and a non-full Staging until it completes.
 - Charger polish: the ⚡ Charge button shows `⏳ n/8` while charging; the unlock button's accessible name now reads "unlock the Charger for …"; Manual wording matches.
 - Factory feature cards (Clock Speed, Restage, Scale Up, Overclock) are each full width, and effect chips are percentages: `🏭 +1%/lvl`, `QB +1%/XP`, `🌐 +10%/lvl` (Scale Up keeps `🏭 ×2`).
-
 - Disk rebuilds (after Reformat or a pool flush) now wait until the disk's own pool Capacity can hold one disk of that size, matching Provision Disk. While waiting, the pool's Data Lake keeps filling and the Reformat replay keeps scaling lakes out and buying Boosters for the disk sizes already completed, up to prior highs.
 - Auto Boost is now automatic and free: once a tier's charge is automated, each automatic charge start spends one remaining token of that tier on your preferred Boost preset (once per charge). The 30 PP Firmware unlock is removed; a Switch on Power pauses/resumes it, and Power opens with the highest automated tier pre-selected.
-
 - Auto Boost's on/off Switch and its preset picker moved from Power to Firmware → Automation → Power Automation, and Auto-charge gets one pause/resume Switch there too (shown once any tier's Auto-charge is bought; buying Auto-charge per tier stays on Power). Pausing Auto-charge stops new automatic timed charges; instant charge-ups still work. Firmware now appears as soon as you buy any Auto-charge (not only after the first Prestige) so these controls are always reachable.
-
 - Every Factory feature card (Clock Speed, Restage, Scale Up, Overclock) now has an expandable details section, including before it's active/claimed; Scale Up previously had none.
-
 - Removed the "Auto"/"Paused" chip from the Scale Up card; Auto Scale Up is managed only on Firmware.
-
 - **Overclock no longer banks levels.** Clock Speed's per-level boost (×1.1 per level) now depends only on the final-tier completed level reached at your latest Overclock claim, instead of a running total across every claim; the Overclock card no longer mentions "banked completed levels", and the button now shows the per-level effect and completed/required levels (`⚡ QB 7/12`; the effect sits beside the card name as `🌐 ×1.1/lvl`, and Scale Up's as `🏭 ×2` — 🌐 Clock Speed / 🏭 tier production mark what each multiplies; Overclock now has its own row; Restage moved beside Scale Up below the tier list, and Clock Speed (`🏭 ×1.01/lvl`) and Restage (`QB ×1.01/XP`) now show their core effect beside their names too) instead of a computed rate. Existing saves keep their last claim's level, so the per-level rate may drop.
 
+## [0.33.0] - 2026-11-10
+
+### Added
+- Factory header shows the exact Bits balance in small text under the Bytes headline once it switches to Bytes.
+- **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline, background catch-up, and hidden-tab ticks don't count; it persists across Purge and Reboot.
+
+### Changed
 - Compute (Flops) screen: removed the explanatory paragraph and shortened per-tier stats to "N owned · Tier ×multiplier".
-
 - Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.
-
 - Collapsed Data Lake header shows a thin progress bar (toward the next disk) under its balance; the running-upgrade tile uses the same bar instead of a background fill. A lake that has already filled every slot at its current capacity reads as full on that bar, not empty.
-
 - **XP now counts powers of ten of Bytes, not Bits.** One XP per new power of ten of the Bytes balance (the headline unit). Saves mid-run may wait up to one level before XP resumes.
-
 - The small Bits balance under the Bytes headline no longer adds height to the Factory header; it sits in the existing gap above the segment bar.
-
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Removed the `+n/8` purchase-progress text from Factory tier Buy buttons; the cost label stands alone.
 - **Autobuyer priority restored to KB → QB.** When tiers compete for the same Bits, lower tiers buy first again, except a tier you own none of goes first.
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 
+## [0.32.2] - 2026-11-09
+
+### Changed
 - **Array read caches fill at 5× Bandwidth, not instantly.** A pool's smallest array's read cache now fills from Staging as a timed transfer at 5× the pool's Bandwidth (and pool tap bonus) instead of snapping in whole blocks, and shows partial fill. Disk fill speeds and the Data Stream / pool fill multiplier curves are unchanged.
 
+## [0.32.1] - 2026-11-05
+
+### Fixed
+- **Backup / Restore save textarea shows a keyboard focus ring.** Settings → Backup / Restore now uses the same accent `:focus-visible` outline as other interactive controls.
+- A Data Lake's enabled **buy 1 Cells** button no longer does nothing on older saves that unlocked Cells before building that pool's first disk — an already-affordable Cell now buys immediately (#1002).
+
+## [0.32.0] - 2026-11-04
+
+### Added
+- **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache then takes full smaller disks from the same pool while Staging keeps filling it, so not every smaller disk is used.
+
+### Changed
 - **Player-facing renames, part 3 (#989, epic #986).** Perks is now **Firmware** (🔧); Double PP is **Compression**; Era ascension is **Reboot** (button "⏻ Reboot…"), Eons are **Kernels** and the Eon Amplifier the Kernel Amplifier; Reset Byte Foundry (and the disk-size "Foundry reset") is **Reformat**; Milestones/Chapters is **Releases** (v1.0 … v5.0, with the old chapter names as subtitles); Prestige museum is the **System log**, the Ops dashboard the **Task Manager**, Import / export save **Backup / Restore**; the "Welcome back!" notice reads "Resumed from sleep" and offline progress is **Sleep mode**; the Guide is the **Manual** (📖), which also gains a Prestige ladder section and holds Data Lakes and Compaction under Storage. Game mechanics and saves are unchanged.
 - **Expediting a disk is much stronger.** A clicked empty disk now takes Staging ahead of the other larger disks (the smallest disk's cache still comes first), pulls in every smaller disk it needs at once instead of one at a time, and writes itself at 5× instead of 2×.
 - **Larger disks fill from Staging by default.** Every disk size above a pool's smallest now fills through its write cache straight from the pool's Staging (after the smaller sizes, in the same order as before) instead of by merging nine full smaller disks, so smaller disks stay in place for the Factory unless you click an empty disk to expedite it.
@@ -178,33 +265,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Level numbers are no longer shown** (Perks rows, Double PP, Speed Up) — only the effect, interval and cost.
 - **Autobuyer speed upgrades now start at 100 PP** for every tier, for both tier autobuyers and tier tickspeed autobuyers (previously 1 PP and 2 PP), still doubling per level.
 - **Autobuyer bulk now goes up to 1024 levels per attempt** (was 512); Buy max's per-click safety cap is 1024 to match.
+
+### Fixed
+- Leftover mixed labels from the #988 rename: Provision Disk again says "tap to queue" (Ping is only the Data Stream / pool tap), Auto-charge status says "Auto-charging" rather than "Auto-merging", the Data Lake's own fill is "buffer" again (Staging is the pool buffer), Upgrade Bitrate's tooltip says Bitrate throughout, the Guide no longer calls the lake fill "staging" or "Ping" the Power reserve slots, a locked MB+ lake unlocks Batteries (not Cells), a full entity says "charge it up" (not "merge it down"), and Auto Boost waits on an in-flight charge.
+- Upgrade Capacity / Upgrade Bitrate and the selected Auto Boost preset buttons regain their prestige color.
+
+## [0.31.1] - 2026-11-03
+
+### Changed
 - **Reboot is now called Purge, and PP are Purge Points.** Same reset, same rewards; existing saves are unaffected.
 - **Auto Restage now unlocks after Auto Speed Up, alongside Auto Scale Up** — buy either first; Auto Overclock now needs both. Auto Restage also fires on its own interval (64 s to start) with a speed upgrade chain on Perks → Upgrades, like the other automations. Saves that already own it keep it.
 - **Perks automation names and layout made consistent.** Every automation is now named `Auto <feature>` (Tickspeed Autobuyer → Auto Speed Up; Auto-Reboot → Auto Purge; Auto-Boost → Auto Boost), Compute Automation is now Booster Automation, Unlocks and Toggles list automations in the same order, every row's icon sits in a fixed-width cell so names line up, and Production speed bonus now uses 📈 instead of sharing Overclock's 🚀.
 - **Tap bonuses now speed what a buffer feeds, never the fill itself** (the fill already reaches 10× on its own). A Data Stream tap speeds the running Upgrade Capacity / Upgrade Speed bar; a pool tap speeds that pool's disk provisioning, disk fills and merges, smaller-size rebuilds and Data Lake drain — all ×(1 + bonus%). The Data Stream tile stays tappable on a full buffer, and a pool's bonus is no longer wiped when its buffer is full.
 - **Foundry-reset rebuild costs one fill per disk.** Smaller disk sizes still rebuild automatically with no provisioning cost, but each disk now draws its own size in bits from the pool buffer (at base Bandwidth × pool tap bonus) instead of appearing for nothing; an empty buffer pauses the rebuild without losing progress (shown as "waiting for buffer"), and that pool's Data Lake waits until the rebuild finishes so it can't take the rebuild's bits.
 - **Renamed: Latency → Speed Up, Prestige → Reboot.** The Factory reset at 1 Googol Bytes is now called Reboot (Auto-Reboot, "Reboot Now", Reboot museum entries, autobuyer milestones "at Reboot N"). "Prestige" is now the umbrella term for every reset-for-rewards — Reboot, Era ascension, Reset Byte Foundry and pool resets — and Prestige Points keep their name. Earlier entries below use the old names. Existing saves carry over: the renamed save fields are converted on load.
+
+## [0.31.0] - 2026-11-02
+
+### Added
+- **Auto Restage (16 PP, Perks → Unlocks).** Once bought, XP is spent on Restage automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
+- **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game, and, like Dev Mode itself, carries no backward-compatibility burden (any save loads; missing fields are filled in, no "incompatible save" notice).
+- Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
+
+### Changed
 - **Latency and Restage sit side by side, as do Scale Up and Overclock** — on every screen size, including phones (Scale Up / Overclock used to stack on narrow screens).
 - **Quettabytes keeps its own tickspeed upgrade at 10% of the price.** Its tickspeed button no longer turns into the XP button after the first Quettabytes Scale Up; each level still needs the usual amount owned (10, 100, …) but only spends a tenth of it (1, 10, …).
 - **The XP-funded tickspeed is now a separate upgrade, Restage, shown beside Latency.** Its bonus stacks on top of Quettabytes' own tickspeed level, and the Quettabytes tickspeed autobuyer no longer spends XP — XP is spent manually, or by the new Auto Restage (below).
-
 - **Dev Mode revamped for ease of use** (dev build only): an on/off switch with game-style readouts; quick-seed presets grouped by area, plus a new +1 Prestige count preset that unlocks count-gated autobuyers; Variables split into Foundry / Compute / Factory / Perks / Prestige / Era tabs with search across all fields; switches for on/off fields; number fields that accept `1e100` / `1,000` / `10^6`, set on Enter, revert on Escape, step by ÷10 / ×10 / ±1 and flag invalid input instead of writing 0; and the raw JSON editor folded under Advanced with live validation and Copy.
+
+### Fixed
+- **Player-facing text reviewed for accuracy and clarity.** The Guide was rewritten to match current mechanics: it no longer describes removed features (the multiplier bars, the manual transfer row, paid-up-front disks, "array offline" rebuilds), now covers pool resets, Data Lake draining and auto-buying, the Production speed bonus and offline progress, and no longer calls Scale Up's bonus permanent. The first-Prestige prompt no longer promises +1% production per unspent PP (that needs the Production speed bonus perk). The Foundry reset confirmation/tooltip and Settings → Reset Byte Foundry now say Data Lakes are replayed, not lost. Provision Disk's tooltip says full disks are pulled automatically (no "redeem"). Compute (Flops) hides its "Unlocks at 100 PP" hint once unlocked. Smaller wording fixes ("The first Kilobyte" chapter, Perks tooltips, Latency tooltip).
+
+## [0.30.5] - 2026-11-01
+
+### Changed
 - **Provision Disk runs at a fixed speed and the disk being built or rebuilt is shown distinctly.** Provisioning is still funded from the pool buffer, but it draws bits at the pool's base Bandwidth instead of waiting on the fill-multiplied buffer pace (an empty buffer still stalls it; a Speed/Capacity upgrade mid-build speeds it up at once; progress is never lost). The post-Foundry-reset rebuild runs at the same fixed speed. The disk under construction fills radially with a glow — violet while provisioning, amber while rebuilding. The tile's ⚡ is that fixed speed. Provision Disk now blocks Compute Boost / Auto-Boost only while a build is armed (not merely startable), and the Foundry nav dot lights only while a disk can be started and none is armed.
 - **Autobuyer bulk reworked into the speed upgrades**: the separate 10/100/1000 per-buy purchase is gone. A tier autobuyer's speed upgrades now continue past the 10 ms floor, and each extra level doubles how many whole levels one attempt may buy (2, 4, … 512; always only an upper limit — as many as are affordable). Previously bought bulk modes no longer apply.
 - **Auto-Prestige Autobuyer removed** (the 100 PP convenience that auto-bought Auto-Prestige's speed upgrades) — its PP are not refunded.
 - **Global Automation is a strict sequence**: Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. Every step is always listed and each needs the previous one (also enforced in the engine). Auto-Prestige is now an Unlocks purchase rather than an Upgrades one.
-- **"Unbounded Prestige" renamed to DeGoogol (the chapter is now "DeGoogoled").**
 
+### Fixed
+- Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
+
+## [0.30.4] - 2026-10-31
+
+### Changed
+- **"Unbounded Prestige" renamed to DeGoogol (the chapter is now "DeGoogoled").**
 - **Auto-Prestige moved to Perks → Unlocks → Global Automation; Auto-Boost has its own "Compute Automation" section.** The redundant Upgrades → Automation category was removed (Auto-Prestige's speed upgrade stays under Upgrades).
 - **DeGoogol now unlocks when Auto-Prestige is upgraded to 1 s or faster** (previously 100 lifetime prestiges). Saves that already earned it keep it.
 - Tier tickspeed autobuyers now unlock at Prestige 11–20 (one per Prestige, tier01 at 11 through tier10 at 20) instead of 12–30.
 - **Foundry-reset rebuild runs at each pool's base Bandwidth.** Smaller disk sizes now rebuild one disk at a time, each in exactly size ÷ base Bandwidth, independent of the fill multiplier, so the Provision Disk tile's ⚡ is the base speed and its ⏳ is the exact total time.
 - Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.
-
 - Data Lake Boosters keep their auto-buy status for the whole Era once a pool has been fully built, through pool resets, Reset Byte Foundry and Prestige. Reset Byte Foundry now also auto-replays Data Lake capacity upgrades and Booster purchases up to their previous highs.
 - **Provision Disk button shows pool speed and time left.** Once Storage is revealed and the pool has a fill speed, a queued build uses the running-upgrade tile: disk size and pass count on the left, progress percent in the middle, ⚡ live pool fill speed and ⏳ time until the remaining cost is banked along the fill-multiplier curve (hidden while Disk Fill outranks it). While smaller sizes auto-rebuild after a Foundry reset the same tile reads "Rebuilding" with the size being rebuilt → the largest size it will reach, the percent of smaller-size disks already built, and ⏳ for the size currently refilling (pool fill + read-cache flush, or remaining bits at current pool speed). Other states keep the original button.
 - **Upgrade Capacity / Upgrade Speed draw at a constant 1× Speed.** The running upgrade bar no longer follows the fill multiplier.
 - **Fill speed multiplier now spans 10× → 0.1×.** The Data Stream / pool fill multiplier falls geometrically from 10× (empty buffer) through exactly 1× at 50% full to 0.1× (full), instead of 150% → 50%. The tap bonus is now multiplicative (×(1 + bonus%)) and the combined cap is 2000%. Production, pool fill, and tile time-to-full ETAs use the matching log integral, so a 1s offline tick matches live 0.1s play.
+
+### Fixed
+- **Rebuild tile always shows a time.** While a rebuilding size's pool is not live yet, the time (and ⚡ speed) are projected from the Bandwidth the pool will have once live instead of being hidden.
+- **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
+
+## [0.30.3] - 2026-10-30
+
+### Fixed
+- **The game loads again.** A bad merge left conflict markers in the Data Lake fill math, so the app could not build. Those markers are gone.
+
+## [0.30.2] - 2026-10-29
+
+### Changed
 - **Compute Boosts also speed up Storage pools.** A boost now boosts the buffer-fill speed of the pools matching the Factory tiers it covers (pool N ↔ tier N) by +200% (Burst), +50% (Standard) or +10% (Sustain), instead of the production multiplier; covered pool cards glow.
 - Removed the 🌟×N boost badge from Factory tiers and the Data Stream (the glow remains). On Boosters the active-boost status is no longer boxed in a card — it matches the Byte Factory's timer bar.
 - **Tier autobuyers buy whole levels.** Each attempt now buys one full level (8 blocks) only when it is
@@ -222,7 +350,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   unused stack remains. On the selected tier, the running preset becomes a Stack button, and picking a
   different preset switches after a confirmation, refunding any unused stacks.
   Refunds are never lost when the funding tier is already full.
-
 - **Boosters: instant manual merge on automated tiers.** Once a tier's auto-merge is unlocked,
   tapping its auto-merge slots (now labelled "🤖 Auto-merge") merges 8 → 1 instantly instead of
   starting a timed merge; only the automatic merge at 18 held is still timed. The auto-merge row now
@@ -231,18 +358,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   preset durations drop zero units ("10m", "1h", "10h" instead of "10m 0s", "1h 0m", "10h 0m").
   Clicking anywhere outside the tier rows deselects the selected boost tier.
 
+## [0.30.1] - 2026-10-28
+
+### Changed
 - **Boosters: presets live on the selected tier.** The three Boost presets now appear inside the
   selected tier's block (one tier at a time) instead of the top card, which now shows the current
   boost effect (including which Factory tiers it covers). Opening Boosters pre-selects the active
   boost's tier.
 - **Boosters: clearer auto-merge row.** Once a tier is automated, its reserve row is highlighted and
   shows "⬆ 8→1 <next tier>" whenever 8 are available, making it clear that tapping it starts a merge.
-
 - **Matching Foundry row heights.** The Data Stream's Upgrading row and a pool's Data Lake row are
   now exactly as tall as the Data Stream and pool tiles above them.
 - **Title icons.** The Data Stream title now shows 🌊, each pool title 💧 and each Data Lake title 🏞️, so
   the title text lines up with the 📦 / 🏷️ line under it.
-
 - **Pools are always tappable.** Tapping a pool now always adds its tap bonus, even while its buffer
   is full or its Data Lake is draining it (the bonus still caps at 100%).
 - **Data Lake balance matches the pool's.** A lake's filled amount now sits vertically centered in
@@ -251,17 +379,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the Data Stream's Upgrading row.
 - **No underlines on clickable text.** A pool's ⚡ speed and Factory tier names no longer show
   link-style underlines.
-- **Pool speed shows the real fill speed.** A pool's ⚡ figure (and its time-to-full) now shows the
-  speed actually available to fill it — its Bandwidth limited by what the Data Stream has left after
-  earlier pools — instead of the theoretical Bandwidth, even while its Data Lake drains it.
-- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
-  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate.
+
+## [0.30.0] - 2026-10-27
 
 ### Added
-
 - **Pool speed details.** Click a pool's ⚡ speed to see every speed figure behind it: available vs.
   theoretical Bandwidth, Data Stream speed, what earlier pools take, the fill multiplier and tap bonus,
   buffer fill, time to full, and any Data Lake drain. Click or scroll anywhere outside to dismiss.
+
+### Changed
+- **Pool speed shows the real fill speed.** A pool's ⚡ figure (and its time-to-full) now shows the
+  speed actually available to fill it — its Bandwidth limited by what the Data Stream has left after
+  earlier pools — instead of the theoretical Bandwidth, even while its Data Lake drains it.
+
+## [0.29.0] - 2026-10-25
+
+### Added
 - **Optional cloud save.** When a Firebase config is built in, Settings → Cloud save lets you sign
   in with email and password, upload your current save and download it on another device (web,
   Android and iOS). **Delete account and data** permanently removes the account and its cloud save.
@@ -270,7 +403,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   edge-to-edge layout and a branded splash screen on Android and iOS. Optional rewarded ads (AdMob)
   and purchases (RevenueCat: remove ads, tip) are built in but switched off — no game content is
   ever behind a purchase.
-
 - **Watch a video for 100% offline progress (apps with ads enabled).** The "Welcome back!" notice
   offers a rewarded video that tops your time away up from 50% to 100% speed — once per return.
   Remove-ads owners get it without a video. The video is preloaded so it starts instantly.
@@ -278,11 +410,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Stream and every Factory tier it covers glow and show a 🌟×N badge; hovering (or a screen reader, via the element's description)
   gives the preset, multiplier, time left and stacks, and the tier's details list repeats it.
 
+### Fixed
+- **Typing inside an in-game confirm dialog no longer loses focus** after the first character.
+
+## [0.28.0] - 2026-10-23
+
+### Added
 - **Autobuyer Speed upgrades (Perks → Upgrades).** Each unlocked tier autobuyer can be upgraded with PP to shorten its purchase interval ×0.9 per level (base interval is N seconds for tier N, 1 s … 10 s, down to a 10 ms floor; autobuyer only — separate from tier tickspeed, and manual buying is unaffected). Cost starts at 1 PP and doubles per level on the 125-based ladder (…64 → 125 → 250 → 500 → 1000, ×1000 per ten levels). Permanent across Prestige and Era ascension.
 - **Interval upgrades for the other automations (Perks → Upgrades → Autobuyer Speed).** Latency (8 PP, 1 s), Scale Up (16 PP, 64 s), Overclock (32 PP, 256 s), Auto-Prestige (64 PP, 1024 s) and each tier's tickspeed autobuyer (2 PP, 16 s) now run on a timer (attempt budget accrues elapsed ÷ interval) with the same ×0.9-per-level, 125-based doubling chain, capped at 10 ms. **Auto Overclock** is new: claims Overclock whenever eligible (pause on Toggles).
 
+### Changed
+- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate.
+- **Automation unlock costs now match their first speed upgrade.** Latency autobuyer 8 PP (was 10), Auto Scale Up 16 PP (was 20), Auto-Prestige 64 PP (was 1000, with its levels already replaced by the speed chain), and Auto Overclock is now its own 32 PP unlock (needs Auto Scale Up) instead of unlocking with its first speed level. Milestone-unlocked automations (tier autobuyers, tier tickspeed autobuyers) have no unlock cost, only upgrades.
+- **Smart autobuyer → bulk mode.** Tier autobuyers now always buy one unit per attempt (Buy max mode never applies to them). The per-tier PP purchase that used to be "Smart" now unlocks bulk modes: each attempt buys 10 levels at once when affordable (1000× the tier's base autobuyer PP), then 100 levels (1e6×), then 1000 (1e9×). Previously-owned Smart is dropped. Auto-Prestige's visibility now only needs every tier's tickspeed autobuyer.
+- **Auto-Prestige no longer has levels.** Activation (64 PP, was 1000) is one-time; cadence now comes from the 64 PP speed chain (base 1024 s, replacing the old 1000 s with +10% per level). The Auto-Prestige Autobuyer now buys that speed chain automatically.
+- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
+- **Lake time to next Booster.** Each Data Lake header now shows `⏳ time left` under its fill speed — the time until it has banked the next Booster's cost at the current fill speed. Reset Pool / Scale Out replace it when offered.
+- Boosters page shows only unlocked tiers; tiers without auto-merge get a spacious layout, automated ones keep the compact layout.
+- **Running upgrade bar layout.** The Upgrading Capacity/Speed bar now reads "⏫ Upgrading…" top-left with the from → to values on one line below it, the percent centred, and the ⚡ draw rate top-right with the ⏳ time left directly under it, like the other tiles, with the same fonts and sizes as the Data Stream and pool tiles. The from → to shows its unit once, on the right-hand number, with at most 3 significant digits (a left value that would have used a smaller unit is shown in the right-hand unit, e.g. `0.5 → 1 KiB/s`), and the percent sits in the exact centre.
+- **Time to full under the speed.** The Data Stream and pool tiles now show `⏳ time until the buffer is full` under their ⚡ speed figure, in the slot the tap bonus uses; an active tap bonus replaces it.
+- **Upgrade bars follow the fill curve.** The Capacity/Speed upgrade bars now draw from the Data Stream at 150% of base Speed when empty, 100% at half full and 50% when nearly full (same curve as pools), instead of a flat 100%, and the running upgrade bar shows that draw rate (⚡) on its right, colour-coded like the other speed readouts, and its “…” animates while upgrading.
+- After a Foundry reset, Capacity and Speed upgrades replay to your previous highs automatically in order of increasing cost, using the normal progress-bar upgrades one at a time (while one runs, the Data Stream's output feeds its bar, so tier01 auto-invest and pool filling only get what is left over), and Provision Disk names the newest unlocked size immediately.
+- After a Foundry reset, every smaller Disk size rebuilds itself for free (one disk at a time; each counts as provisioned again once it fills) and Provision Disk presents only the newest unlocked size (disabled with a "Rebuilding … first" note until the smaller sizes are done).
+- The Provision Disk button also stays visible while its pool is rebuilding after a pool reset; a click queues the build, which fires once the rebuild finishes.
+
+### Fixed
+- **Running Data Stream upgrade is a full-width status tile**, not a button-like container, filled like the Data Stream tile above it.
+- **Data Lake header layout is consistent.** The filled amount and fill speed now always sit on the title row at one size (no more jumping between rows/sizes), and the Booster cost pill no longer shifts its label off the lake's text edges.
+
+## [0.27.0] - 2026-10-22
+
+### Added
 - **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.
 
+### Changed
+- The Provision Disk button now appears as soon as the Byte exists, instead of waiting for 1 KiB of Capacity; clicking it early queues the build. Upgrade Speed / Capacity were never blocked by a queued or running provision and still aren't (covered by a new test).
+- Storage pool Bandwidth is now capped at the pool's Capacity^e (was √Capacity), using the same rising exponent `e` as the Data Stream's Speed rule (see the Foundry-reset entry below), so pools benefit from faster Speed too.
+- Byte Foundry pacing: base Speed is now (Speed level in Bytes)^e and capped at Capacity^e, instead of √Capacity. `e` starts at 0.5 (unchanged early game) and rises by 0.01 for every further Disk size you unlock with a **Foundry reset** (see Added). Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Old saves keep every Disk size they already built (grandfathered), so their exponent starts at 0.5 + 0.01 per built size.
+- Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press.
+- Byte Foundry: the running Capacity/Speed upgrade bar now shows the percent on its first line, the actual from → to value, and the time left.
+- Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed is capped relative to Capacity (see the pacing entry above).
+
+## [0.26.4] - 2026-10-20
+
+### Changed
+- Boosters page text is shorter: funding line reads "1 ▦ → KB–PB · 0 held" (tier symbols), tier buttons read "⬆ 8→1 Fabric" and "🤖 0/10", and the "Boost" / "Boost with" headings are gone.
+- Auto-Boost unlock moved from the Boosters page to Perks → Unlocks (Global Automation); Boosters only shows its preset preference once unlocked, and the Perks dot now lights when it's affordable.
+- Compute Boosts: every funding tier now gives the same multiplier and duration as Cores; spending a higher tier instead boosts more Factory tiers (Node: the first two, Cluster: the first three, …). Memory is always boosted.
+
+## [0.26.3] - 2026-10-19
+
+### Changed
+- **Data Lake header.** Each lake's header now matches the pool/Data Stream tile layout: name with the Booster target price (also the buy control) under it, the amount filled big and centered, and the current fill speed on the right.
+- **Memory amounts show at most 5 significant digits.** Unit-scaled sizes/balances/speeds (e.g. the Data Stream
+  balance) now trim decimals as the integer part grows — "1,011.1 MiB" instead of "1,011.147 MiB".
+- **Foundry speed display.** The Data Stream and pool multiplier bars are gone; their Speed/Bandwidth
+  figures now show the actual resulting value (3 significant digits), colored red → blue → green with
+  the fill multiplier. Capacity now sits under each pool/Data Stream name (the balance shows no "/ capacity" and grows larger while no tap bonus is active), and the tap bonus reads "+x% 👆" under the speed beside a narrower bar (hidden when inactive). A collapsed pool card now also
+  shows its Data Lake heading and Booster action.
+- Boosters page: boost controls now live in one "Boost" card, the selected funding tier is marked with a filled dot and highlighted border, and a tier's Merge/Auto row only shows for the selected tier or when there is something to act on, so idle tiers are one line. The slot dots carry the count, so the "n/10" text is gone from the tier rows (still announced to screen readers).
+- Boosters page: clearer wording — the active boost reads "💥 Burst ×20 · 19m left", preset buttons show their duration, the funding line says what a boost spends, Auto-Boost unlock is a quiet neutral button, and each tier's Merge/Auto buttons name their target.
+- **Bytes and Bits are now one balance.** There is no separate Bytes pool any more: Kilobytes credit Bits (8 per Byte), and Latency is paid from that same balance (10 Bytes = 80 Bits at level 0), so its button can never be enabled above the balance shown. Older saves simply drop their stray Bytes counter.
+
+## [0.26.2] - 2026-10-18
+
+### Changed
+- **Buy button progress uses a plus sign throughout.** Every count on the tier Buy button's progress text is prefixed with `+` (`+3/8`, `+4`, `+4 +3/8`); zero parts stay hidden.
+- **Buy button no longer mixes bought and affordable counts.** The ordinary Buy button's progress text shows only the affordable count (`+3/8`) when anything is affordable, else the bought count (`3/8`); the old `3+3/8` was misleading.
+- **Buy button progress hides zeros.** The tier Buy button's progress text omits zero parts: no `0+`, and nothing at all at `0/8` (e.g. `3/8`, `+3/8`, `4`, `4+3/8`).
+- **Buy max shows levels + partial progress.** The Buy button's progress text is now `<full levels>+<affordable purchases toward the next level>/<block size>` (e.g. `4+3/8`) instead of `+N Lv`, and its cost is that of the highest level reached. Gating and spending are unchanged.
+- **Buy max shows only the highest level's cost.** With Buy max on, a tier's Buy button now displays
+  the cost of the highest level it would buy (in the usual units) instead of the combined total. The
+  button is still gated on, and a click still spends, the full cost.
+- **Upgrade Data Stream is now a progress bar.** Clicking it pulls from the Data Stream Buffer at a constant 100% of base Speed at top priority; when the bar fills, Capacity doubles. Nothing is paused and there is no race with other Data Stream consumers. The same button shows the progress; there is no cancel. A full Buffer no longer upgrades instantly, and leftover Buffer bits are kept.
+- **Pool title is a real button.** The "KB Pool" title is now its own button (keyboard/focus support) beside a stretched tap target, so it still expands/collapses while the pool's tap is disabled (full buffer, lake draining, tap bonus capped).
+- **Byte Foundry spacing.** The Data Stream and pool tiles now sit flush in their cards (no padding around them); only the buttons, disks and Data Lake below are padded, and gaps between cards are tighter, so more fits on screen. Cards get a stronger edge and shadow against the page, while the tiles and buttons inside them use a softer fill, so contrast is higher between cards and lower within them.
+- **Provision Disk is its own card.** The Provision Disk control no longer lives inside the Data Stream card; it sits in a separate card right below it.
+- **Name-only expand/collapse.** Storage pool cards and Factory tier rows now expand/collapse only from their name (the "KB Pool" title, the tier label); the pool's chevron strip and the whole-row click target are gone. The same rule now applies app-wide: the Latency/Overclock disclosures no longer collapse when their revealed text is clicked, and the global-multipliers breakdown toggles from the balance figure only, not the whole money card (its `money display` label now covers just the balance figure).
+- **Foundry multiplier bars read at a glance.** The fill-based multiplier (blue) and tap bonus (yellow, only while active) are two bars growing from the centre, each with its percent centred inside it. The balance now sits on the title row between a smaller name and Speed/Bandwidth, and has a halo so the fill edge no longer clips its digits.
+- **Byte Foundry: provisioning in progress is obvious at a glance.** A queued Provision Disk build now
+  reads `⏳ Provisioning 1 KB Disk…` (with its banked passes, e.g. `2/9 · needs buffer`) and pulses;
+  idle states keep `🏦 Provision 1 KB Disk`, so the two no longer look alike.
+- **Cost icon is now 🏷️ everywhere.** The Data Lake Booster control, the Upgrade Data Stream button
+  and Provision Disk's status line all mark their cost with the same price-tag icon (replacing 🎯).
+
+### Fixed
+- **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
+
+## [0.26.1] - 2026-10-17
+
+### Changed
+- **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
+  The upgrade button shows `🏷️ 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the
+  Provision Disk button moved out of the pool cards into the Data Stream section, directly under it.
+- **Byte Foundry: armed Upgrade Data Stream status is tidier.** The headline stays on one line
+  (`Upgrading to … · ⚡ …`); "Outflow paused" moves to a smaller second line.
+- **Byte Foundry: Provision Disk always states its status.** A short second line on the button
+  reads Ready, Queued (and what it's waiting for) or "tap to queue", with the cost and pass count —
+  the button no longer looks the same while ready, queued or waiting.
+
+### Fixed
+- **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of
+  their PP cost, and plain-word buttons (e.g. "Redeem code", "Dummy checkout", "Ascend Era…") were split
+  with a wide gap after the first word. Perks rows now line up in fixed columns, automation toggles are
+  proper on/off switches (Buy max too), the Milestones page no longer repeats each chapter name, and the
+  Factory's Latency / Scale Up / Overclock cards share one compact style with Auto Scale Up shown as a
+  header chip.
+
+## [0.26.0] - 2026-10-16
+
+### Added
 - **Perks page.** A new **Perks** item in the bottom bar (after your first Prestige) gathers every
   permanent feature into three icon tabs: 🔓 **Unlocks** (one-time purchases like Smart, Tickspeed
   Autobuyer and Auto Scale Up, plus every tier's autobuyer milestones, reached ones included — shown
@@ -291,107 +530,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   previously had no pause control). Byte Factory no longer has its own Upgrades tab, and the
   Buy max toggle moved off Factory/Compute onto Toggles.
 
+## [0.25.1] - 2026-10-13
+
+### Security
+- **Saves must be plain JSON objects.** Loading a save (or Dev Mode JSON) now rejects anything
+  that isn't a plain object — arrays, class instances, or other non-plain payloads — and treats it
+  as an invalid save instead of merging it into game state.
+
+## [0.25.0] - 2026-10-12
+
+### Added
 - **Buy max mode.** After your first Prestige, a **Buy max** toggle (Perks → Toggles)
   makes each purchase buy as many levels as you can afford — Factory tiers, tier tickspeed, Latency,
   Double PP, Auto-Prestige, and Flops tiers. Factory tiers buy full levels only; a partially-filled
   level still takes its own click.
-
 - **Native Android and iOS apps (#70).** The game now ships as Capacitor native projects
   (`android/`, `ios/`) with the byte-grid launcher icon and a dark splash screen; they require
   Android 14+ or iOS 18+. A new **Mobile build** workflow produces a debug Android APK and an iOS
   Simulator app to download.
 
-- Added pool-local end-of-progression resets: a completed 9/9/9 Storage Pool at an unreachable
-  Booster capacity wall can restart its own disks for permanent Data Lake capacity, speed, and
-  bandwidth progression, followed by free sequential rebuilding and automatic Booster conversion.
-- Completed 9/9/9 pools now show the next Booster cost as a label and convert affordable Lake
-  contents automatically, without a conversion button.
-
-### Fixed
-
-- **Rebuild tile always shows a time.** While a rebuilding size's pool is not live yet, the time (and ⚡ speed) are projected from the Bandwidth the pool will have once live instead of being hidden.
-- **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
+## [0.24.4] - 2026-09-29
 
 ### Changed
-
-- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
-
-- **Automation unlock costs now match their first speed upgrade.** Latency autobuyer 8 PP (was 10), Auto Scale Up 16 PP (was 20), Auto-Prestige 64 PP (was 1000, with its levels already replaced by the speed chain), and Auto Overclock is now its own 32 PP unlock (needs Auto Scale Up) instead of unlocking with its first speed level. Milestone-unlocked automations (tier autobuyers, tier tickspeed autobuyers) have no unlock cost, only upgrades.
-
-- **Smart autobuyer → bulk mode.** Tier autobuyers now always buy one unit per attempt (Buy max mode never applies to them). The per-tier PP purchase that used to be "Smart" now unlocks bulk modes: each attempt buys 10 levels at once when affordable (1000× the tier's base autobuyer PP), then 100 levels (1e6×), then 1000 (1e9×). Previously-owned Smart is dropped. Auto-Prestige's visibility now only needs every tier's tickspeed autobuyer.
-
-- **Auto-Prestige no longer has levels.** Activation (64 PP, was 1000) is one-time; cadence now comes from the 64 PP speed chain (base 1024 s, replacing the old 1000 s with +10% per level). The Auto-Prestige Autobuyer now buys that speed chain automatically.
-- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
-  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
-- **Lake time to next Booster.** Each Data Lake header now shows `⏳ time left` under its fill speed — the time until it has banked the next Booster's cost at the current fill speed. Reset Pool / Scale Out replace it when offered.
-
-- Boosters page shows only unlocked tiers; tiers without auto-merge get a spacious layout, automated ones keep the compact layout.
-- **Running upgrade bar layout.** The Upgrading Capacity/Speed bar now reads "⏫ Upgrading…" top-left with the from → to values on one line below it, the percent centred, and the ⚡ draw rate top-right with the ⏳ time left directly under it, like the other tiles, with the same fonts and sizes as the Data Stream and pool tiles. The from → to shows its unit once, on the right-hand number, with at most 3 significant digits (a left value that would have used a smaller unit is shown in the right-hand unit, e.g. `0.5 → 1 KiB/s`), and the percent sits in the exact centre.
-- **Time to full under the speed.** The Data Stream and pool tiles now show `⏳ time until the buffer is full` under their ⚡ speed figure, in the slot the tap bonus uses; an active tap bonus replaces it.
-
-- **Upgrade bars follow the fill curve.** The Capacity/Speed upgrade bars now draw from the Data Stream at 150% of base Speed when empty, 100% at half full and 50% when nearly full (same curve as pools), instead of a flat 100%, and the running upgrade bar shows that draw rate (⚡) on its right, colour-coded like the other speed readouts, and its “…” animates while upgrading.
-- After a Foundry reset, Capacity and Speed upgrades replay to your previous highs automatically in order of increasing cost, using the normal progress-bar upgrades one at a time (while one runs, the Data Stream's output feeds its bar, so tier01 auto-invest and pool filling only get what is left over), and Provision Disk names the newest unlocked size immediately.
-
-- After a Foundry reset, every smaller Disk size rebuilds itself for free (one disk at a time; each counts as provisioned again once it fills) and Provision Disk presents only the newest unlocked size (disabled with a "Rebuilding … first" note until the smaller sizes are done).
-
-- The Provision Disk button also stays visible while its pool is rebuilding after a pool reset; a click queues the build, which fires once the rebuild finishes.
-
-- The Provision Disk button now appears as soon as the Byte exists, instead of waiting for 1 KiB of Capacity; clicking it early queues the build. Upgrade Speed / Capacity were never blocked by a queued or running provision and still aren't (covered by a new test).
-
-- Storage pool Bandwidth is now capped at the pool's Capacity^e (was √Capacity), using the same rising exponent `e` as the Data Stream's Speed rule (see the Foundry-reset entry below), so pools benefit from faster Speed too.
-
-- Byte Foundry pacing: base Speed is now (Speed level in Bytes)^e and capped at Capacity^e, instead of √Capacity. `e` starts at 0.5 (unchanged early game) and rises by 0.01 for every further Disk size you unlock with a **Foundry reset** (see Added). Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Old saves keep every Disk size they already built (grandfathered), so their exponent starts at 0.5 + 0.01 per built size.
-
-- Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press.
-
-- Byte Foundry: the running Capacity/Speed upgrade bar now shows the percent on its first line, the actual from → to value, and the time left.
-
-- Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed is capped relative to Capacity (see the pacing entry above).
-
-- Boosters page text is shorter: funding line reads "1 ▦ → KB–PB · 0 held" (tier symbols), tier buttons read "⬆ 8→1 Fabric" and "🤖 0/10", and the "Boost" / "Boost with" headings are gone.
-
-- Auto-Boost unlock moved from the Boosters page to Perks → Unlocks (Global Automation); Boosters only shows its preset preference once unlocked, and the Perks dot now lights when it's affordable.
-- Compute Boosts: every funding tier now gives the same multiplier and duration as Cores; spending a higher tier instead boosts more Factory tiers (Node: the first two, Cluster: the first three, …). Memory is always boosted.
-- **Data Lake header.** Each lake's header now matches the pool/Data Stream tile layout: name with the Booster target price (also the buy control) under it, the amount filled big and centered, and the current fill speed on the right.
-- **Memory amounts show at most 5 significant digits.** Unit-scaled sizes/balances/speeds (e.g. the Data Stream
-  balance) now trim decimals as the integer part grows — "1,011.1 MiB" instead of "1,011.147 MiB".
-
-- **Foundry speed display.** The Data Stream and pool multiplier bars are gone; their Speed/Bandwidth
-  figures now show the actual resulting value (3 significant digits), colored red → blue → green with
-  the fill multiplier. Capacity now sits under each pool/Data Stream name (the balance shows no "/ capacity" and grows larger while no tap bonus is active), and the tap bonus reads "+x% 👆" under the speed beside a narrower bar (hidden when inactive). A collapsed pool card now also
-  shows its Data Lake heading and Booster action.
-- Boosters page: boost controls now live in one "Boost" card, the selected funding tier is marked with a filled dot and highlighted border, and a tier's Merge/Auto row only shows for the selected tier or when there is something to act on, so idle tiers are one line. The slot dots carry the count, so the "n/10" text is gone from the tier rows (still announced to screen readers).
-- Boosters page: clearer wording — the active boost reads "💥 Burst ×20 · 19m left", preset buttons show their duration, the funding line says what a boost spends, Auto-Boost unlock is a quiet neutral button, and each tier's Merge/Auto buttons name their target.
-
-- **Bytes and Bits are now one balance.** There is no separate Bytes pool any more: Kilobytes credit Bits (8 per Byte), and Latency is paid from that same balance (10 Bytes = 80 Bits at level 0), so its button can never be enabled above the balance shown. Older saves simply drop their stray Bytes counter.
-
-- **Buy button progress uses a plus sign throughout.** Every count on the tier Buy button's progress text is prefixed with `+` (`+3/8`, `+4`, `+4 +3/8`); zero parts stay hidden.
-- **Buy button no longer mixes bought and affordable counts.** The ordinary Buy button's progress text shows only the affordable count (`+3/8`) when anything is affordable, else the bought count (`3/8`); the old `3+3/8` was misleading.
-- **Buy button progress hides zeros.** The tier Buy button's progress text omits zero parts: no `0+`, and nothing at all at `0/8` (e.g. `3/8`, `+3/8`, `4`, `4+3/8`).
-- **Buy max shows levels + partial progress.** The Buy button's progress text is now `<full levels>+<affordable purchases toward the next level>/<block size>` (e.g. `4+3/8`) instead of `+N Lv`, and its cost is that of the highest level reached. Gating and spending are unchanged.
-- **Buy max shows only the highest level's cost.** With Buy max on, a tier's Buy button now displays
-  the cost of the highest level it would buy (in the usual units) instead of the combined total. The
-  button is still gated on, and a click still spends, the full cost.
-
-- **Upgrade Data Stream is now a progress bar.** Clicking it pulls from the Data Stream Buffer at a constant 100% of base Speed at top priority; when the bar fills, Capacity doubles. Nothing is paused and there is no race with other Data Stream consumers. The same button shows the progress; there is no cancel. A full Buffer no longer upgrades instantly, and leftover Buffer bits are kept.
-- **Pool title is a real button.** The "KB Pool" title is now its own button (keyboard/focus support) beside a stretched tap target, so it still expands/collapses while the pool's tap is disabled (full buffer, lake draining, tap bonus capped).
-- **Byte Foundry spacing.** The Data Stream and pool tiles now sit flush in their cards (no padding around them); only the buttons, disks and Data Lake below are padded, and gaps between cards are tighter, so more fits on screen. Cards get a stronger edge and shadow against the page, while the tiles and buttons inside them use a softer fill, so contrast is higher between cards and lower within them.
-- **Provision Disk is its own card.** The Provision Disk control no longer lives inside the Data Stream card; it sits in a separate card right below it.
-- **Name-only expand/collapse.** Storage pool cards and Factory tier rows now expand/collapse only from their name (the "KB Pool" title, the tier label); the pool's chevron strip and the whole-row click target are gone. The same rule now applies app-wide: the Latency/Overclock disclosures no longer collapse when their revealed text is clicked, and the global-multipliers breakdown toggles from the balance figure only, not the whole money card (its `money display` label now covers just the balance figure).
-- **Foundry multiplier bars read at a glance.** The fill-based multiplier (blue) and tap bonus (yellow, only while active) are two bars growing from the centre, each with its percent centred inside it. The balance now sits on the title row between a smaller name and Speed/Bandwidth, and has a halo so the fill edge no longer clips its digits.
-- **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
-  The upgrade button shows `🏷️ 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the
-  Provision Disk button moved out of the pool cards into the Data Stream section, directly under it.
-- **Byte Foundry: provisioning in progress is obvious at a glance.** A queued Provision Disk build now
-  reads `⏳ Provisioning 1 KB Disk…` (with its banked passes, e.g. `2/9 · needs buffer`) and pulses;
-  idle states keep `🏦 Provision 1 KB Disk`, so the two no longer look alike.
-- **Cost icon is now 🏷️ everywhere.** The Data Lake Booster control, the Upgrade Data Stream button
-  and Provision Disk's status line all mark their cost with the same price-tag icon (replacing 🎯).
-- **Byte Foundry: armed Upgrade Data Stream status is tidier.** The headline stays on one line
-  (`Upgrading to … · ⚡ …`); "Outflow paused" moves to a smaller second line.
-- **Byte Foundry: Provision Disk always states its status.** A short second line on the button
-  reads Ready, Queued (and what it's waiting for) or "tap to queue", with the cost and pass count —
-  the button no longer looks the same while ready, queued or waiting.
 - **Boosters: timed merges now take 8 normal disk fills (#755).** A reserve merge takes as long as
   8 of the input tier's own pool's smallest disks take to fill at that pool's Bandwidth. Cores use
   the KB pool, Nodes the MB pool, and so on. Before, it was 10× "Core earn time" and grew 10× per
@@ -399,10 +559,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   A running merge never takes longer than the current merge time: it shortens as the pool's
   Bandwidth grows, including merges started on an older save. A tier's merges now wait until its
   Storage pool is visible, and the tooltip says so.
+
+## [0.24.3] - 2026-09-26
+
+### Fixed
+- **Boosters page (#740).** A lower-tier merge now fills the next tier's reserve (up to 18) once
+  that tier has auto-merge unlocked, so chained auto-merges keep going instead of stalling at 10.
+  A timed merge finishing no longer cuts an output that grew past 10 back down to 10. The
+  merge-duration upgrade now spends exactly 10 instead of wiping reserve progress. Clicking a
+  different tier during an active boost now arms it for a confirmed switch, and the active-boost
+  line keeps describing the running boost. The reserve Start control stays disabled when a merge
+  couldn't actually start. Reclaiming a boost stack no longer cuts a tier that grew into its
+  reserve back down to 10.
+
+## [0.24.2] - 2026-09-25
+
+### Changed
 - **Pools are fully isolated.** A pool's largest disks no longer merge into the next pool's smallest
   disks; each pool's disks fill only from its own resources. An in-progress cross-pool merge from an
   older save is cancelled and its collected disks returned to the lower pool (one already
   finishing is allowed to complete).
+
+## [0.24.1] - 2026-09-24
+
+### Changed
 - **Upgrade Data Stream is clickable before the Buffer is full.** Clicking it before the Buffer is completely
   full arms the upgrade and pauses all outflow from the Data Stream (pool buffers, Data Lakes,
   Kilobyte auto-convert) until the Buffer fills and the upgrade completes — fixing a Data Stream
@@ -414,50 +594,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   disk filling first, then any disk build in progress, then the lake — so it fills whenever every
   built disk is full and no build is underway (unprovisioned disks don't block it), including while
   an armed Upgrade Data Stream has paused the Data Stream.
-- **Storage disk arrays and Data Lakes now build/hold 9 disks per size instead of 10** — the array's
-  own always-full cache (Storage side) or the lake's own retained fill buffer (Data Lake side)
-  economically substitutes for the missing 10th unit. A Data Lake's overflow fill no longer tapers
-  its rate down as the currently-filling disk nears completion — it now fills at the plain available
-  rate, one disk at a time, the same posture Storage's own disk provisioning already uses. A Storage
-  pool's or Data Lake's own balance/capacity now always renders in that pool's/lake's own fixed unit
-  (e.g. a maxed KB Data Lake reads "1000 KB", never auto-converting to "1 MB"), and a Disk's own
-  visible size label is now a bare number with no unit suffix (the surrounding pool/lake card already
-  establishes the scale).
-- **Renamed Clock Speed to Latency.** It now unlocks once level 1 of the first tier (Kilobytes) is
-  purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
-  level compounds the same Overclock-scaled 1% step.
-- **Completed levels now multiply production by ×1.25** (was ×2), compounding per completed level.
-- **Scale Up requirements are based on the target tier's completed levels** — each of the first ten
-  Scale Ups requires 3 completed levels on its target (the last unlocked tier), then repeated
-  final-tier claims require 6, 9, 12, … completed levels. This remains separate from tier re-reveal. A tier already
-  unlocked by a previous Scale Up within the same Overclock re-reveals at 2 completed predecessor
-  levels. The Scale Up button names the required tier, shows completed-level progress, and displays
-  "Unlock TB" when the claim will reveal Terabytes.
-- **Overclock requirements are completed levels of the final tier**: first available at 5 completed
-  levels, then at the previous claim's completed-level count + 3 (dynamic, not a fixed ladder). A
-  claim banks the whole completed-level count, so claiming 3 + 3 equals claiming 6.
-- **The final-tier XP-funded tickspeed boost unlocks after the first Scale Up of the final tier**
-  (the 10th Scale Up today) rather than on reveal alone.
-- **Byte Foundry Speed ×2 (Invest) and Capacity ×2 are consolidated into a single "Upgrade Data
-  Stream" button** (no icon): cost = current capacity, each upgrade doubles capacity, and Speed is
-  derived from capacity — `sqrt(capacityBytes)` B/s at even log2 exponents, the mean of the
-  neighbouring even-exponent speeds at odd ones (×1.5/×4/3 alternating, ×2 per two upgrades). Upgrade
-  Data Stream is not gated by the forced priority order at all — it never waits on Disk Fill,
-  Provision Disk, or Compute.
-- **A Storage pool's liveness (buffer, Bandwidth, read cache) now depends only on the Data Stream's
-  own Capacity reaching that pool's threshold**, independent of how much has actually been built in
-  any earlier pool. Provisioning a disk still requires every smaller size, in every earlier pool, to
-  already be fully built — that pool-to-pool disk-build chain is unchanged and separate from pool
-  liveness.
-- **A Data Lake now fills manually** — capped at exactly what its next Booster still needs, via a new
-  `💧 Fill` button that draws from its own pool's buffer — **until that pool is entirely built**, at
-  which point it switches to filling automatically from the pool's buffer overflow as before.
-- **Manual tap bonus is a separate yellow bar** directly below the blue fill-based bar: +5pp per
-  tap, −1pp/s decay, clamped 0–100%, shown only while the bonus is above 0; both bars are centered
-  and continuous with transparent tracks.
-- **Foundry balance tiles are cleaner and centered:** Speed/Bandwidth moved to the top-right, disk
-  counts were removed, balance and Capacity now share one centered line, and active tap percentages
-  use a neutral plus with a yellow percentage and tap icon.
+
+## [0.24.0] - 2026-09-20
+
+### Added
+- Added pool-local end-of-progression resets: a completed 9/9/9 Storage Pool at an unreachable
+  Booster capacity wall can restart its own disks for permanent Data Lake capacity, speed, and
+  bandwidth progression, followed by free sequential rebuilding and automatic Booster conversion.
+- Completed 9/9/9 pools now show the next Booster cost as a label and convert affordable Lake
+  contents automatically, without a conversion button.
+
+## [0.23.7] - 2026-09-19
+
+### Fixed
+- **Fixed a crash on the Foundry screen** (`ReferenceError: LakeActionsRow is not defined`,
+  triggered the instant any Data Lake panel rendered) caused by a stray leftover reference to a
+  removed control from the Data Lake conversion redesign above.
+- **Unlocking a compute-ladder auto-merge boundary no longer wipes out reserve progress already
+  accumulating on a downstream boundary** — it now sacrifices exactly 10 held units of the target
+  entity instead of zeroing the whole field, so any excess held past 10 (that entity's own
+  gradually-filling reserve, once ITS outbound boundary is unlocked) survives intact.
+- **A Data Lake's "start converting" control can no longer get stuck showing "converting" forever**
+  on an old save that carries the legacy Boosters-unlocked latch without a real disk built yet this
+  era — starting a conversion now correctly requires the pool to actually be able to feed it.
+
+## [0.23.6] - 2026-09-18
+
+### Changed
 - **The Boosters screen's pre-auto-merge "🤖 Auto" button now shows live progress toward its own
   unlock cost** — a fill bar plus a `<held>/10` figure, matching how Factory's own Buy buttons show
   cost-block progress. Once a boundary's auto-merge unlocks, that tier can now keep holding up to 8
@@ -472,37 +635,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   of a button. Starting is blocked if the matching compute entity is already full. The lake's old
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
+## [0.23.5] - 2026-09-17
+
+### Changed
+- **Completed levels now multiply production by ×1.25** (was ×2), compounding per completed level.
+
 ### Fixed
-- **The game loads again.** A bad merge left conflict markers in the Data Lake fill math, so the app could not build. Those markers are gone.
-- **Running Data Stream upgrade is a full-width status tile**, not a button-like container, filled like the Data Stream tile above it.
-- **Data Lake header layout is consistent.** The filled amount and fill speed now always sit on the title row at one size (no more jumping between rows/sizes), and the Booster cost pill no longer shifts its label off the lake's text edges.
-
-- **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
-
-- **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of
-  their PP cost, and plain-word buttons (e.g. "Redeem code", "Dummy checkout", "Ascend Era…") were split
-  with a wide gap after the first word. Perks rows now line up in fixed columns, automation toggles are
-  proper on/off switches (Buy max too), the Milestones page no longer repeats each chapter name, and the
-  Factory's Latency / Scale Up / Overclock cards share one compact style with Auto Scale Up shown as a
-  header chip.
-- **Boosters page (#740).** A lower-tier merge now fills the next tier's reserve (up to 18) once
-  that tier has auto-merge unlocked, so chained auto-merges keep going instead of stalling at 10.
-  A timed merge finishing no longer cuts an output that grew past 10 back down to 10. The
-  merge-duration upgrade now spends exactly 10 instead of wiping reserve progress. Clicking a
-  different tier during an active boost now arms it for a confirmed switch, and the active-boost
-  line keeps describing the running boost. The reserve Start control stays disabled when a merge
-  couldn't actually start. Reclaiming a boost stack no longer cuts a tier that grew into its
-  reserve back down to 10.
-- **Fixed a crash on the Foundry screen** (`ReferenceError: LakeActionsRow is not defined`,
-  triggered the instant any Data Lake panel rendered) caused by a stray leftover reference to a
-  removed control from the Data Lake conversion redesign above.
-- **Unlocking a compute-ladder auto-merge boundary no longer wipes out reserve progress already
-  accumulating on a downstream boundary** — it now sacrifices exactly 10 held units of the target
-  entity instead of zeroing the whole field, so any excess held past 10 (that entity's own
-  gradually-filling reserve, once ITS outbound boundary is unlocked) survives intact.
-- **A Data Lake's "start converting" control can no longer get stuck showing "converting" forever**
-  on an old save that carries the legacy Boosters-unlocked latch without a real disk built yet this
-  era — starting a conversion now correctly requires the pool to actually be able to feed it.
 - **Buying a Data Lake Booster no longer mints a compute-ladder entity past its own 10-slot cap** —
   a purchase (manual or auto-buy) now pauses at the cap instead of growing the entity unbounded,
   resuming automatically once it's spent back down (a merge, or a Compute Boost activation/stack).
@@ -512,12 +650,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the rest of the row left empty. Each tier row's symbol/label also now starts at the same
   horizontal offset as every other tier — a plain-text symbol (⬡, ▦) used to render narrower than a
   full-color emoji one, shifting that row's label a few pixels left of the rest.
+
+## [0.23.4] - 2026-09-16
+
+### Fixed
 - **The fill-based multiplier/Data Lake overflow-rate bar no longer shows an empty bar with an
   orphaned "0%" label** — it now renders nothing at all whenever the reading it displays is exactly
   0 (only reachable via a maxed Data Lake with no open disk slot left).
 - **A Storage pool's own buffer balance no longer misrenders as a raw bit count** (e.g. "3.187e6
   bits") whenever it sits below that pool's own fixed display unit (e.g. filling toward a "1 MB"
   capacity) — it now self-sizes to a finer unit instead (e.g. "398.375 KB / 1 MB").
+
+## [0.23.3] - 2026-09-15
+
+### Changed
+- **Storage disk arrays and Data Lakes now build/hold 9 disks per size instead of 10** — the array's
+  own always-full cache (Storage side) or the lake's own retained fill buffer (Data Lake side)
+  economically substitutes for the missing 10th unit. A Data Lake's overflow fill no longer tapers
+  its rate down as the currently-filling disk nears completion — it now fills at the plain available
+  rate, one disk at a time, the same posture Storage's own disk provisioning already uses. A Storage
+  pool's or Data Lake's own balance/capacity now always renders in that pool's/lake's own fixed unit
+  (e.g. a maxed KB Data Lake reads "1000 KB", never auto-converting to "1 MB"), and a Disk's own
+  visible size label is now a bare number with no unit suffix (the surrounding pool/lake card already
+  establishes the scale).
+- **A Storage pool's liveness (buffer, Bandwidth, read cache) now depends only on the Data Stream's
+  own Capacity reaching that pool's threshold**, independent of how much has actually been built in
+  any earlier pool. Provisioning a disk still requires every smaller size, in every earlier pool, to
+  already be fully built — that pool-to-pool disk-build chain is unchanged and separate from pool
+  liveness.
+- **A Data Lake now fills manually** — capped at exactly what its next Booster still needs, via a new
+  `💧 Fill` button that draws from its own pool's buffer — **until that pool is entirely built**, at
+  which point it switches to filling automatically from the pool's buffer overflow as before.
+
+### Fixed
 - **A pool's own read cache now always gets first claim on that pool's buffer over Provision Disk
   funding**, rather than the reverse — a queued Provision Disk build could previously starve the
   read cache near-empty by claiming each tick's fresh production first.
@@ -573,20 +738,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   into that size's own pool buffer, capped at the pool's own ceiling, instead of sitting forever as
   unreachable state.
 
-### Accessibility
-- Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
-- Added `focus-visible` outline styles to TierNameTrigger and other interactive components.
+## [0.23.2] - 2026-09-14
 
-### Security
-- **Saves must be plain JSON objects.** Loading a save (or Dev Mode JSON) now rejects anything
-  that isn't a plain object — arrays, class instances, or other non-plain payloads — and treats it
-  as an invalid save instead of merging it into game state.
-- Harden `storage.js` JSON loads (`safeJsonParse`) against prototype pollution via `__proto__` /
-  `constructor` keys (supersedes #478 / #480).
-- Fixed object prototype checks in `storage.js` to handle Custom and null prototype objects correctly.
-- Pin transitive `uuid` to **11.1.1** via Yarn `resolutions` (Dependabot alert #185 /
-  moderate: missing buffer bounds check in v3/v5/v6 when `buf` is provided). Pulled in by
-  `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
+### Changed
+- **Foundry balance tiles are cleaner and centered:** Speed/Bandwidth moved to the top-right, disk
+  counts were removed, balance and Capacity now share one centered line, and active tap percentages
+  use a neutral plus with a yellow percentage and tap icon.
+
+## [0.23.1] - 2026-09-13
+
+### Changed
+- **Renamed Clock Speed to Latency.** It now unlocks once level 1 of the first tier (Kilobytes) is
+  purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
+  level compounds the same Overclock-scaled 1% step.
+- **Scale Up requirements are based on the target tier's completed levels** — each of the first ten
+  Scale Ups requires 3 completed levels on its target (the last unlocked tier), then repeated
+  final-tier claims require 6, 9, 12, … completed levels. This remains separate from tier re-reveal. A tier already
+  unlocked by a previous Scale Up within the same Overclock re-reveals at 2 completed predecessor
+  levels. The Scale Up button names the required tier, shows completed-level progress, and displays
+  "Unlock TB" when the claim will reveal Terabytes.
+- **Overclock requirements are completed levels of the final tier**: first available at 5 completed
+  levels, then at the previous claim's completed-level count + 3 (dynamic, not a fixed ladder). A
+  claim banks the whole completed-level count, so claiming 3 + 3 equals claiming 6.
+- **The final-tier XP-funded tickspeed boost unlocks after the first Scale Up of the final tier**
+  (the 10th Scale Up today) rather than on reveal alone.
+- **Byte Foundry Speed ×2 (Invest) and Capacity ×2 are consolidated into a single "Upgrade Data
+  Stream" button** (no icon): cost = current capacity, each upgrade doubles capacity, and Speed is
+  derived from capacity — `sqrt(capacityBytes)` B/s at even log2 exponents, the mean of the
+  neighbouring even-exponent speeds at odd ones (×1.5/×4/3 alternating, ×2 per two upgrades). Upgrade
+  Data Stream is not gated by the forced priority order at all — it never waits on Disk Fill,
+  Provision Disk, or Compute.
+- **Manual tap bonus is a separate yellow bar** directly below the blue fill-based bar: +5pp per
+  tap, −1pp/s decay, clamped 0–100%, shown only while the bonus is above 0; both bars are centered
+  and continuous with transparent tracks.
+
+## [0.23.0] - 2026-09-12
 
 ### Added
 - **Factory purchase levels now start at 0 and count completed levels** in tier details, accessible
@@ -596,98 +782,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   level 2, and stacks cumulative per-tier multipliers. Final-tier requirements progress 3 → 6 → 9,
   letting Auto Scale Up remain active while Overclock stays reachable at level 5. Clock Speed
   milestones no longer add a bonus.
+
+## [0.22.0] - 2026-09-11
+
+### Added
 - **Scale Up and Overclock cards are more compact**, with reduced card/button padding, heading
   margins, and spacing between and within the two soft-reset controls.
-- **A dedicated Data Lake pool-fill tile** — a small fillable element inside each Data Lake block
-  showing progress toward the currently-open disk slot ("`<fillBits>` / `<size>`"), always visible
-  (even before the lake unlocks, where it reads "Locked · 0 / `<size>`") rather than only a sliver
-  on one small disk square.
-- **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
-  `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
-  (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for
-  future `android/` / `ios/` build artifacts. Native platform projects and
-  `mobile-build.yml` are deferred to a later slice of #70.
-- **Dev Mode** — a local, dev-build-only sandbox (More → Dev Mode, rendered only when
-  `import.meta.env.DEV`; absent from the production build) for seeding and experimenting with game
-  state on a save entirely separate from any real player slot. Toggle it on/off without touching
-  your real progress — enforced at the storage layer, not just by hiding UI: Settings' save-slot
-  actions (Play/Clear/Erase all) refuse to run while Dev Mode is active rather than risk touching a
-  real slot. Quick-seed presets, a Variables editor auto-generated by recursively walking the live
-  game state (so it always matches whatever `engine.js` currently defines — no hand-maintained
-  field list to keep in sync), and a raw state-JSON editor that merges a partial object (only the
-  fields you're changing) onto the current dev save.
-- **Data Lakes + Boosters** — ten storage-tier lakes (KB … QB), one per Storage pool. Each lake is
-  fed directly and continuously by its own matching pool's OVERFLOW (production beyond that pool's
-  Memory buffer once completely full) — fully decoupled from Storage Disks. The overflow feed rate
-  is itself fill-based on progress of the one disk currently being filled in that lake, not the
-  lake's overall total (50% at that disk empty, tapering down as it approaches completion — floored
-  at 5% rather than truly reaching 0%, so a disk always keeps filling — back to 50% once it
-  completes), shown as the bottom half of that pool's own speedometer gauge (see "Fill-based Speed/Bandwidth
-  multiplier" below). Overflow fills the lake's own ×1/×10/×100 disks smallest denomination first
-  (capped 10/9/9 respectively so the three sizes sum exactly to the maxed level's 1,000-unit
-  capacity), rendered on Foundry as one row of disk squares per size with the currently-filling one
-  showing live progress. A lake's first-ever completed disk permanently unlocks Boosters for it.
-  Buying a Booster (manual, or auto-buy via a per-lake toggle) costs escalating lake units (the nth
-  Booster ever bought costs n) and spends only that lake's own banked units, instantly — no transfer,
-  no waiting. A lake's own deposit capacity is a separate, purchasable decade-power ladder (1 → 10 →
-  100 → 1,000 units); advancing it is available once the corresponding Storage disk array for that
-  level is fully built, and drains whatever the lake currently holds. Foundry's per-lake panel
-  repurposes one button between Buy and Upgrade, unconditionally preferring Upgrade whenever it's
-  available (see the "Changed" entry below — Upgrade is no longer forced-priority-gated or ever
-  merely disabled-but-visible). Once a size's Storage Disk array is fully
-  built and a full disk on it is no longer redeemable, it liquidates straight into Bits instead of
-  sitting idle (previously only a pool's largest size did this, tied to the old deposit mechanic).
-- **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
-  (`getVisibleStoragePoolCount`) needs the Data Stream's raw Capacity (`intro.capacity`) to have
-  reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on — on top of
-  its existing disk-build condition before it renders. In practice this rarely changes pool 1's own
-  reveal timing (Storage's own reveal threshold is already stricter), but it adds a real gate for
-  pools 2 and up. See `docs/DESIGN_HISTORY.md`.
-- **Fill-based Speed/Bandwidth multiplier** — the Data Stream's own Speed and each Storage pool's
-  own Bandwidth now scale with how full their respective buffer currently is: 150% at empty, exactly
-  100% at 50% full, down to 50% completely full. The displayed Speed/Bandwidth numbers are unchanged
-  — they're always what applies at 100% of this multiplier, shown alongside the live percent — only
-  the real Data Stream/pool-buffer fill rate scales with it. Tapping the Data Stream tile (once
-  Storage pools are revealed at 1 KiB) or a pool's own Memory buffer tile adds +5% to that one Data
-  Stream/pool's own multiplier, decaying back down at 1%/sec; before Storage pools are revealed, a
-  Data Stream tap still credits its original flat "one second's worth of bits." The combined total
-  (fill-based value plus any live tap bonus) is capped at 200%, at which point tapping becomes a
-  no-op — and any excess is discarded instantly on every tick (not just at tap time), so a stored
-  bonus can never resurface as extra effect later if the underlying fill level changes. Each
-  Speed/Bandwidth figure is paired with a compact speedometer gauge — title top-left, gauge
-  top-middle, the Speed/Bandwidth figure top-right, with the balance tile as a second line below —
-  sweeping 0% to 200% with a percent readout below the dial and showing the same split as a two-tone
-  arc — the base fill-based portion in the usual accent color, any live tap bonus extending it in a
-  distinct orange/gold tone. For a pool specifically, the same dial continues into a bottom half
-  showing that pool's own Data Lake overflow rate/fill (see "Data Lakes" above).
 
-### Removed
-- **"Queue next build" pin-icon toggle beside Provision Disk** — the small pin/✕ button that armed
-  auto-firing the next Provision Disk pass is gone from `ByteFoundryPage`. The underlying engine
-  action (`queueDiskBuild`/`clearDiskBuildQueue`/`tickQueuedDiskBuild`, `intro.diskBuildQueued`)
-  remains fully implemented and tested, but no UI control currently arms it — the same posture
-  Capacity's own `queueIntroCapacityUpgrade` already had.
-- **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
-  minted a Compute Core by flushing the player's entire Memory capacity) are gone, superseded by
-  buying Boosters from the Data Lake for Cores. The Sacrifice confirm dialog's "every future Core
-  will cost more" warning is also gone (no longer true) — the dialog itself, including its "wipes
-  all held Compute tokens" warning, was later removed entirely (see the "Memory ×2 (Sacrifice)
-  fires immediately" entry under Changed below).
-- **Manual transfer-block row on the Byte Foundry screen** — the row of clickable blocks that let a
-  player manually convert Data Stream bits into `tier01` (Kilobyte) units is gone. The always-on
-  auto-convert (`tickIntroAutoInvest`) already handled this automatically with no per-cycle cap, so
-  it's now the sole path from Data Stream bits to `tier01` units and to unlocking the main game — no
-  functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
-- **Idle disk liquidation** — the mechanic that converted a fully-built Storage Disk straight into
-  Bits once its corresponding tier's purchase level had moved past the level it required is gone. A
-  stranded disk now simply sits full and unredeemable for the rest of the cycle instead of being
-  destroyed; it becomes redeemable again after the next real Prestige resets purchase levels. See
-  `docs/DESIGN_HISTORY.md`.
-- **Manual disk Redeem and cache-release-to-Bits controls** — Storage no longer has a Redeem button
-  on a full disk, an autobuyer-gated auto-redeem, or a manual/Smart-auto cache-block release. Byte
-  Foundry now funds Byte Factory tier levels **pull-based and fully automatically, every tick**,
-  with no click and no autobuyer needed — see the "Byte Foundry storage funding is now fully
-  automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
+## [0.21.2] - 2026-09-10
 
 ### Fixed
 - **An ordinary Prestige wiped Era ascension progress** — `prestigeGame` never carried
@@ -696,6 +798,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   hyperscaler count, Eon upgrade levels, and Flops autobuyer unlocks/pause preferences back to fresh
   defaults. Now carries all six through unchanged, matching `scaleUpGame`/`overclockGame`/`eraGame`'s
   existing treatment (#626).
+
+## [0.21.1] - 2026-09-09
+
+### Changed
+- **Provision Disk no longer imposes a separate build-time countdown after funding completes** —
+  gathering a disk's funding passes at the pool's own production rate already takes exactly the
+  intended build time, so an additional post-funding wait was pure duplication (an array's very
+  first disk, needing only 1 pass, previously took twice as long overall as it should have). A disk
+  now exists the instant its final pass lands. A save with an already-in-progress countdown from
+  before this change still finishes it out normally.
+- **A pool's smallest size's read cache pre-fills the instant its pool unlocks again** — ready to
+  flush before the player's first disk of that size even exists, rather than waiting for one to be
+  built first.
+- **The Data Stream and pool buffer balances drop their padded decimal zeros once full for more
+  than a second** — the fixed-3-decimal display exists to stop a fast-changing balance from
+  jittering width tick to tick, which no longer matters once it sits completely full; reverts
+  instantly the moment it drains back below full.
+- **Data Lake capacity Upgrade is no longer blocked by the forced priority order** — it's now
+  available and immediately clickable the instant its own corresponding Storage disk array is
+  fully built, regardless of whether Disk Fill, Speed, Provision Disk, or a Compute Boost is also
+  currently available, matching Buying Boosters' own "always available the instant affordable"
+  behavior. Previously the button could sit visibly present but disabled — its own array long
+  complete — solely because an unrelated action elsewhere on the page happened to outrank it.
+- **Provision Disk's build cost is now paid in installments ("passes") instead of one lump sum, and
+  early disks in an array are now cheaper than later ones** — each pass costs exactly the disk's own
+  face-value size, so a pool's local buffer only ever needs to hold one pass at a time rather than
+  the disk's full build cost. The number of passes now scales with the disk's own position in the
+  array (1 for the very first disk, 2 for the second, … up to 10 for the tenth and last), instead of
+  every disk costing a flat 10 passes regardless — a 1 KB array's first disk now costs just 1 KB
+  total to build (was 10 KB), its last disk still costs 100 KB, unchanged. A click collects as many
+  whole passes as the buffer currently affords (every required pass at once if it already holds the
+  full cost, fewer otherwise, banking the remainder); the button's label and progress bar reflect
+  passes collected so far while funding is in progress, now including a "0/N" count on the button's
+  own idle label before the first pass ever lands (for any disk needing more than one), so it's
+  clear upfront that a multi-pass disk isn't a single-click purchase. Once a click leaves a build
+  only partially funded, the remaining passes now fire themselves automatically as the buffer
+  refills — no more manual re-clicking between passes; only starting a brand-new disk's build still
+  needs one click. A stale, already-over-required pass count (e.g. from a hand-edited save) now
+  completes immediately even with an empty pool buffer, rather than being gated out by Provision
+  Disk's own availability check before it ever got a chance to self-heal; and a save already
+  carrying a genuine partial pass count auto-resumes the auto-continue behavior on load, with no
+  extra click needed to "wake it up." Reset Byte Foundry's convenience replay (which auto-plays
+  Provision Disk up to what was already earned before the reset) no longer lets the new auto-continue
+  behavior carry it past its own cap under any of the ways that could happen — a replay-driven
+  partial fund no longer arms auto-continue, a single replay call can no longer collect more passes
+  than the cap allows even when the pool buffer can afford the disk's full remaining cost, and the
+  automatic queue itself (regardless of what armed it, including a reload mid-replay) now always
+  stops exactly at an active cap's own remaining allowance instead of an abundant buffer refill
+  carrying it past — anything beyond what was already re-earned still needs a genuine manual click,
+  same as before.
+- **Provision Disk's own first click no longer requires its first pass to already be banked** —
+  clicking it while the buffer doesn't yet cover a whole pass, or while a higher-priority action
+  currently outranks it, now queues the build (the same `diskBuildQueued` mechanism the automatic
+  mid-build continuation above already uses) instead of the button simply refusing the click. The
+  build then fires itself the instant it's affordable, with no further click needed — the same
+  "click once, then it just happens" treatment every pass past the first already had.
+- **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
+  2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
+  cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the
+  subsequent flush-into-target-disk phase is unchanged at 2x — so collecting no longer happens to
+  take the same total time as flushing, and completes noticeably sooner.
+- **"Speed Up" renamed to "Scale Up," and redesigned to unlock tiers one at a time instead of gating only on the last tier.** A Scale Up is now available once the tier it's currently working through (starting with Kilobytes) hits level 3 (displayed Lv.2) — firing it doubles production speed (stacking, same as before) and permanently unlocks the next tier, on top of keeping every tier already reached. The Scale Up card is now always shown from the very first cycle, rather than staying hidden until the last tier unlocks. Once every tier has been reached, Scale Up settles into a repeating "every 3 levels of the last tier" endgame phase (level 3, then 6, then 9, …) instead of its old +1-per-activation last-tier-only ladder.
+- **Data Lake's capacity-increase button now reads "⚡ Scale Out"** (was "⚡ Upgrade") — same action, cost, and gating as before.
+
+### Fixed
 - **Byte Foundry and Boosters page titles rendered behind the iPhone Dynamic Island** — both
   pages' root container was missing the `env(safe-area-inset-top)` top-padding convention every
   other page already uses, so their fixed `theme.space.xl` top padding wasn't enough to clear the
@@ -712,6 +879,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   own historical cap when IT armed the queue (via its own load-time wake-up), never when a player's
   own manual click did; a manual continuation always runs at full, unattended speed once armed,
   regardless of any prior Reset Byte Foundry history for that same disk.
+- **Scale Up and Overclock no longer erase Era ascension progress.** Both soft-resets were silently
+  wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
+  unlock/pause flags back to fresh defaults on every activation; they now carry these permanent
+  fields through unchanged, same as every other permanent field they already preserve.
+
+## [0.21.0] - 2026-09-08
+
+### Changed
+- **Byte Foundry's corner needle-speedometer replaced with a center-grow multiplier bar** — the
+  fill-based Speed/Bandwidth multiplier now shows as a compact bar that grows and shrinks from the
+  middle (200% fills the full width) instead of a tall dial, with a live tap bonus rendered as a
+  highlighted band in the bar's own middle, and its own percent readout on a line below the bar.
+  Each tile (Data Stream and every pool) was reorganized around it: title top-left with that
+  section's own current full-disk count top-right, the balance alone in a bigger centered font
+  below that, the bar full-width below the balance, then Speed/Bandwidth and Capacity split across
+  the bottom row's left and right halves — each now prefixed with its own icon (⚡ for
+  Speed/Bandwidth, 🪣 for Capacity) for at-a-glance scanning; the "Capacity ×2" milestone button's
+  icon was also switched from 🧠 to the same 🪣, since the brain emoji was already doing double duty
+  elsewhere for the unrelated "Smart" autobuyer concept.
+- **Read cache blocks now show their fill level, not just full/empty** — a partially-filled block
+  (whether filling up from Memory or draining down during a flush to disk) now renders a
+  proportional fill overlay instead of looking identical to an empty block until it snapped
+  straight to full; a full block also gets the same accent-colored border a full Disk circle
+  already used, for a consistent "this slot is full" signal across both rows.
+- **The Data Stream/pool balance now shows a stable, non-trimmed decimal digit count** — a balance
+  that floors to a round fraction now reads e.g. "5.600 KiB" instead of "5.6 KiB", matching the 3
+  decimal places a non-round balance ("3.578 KiB") already showed, so the balance's own displayed
+  width doesn't jitter tick to tick purely because a digit happens to land on zero. Every other
+  memory-scaled reading on the page (Capacity, Bandwidth, Disk/Cache sizes) is unaffected.
+- **Consistent, properly-scaled rate units on Byte Foundry** — the Data Stream's own rate readout
+  now reads e.g. "4 bits/s" / "1 B/s" / "2 KiB/s" (the same binary B/KiB/MiB/… ladder its balance
+  line already uses, scaling up automatically instead of showing an unscaled raw Byte count like
+  "2048 B/s") instead of the old spelled-out "+4 bits/sec" / "+1 Byte/sec", with no leading "+".
+  Pool Bandwidth figures switch from "/sec" to the same short "/s" suffix for consistency.
+- **Data Stream and pool header rows now render inside the same tappable balance button** instead
+  of sitting as a separate header above it — title, fill-multiplier gauge, and Speed/Bandwidth
+  figure are now the first line of the one bordered tap button, with the bits/Buffer (or Memory
+  buffer) balance as its second line, so the whole thing reads as one control. For pool cards,
+  where the header used to also toggle that pool's expand/collapse, that action moved to a new
+  slim chevron (▲/▼) strip rendered just below the merged button.
+- **Trimmed dead space below the Data Stream/pool fill-multiplier gauge** — the dial's SVG canvas
+  used to reserve a full circle's worth of height even though the needle only ever sweeps the top
+  half, leaving a large empty band below the percent label. The canvas now crops to just past the
+  label itself; the dial, needle, and label render at identical coordinates, only the unused canvas
+  beneath them is gone.
+- **Storage pools now top out at 100x their own base unit instead of 1000x** — e.g. the MB Pool's
+  Memory Capacity now maxes at 100 MB instead of 1 GB (pool 1/KB Pool: 100 KB instead of 1 MB; pool
+  3/GB Pool: 100 GB instead of 1 TB; and so on). Enabled directly by the Provision Disk pass change
+  above: a pool's buffer ceiling only ever needs to fund one pass of its own largest disk (that
+  disk's own face value) now, not the disk's whole 10x build cost, so the ceiling itself shrinks by
+  the same 10x. Data Lake capacity is unaffected — a lake still climbs to 1,000 units at its own max
+  level.
+- **Removed the standalone Data Lake fill bar from each Storage pool card** — the always-visible
+  "`<symbol>` Lake · NN%" tile between the pool's Memory buffer and Provision Disk is gone; the same
+  fill level is already shown by the Data Lake panel's own tile once that pool's card is expanded,
+  so the duplicate copy above the fold added nothing.
+- **Byte Foundry storage funding is now fully automatic (pull-based)** — Storage no longer pushes
+  redemption into the Byte Factory tier ladder via a click or an autobuyer gate; instead, every
+  tick, Byte Foundry pulls a full, clean-slate (zero purchase-level-progress) matching disk into
+  its own tier's current level the instant that tier sits at exactly the required level, or — for a
+  tier still sitting at its own level 1 with no fresh disk to pull — spends that tier's pool cache
+  directly instead. A level with existing progress (from a manual buy or an autobuyer) is never
+  later topped off by a disk; the disk simply waits for that tier's next fresh level. Byte Foundry
+  has no proactive knowledge of Byte Factory beyond this: "it simply supplies if asked and
+  otherwise minds its own business" (issue #571). This generalizes tier01's own pre-Storage
+  bootstrap (unchanged) to every tier's own level 1, and retires the manual Redeem button and the
+  cache-release-to-Bits control — see the matching entry under Removed above.
+
+### Removed
+- **"Queue next build" pin-icon toggle beside Provision Disk** — the small pin/✕ button that armed
+  auto-firing the next Provision Disk pass is gone from `ByteFoundryPage`. The underlying engine
+  action (`queueDiskBuild`/`clearDiskBuildQueue`/`tickQueuedDiskBuild`, `intro.diskBuildQueued`)
+  remains fully implemented and tested, but no UI control currently arms it — the same posture
+  Capacity's own `queueIntroCapacityUpgrade` already had.
+- **Manual disk Redeem and cache-release-to-Bits controls** — Storage no longer has a Redeem button
+  on a full disk, an autobuyer-gated auto-redeem, or a manual/Smart-auto cache-block release. Byte
+  Foundry now funds Byte Factory tier levels **pull-based and fully automatically, every tick**,
+  with no click and no autobuyer needed — see the "Byte Foundry storage funding is now fully
+  automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
+
+### Fixed
 - **A disk stranded by an advanced tier could never again feed the write cache, permanently
   starving every disk size above a pool's smallest one (and, one level deeper, every size across a
   Factory tier-group boundary too)** — after Storage funding became fully automatic and
@@ -756,6 +1004,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   largest disk's face value — so even a completely full buffer read as 0 affordable passes via
   `Math.floor(bufferBits / size)`, permanently blocking that array. Dividing first, then
   multiplying, is exact for all 10 pools. Caught by Devin's automated review on PR #597.
+
+## [0.20.3] - 2026-09-07
+
+### Fixed
 - **A real Prestige could silently destroy an in-flight write-cache merge or read-cache flush** —
   `intro.diskWriteCache`/`intro.diskReadCacheFlush` reset unconditionally on every real Prestige even
   though the Disks/build state they operate on is otherwise permanent. Combined with the write-cache
@@ -765,12 +1017,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fields now carry through a real Prestige unchanged, same as `diskBuild` already did; a frozen,
   stranded merge now survives indefinitely and can even resume once reset purchase levels un-strand
   its source again. See `docs/DESIGN_HISTORY.md`.
+
+### Accessibility
+- Added `focus-visible` outline styles to TierNameTrigger and other interactive components.
+
+## [0.20.2] - 2026-09-06
+
+### Security
+- Fixed object prototype checks in `storage.js` to handle Custom and null prototype objects correctly.
+
+## [0.20.1] - 2026-09-05
+
+### Accessibility
+- Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
+
+## [0.20.0] - 2026-09-04
+
+### Changed
+- **Compute Boost's Reclaim and Forfeit controls are now mutually exclusive** — Reclaim (instant,
+  no confirmation) shows only while more than 1 stack is held; Forfeit (clears the boost entirely
+  with no refund, confirmation required) shows only once down to the last remaining, still-active
+  stack. Previously both sat visible together the whole time a boost was active, with Forfeit able
+  to cancel several stacks' worth of tokens outright instead of nudging toward Reclaim's
+  incremental, refundable path first. Switching to a different boost preset entirely (which also
+  forfeits whatever's currently running) is now restricted the same way — only possible once
+  Reclaimed down to the last stack, closing a second path to the same outcome. The standalone
+  Forfeit action itself now enforces this restriction too (not just its own button's visibility),
+  so every way to end a boost with no refund agrees on when that's allowed.
+
+### Removed
+- **Idle disk liquidation** — the mechanic that converted a fully-built Storage Disk straight into
+  Bits once its corresponding tier's purchase level had moved past the level it required is gone. A
+  stranded disk now simply sits full and unredeemable for the rest of the cycle instead of being
+  destroyed; it becomes redeemable again after the next real Prestige resets purchase levels. See
+  `docs/DESIGN_HISTORY.md`.
+
+### Fixed
 - **A stranded Storage Disk could still be silently folded into another (possibly also-unredeemable)
   array by the write-cache upward-merge mechanism**, undermining the idle-disk-liquidation removal
   above — `tickDiskWriteCache` never checked whether a merge's source size was stranded before
   starting or continuing to collect from it, and a Prestige landing mid-merge could discard
   already-consumed source disks with nothing to show for it. A stranded source can no longer start
   or continue feeding a write-cache merge. See `docs/DESIGN_HISTORY.md`.
+
+## [0.19.0] - 2026-09-03
+
+### Added
+- **A dedicated Data Lake pool-fill tile** — a small fillable element inside each Data Lake block
+  showing progress toward the currently-open disk slot ("`<fillBits>` / `<size>`"), always visible
+  (even before the lake unlocks, where it reads "Locked · 0 / `<size>`") rather than only a sliver
+  on one small disk square.
+- **Data Lakes + Boosters** — ten storage-tier lakes (KB … QB), one per Storage pool. Each lake is
+  fed directly and continuously by its own matching pool's OVERFLOW (production beyond that pool's
+  Memory buffer once completely full) — fully decoupled from Storage Disks. The overflow feed rate
+  is itself fill-based on progress of the one disk currently being filled in that lake, not the
+  lake's overall total (50% at that disk empty, tapering down as it approaches completion — floored
+  at 5% rather than truly reaching 0%, so a disk always keeps filling — back to 50% once it
+  completes), shown as the bottom half of that pool's own speedometer gauge (see "Fill-based Speed/Bandwidth
+  multiplier" below). Overflow fills the lake's own ×1/×10/×100 disks smallest denomination first
+  (capped 10/9/9 respectively so the three sizes sum exactly to the maxed level's 1,000-unit
+  capacity), rendered on Foundry as one row of disk squares per size with the currently-filling one
+  showing live progress. A lake's first-ever completed disk permanently unlocks Boosters for it.
+  Buying a Booster (manual, or auto-buy via a per-lake toggle) costs escalating lake units (the nth
+  Booster ever bought costs n) and spends only that lake's own banked units, instantly — no transfer,
+  no waiting. A lake's own deposit capacity is a separate, purchasable decade-power ladder (1 → 10 →
+  100 → 1,000 units); advancing it is available once the corresponding Storage disk array for that
+  level is fully built, and drains whatever the lake currently holds. Foundry's per-lake panel
+  repurposes one button between Buy and Upgrade, unconditionally preferring Upgrade whenever it's
+  available (see the "Changed" entry below — Upgrade is no longer forced-priority-gated or ever
+  merely disabled-but-visible). Once a size's Storage Disk array is fully
+  built and a full disk on it is no longer redeemable, it liquidates straight into Bits instead of
+  sitting idle (previously only a pool's largest size did this, tied to the old deposit mechanic).
+
+### Changed
+- **A Data Lake now unlocks with its own matching Storage pool's real progress, not its own internal
+  fill state.** Boosters become buyable the instant a pool has built its first real disk
+  (`isDataLakePoolReady`), not once the lake's own first disk completes — and overflow no longer
+  feeds a lake at all until then, so a pool can't bank lake progress before any real Storage disk
+  exists. Capacity upgrades (1 → 10 → 100 → 1,000) now require the CORRESPONDING Storage array to be
+  fully built (the smallest/middle/largest array for level 0→1/1→2/2→3 respectively) rather than the
+  lake's own escalating Booster cost exceeding its capacity — the Upgrade button is hidden (not just
+  disabled) until that array is actually complete. This is no longer guaranteed mutually exclusive
+  with an affordable Booster purchase, unlike under the old cost-based condition; `DataLakePanel`
+  still repurposes one button slot, preferring Upgrade when both apply. See `docs/DESIGN_HISTORY.md`.
+- **A pool's multiplier gauge and Data Lake reading are now one continuous speedometer, not two
+  stacked dials** — the earlier design rendered a separate bottom-half arc for the Data Lake's own
+  overflow rate. Now the same dial switches from the fill-based Speed/Bandwidth multiplier to that
+  pool's own Data Lake overflow rate the instant the pool's Memory buffer is completely full, on the
+  identical 0–200% scale, transitioning cleanly at the shared 50% value both readings meet at — a
+  pool's own live tap bonus is now forced to 0 the instant its buffer is full so a leftover bonus
+  can't make the transition visibly jump. The Data Lake's own accumulated fill level (as opposed to
+  that rate) now has its own separate bar below the Memory buffer tile, always visible.
+- **A pool's read cache now only ever fills once a disk of that size has actually been built** — a
+  since-reverted change (never cut into a dated release — see `### Fixed` above) briefly keyed cache
+  eligibility off which pools were unlocked instead of `disksBuiltTotal`, so a freshly-unlocked pool's
+  cache would start filling from Memory before any disk existed to receive it, silently draining the
+  buffer toward a cache with nowhere to flush. It had already reached the live GitHub Pages
+  deployment (which auto-publishes on every push to `main`, independent of any release tag), so real
+  saves could carry cache staged under it — see the migration note under `### Fixed`.
+
+### Fixed
 - **A lone Data Lake disk square rendered as a giant, room-spanning circle** at a fresh capacity
   level (only one slot to show) — `LakeSquare`'s own flex-grow stretched it to fill the whole row
   width with nothing else to share space with; capped with a `max-width`.
@@ -820,58 +1166,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **A save whose cache had already staged bits under the above (now-reverted) behavior would have had
   those bits stranded forever** once the fix above landed — the existing stale-cache self-heal now
   also catches this case, refunding them into the pool's own buffer on the next tick.
-- **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
-  "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
-  amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
-  it's an exact whole-Byte figure with no precision lost dividing by 8. `PRESTIGE_THRESHOLD`
-  (`8e100`) is a real example this also affects.
-- **"0.xyz `<unit>`" fractions in Byte/bit-denominated displays** (e.g. "0.125 B/sec" Bandwidth,
-  "0.5 B" Disk sizes) — `formatMemoryAmount` (backing `formatDiskSize`/`formatBitsInNearestUnit`/
-  `formatCacheSize`) now falls back to a raw bit count whenever the value would floor to a nonzero
-  fraction below 1 in its chosen unit, so every such figure always has at least one significant
-  digit before the decimal point (a true zero still renders as a clean "0 `<unit>`", unaffected).
-- **Missing hover tooltips on tier autobuyer pause toggles** (#515) — they now carry `title`
-  tooltips matching their `aria-label`s and the global automation toggles.
-- **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
-  (banked units, purchased Boosters, and capacity level) unchanged, matching
-  Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
-  with the rest of the Foundry.
-- **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
-  cache flush bar inherited the same `aspect-ratio: 1` its 10 individual collecting segments use,
-  so stretching it to the full row width also stretched it to that same width in height. It now
-  uses `DISK_LADDER_SIZE_MULTIPLIER` as its aspect ratio instead, landing back near one segment's own
-  height.
-- **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
-  least one Flops tier (previously hardcoded off).
-- **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1
-  minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour) gave Sustain less total extra production
-  than Standard despite its much longer commitment. Replaced with `burst` ×20/10 minutes,
-  `standard` ×5/1 hour, `sustain` ×2/10 hours, whose total extra production now strictly increases
-  Burst → Standard → Sustain as intended.
-- **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
-  Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
-  `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
-- **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
-  the **Bytes** pool (matching the buy button), not Bits.
-- **Storage pool bandwidth/capacity no longer divided by higher unlocked pools** —
-  `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
-  Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
-  stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
-- **Storage pool Capacity/Bandwidth showing non-round SI figures** (e.g. "16.384 KB" / "128 B/sec"
-  instead of a clean "16 KB" / "250 B/sec") — each pool now derives its own SI-clean Capacity from
-  `intro.capacity`'s plain binary doubling count via a rounded-log2 lookup into the SI-clean
-  switchover sequence, computed in closed form (`getSiCleanEquivalentBits`) rather than iterated —
-  robust to floating-point drift both from chained purchases/boosts (the rounded log2) and at very
-  large doubling counts past `Number.MAX_SAFE_INTEGER` (the closed form; an iterative approach
-  would silently pick the wrong decade multiplier once reachable, around pool 8's own boundary
-  within a single Era — see `getStoragePoolCapacity`). Bandwidth simply follows that same raw
-  production rate through the identical transform, with `sqrt(Capacity)` acting only as a bound on
-  the raw rate before the transform (a guideline for bandwidth's bounds, not the formula — see
-  `getStoragePoolBandwidth`). This is fully decoupled from `intro.capacity` itself, which keeps
-  doubling plainly and unclamped in binary for the Data Stream tile's own display — standing rule
-  going forward: the SI-clean switchover sequence is for storage-pool-scoped values only. See
-  `docs/DESIGN_HISTORY.md` for earlier reverted attempts that instead shared one raw value between
-  both displays.
+
+## [0.18.0] - 2026-09-02
+
+### Added
+- **Fill-based Speed/Bandwidth multiplier** — the Data Stream's own Speed and each Storage pool's
+  own Bandwidth now scale with how full their respective buffer currently is: 150% at empty, exactly
+  100% at 50% full, down to 50% completely full. The displayed Speed/Bandwidth numbers are unchanged
+  — they're always what applies at 100% of this multiplier, shown alongside the live percent — only
+  the real Data Stream/pool-buffer fill rate scales with it. Tapping the Data Stream tile (once
+  Storage pools are revealed at 1 KiB) or a pool's own Memory buffer tile adds +5% to that one Data
+  Stream/pool's own multiplier, decaying back down at 1%/sec; before Storage pools are revealed, a
+  Data Stream tap still credits its original flat "one second's worth of bits." The combined total
+  (fill-based value plus any live tap bonus) is capped at 200%, at which point tapping becomes a
+  no-op — and any excess is discarded instantly on every tick (not just at tap time), so a stored
+  bonus can never resurface as extra effect later if the underlying fill level changes. Each
+  Speed/Bandwidth figure is paired with a compact speedometer gauge — title top-left, gauge
+  top-middle, the Speed/Bandwidth figure top-right, with the balance tile as a second line below —
+  sweeping 0% to 200% with a percent readout below the dial and showing the same split as a two-tone
+  arc — the base fill-based portion in the usual accent color, any live tap bonus extending it in a
+  distinct orange/gold tone. For a pool specifically, the same dial continues into a bottom half
+  showing that pool's own Data Lake overflow rate/fill (see "Data Lakes" above).
+
+### Changed
+- **The Byte Foundry gate is now one-time-ever, not per-Prestige-cycle** — reaching the main game
+  no longer resets on a real Prestige or an Era ascension. The standalone Tap button disappears and
+  Factory becomes reachable the instant Storage's own capacity threshold is crossed (the same "1
+  KiB" moment that already reveals Storage pool cards and switches tapping into fill-multiplier-
+  bonus mode), and once that's happened, it's permanent: every future cycle starts with Factory
+  already reachable, with no Byte Foundry replay. (Previously, every real Prestige — via the
+  auto-convert mechanic that funds tier01 purchases — reset the gate and sent the player back
+  through the standalone Tap button each cycle.)
+- **Tier per-level costs now grow more slowly from level 6 onward** — `getCostEpochExponent`'s
+  per-epoch increment changed from a Fibonacci progression (`1, 1, 2, 3, 5, 8, 13, …`) to a linear
+  one (`1, 1, 2, 3, 4, 5, 6, …`), giving exponents `1, 2, 3, 5, 8, 12, 17, 23, 30, …` instead of
+  `1, 2, 3, 5, 8, 13, 21, 34, 55, …` for epochs 0-8. Levels 1-5 are priced identically to before;
+  every tier's level 6 and beyond (and PP Compute/Flops tiers, which reuse the same formula) now
+  cost noticeably less as levels climb, since the sequence grows quadratically rather than
+  exponentially. See `docs/DESIGN_HISTORY.md`.
+- **Data Lake capacity ladder switched from its own finer SI-clean sequence to the same
+  decade-power-of-10 shape pool Capacity uses** — a lake's own deposit capacity previously climbed
+  1, 2, 4, 8, …, 64, 125, 250, 500, 1,000 over 11 levels; it now climbs 1 → 10 → 100 → 1,000 over 4
+  levels, matching how a pool's own Capacity now derives (see above). Each level's own upgrade cost
+  is unchanged in shape — always exactly the capacity of the level below it (1 unit to reach 10, 10
+  to reach 100, 100 to reach 1,000) — only the values themselves changed. The button's visible
+  label/tooltip moved from "⚡ ×2"/"double…capacity" to "⚡ ×10"/"increase…capacity ×10" to match.
+  See `docs/DESIGN_HISTORY.md`.
+- **Storage reveals a full decade earlier — right when the Data Stream hits 1 KiB, matching pool
+  1's own capacity-threshold gate** — `INTRO_DISK_UNLOCK_CAPACITY` moves from 80,000 bits ("9.765
+  KiB") to 8,192 bits ("1 KiB"), now expressed as `BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` — the
+  same product `getPoolCapacityUnlockThresholdBits(1)` computes — so the whole Storage section and
+  pool 1's own card reveal at the exact same instant, with pool 1 already showing a clean "1 KB"
+  Capacity rather than one that had already advanced to "10 KB" by the time a player first saw it.
+  See `docs/DESIGN_HISTORY.md`.
+- **Data Lake panel redesigned around fewer labels and bigger numbers, matching the rest of the
+  page** — each lake now renders as a self-contained block (title + a big fillable
+  deposited/capacity number + a compact actions row) instead of a dense grid table with explicit
+  Lake/Deposited/Capacity/Bought/Next column headers, mirroring the same `FillableStatCard`/
+  `BalanceText`/`StatusText` shape every other Byte Foundry balance already uses. A lake's visible
+  name now includes its own size unit — "KB Lake," not just "KB". See `docs/DESIGN_HISTORY.md`.
+
+### Fixed
 - **A save from before the decade-power Capacity ladder could carry an over-cap pool buffer or an
   out-of-bounds Data Lake capacity level** — `getStoragePoolCapacity` moving to a coarser
   decade-power ladder (see above) meant an existing save's `intro.poolBuffers` entry could sit above
@@ -896,175 +1251,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   direction. `normalizePoolMemoryCapacity` now floors, truncates, and caps `capacityLevel` in one
   step; a negative pool buffer gets the same defensive floor for consistency.
 
-### Changed
+## [0.17.0] - 2026-09-01
 
-- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
-- **Provision Disk no longer imposes a separate build-time countdown after funding completes** —
-  gathering a disk's funding passes at the pool's own production rate already takes exactly the
-  intended build time, so an additional post-funding wait was pure duplication (an array's very
-  first disk, needing only 1 pass, previously took twice as long overall as it should have). A disk
-  now exists the instant its final pass lands. A save with an already-in-progress countdown from
-  before this change still finishes it out normally.
-- **A pool's smallest size's read cache pre-fills the instant its pool unlocks again** — ready to
-  flush before the player's first disk of that size even exists, rather than waiting for one to be
-  built first.
-- **The Data Stream and pool buffer balances drop their padded decimal zeros once full for more
-  than a second** — the fixed-3-decimal display exists to stop a fast-changing balance from
-  jittering width tick to tick, which no longer matters once it sits completely full; reverts
-  instantly the moment it drains back below full.
-- **Data Lake capacity Upgrade is no longer blocked by the forced priority order** — it's now
-  available and immediately clickable the instant its own corresponding Storage disk array is
-  fully built, regardless of whether Disk Fill, Speed, Provision Disk, or a Compute Boost is also
-  currently available, matching Buying Boosters' own "always available the instant affordable"
-  behavior. Previously the button could sit visibly present but disabled — its own array long
-  complete — solely because an unrelated action elsewhere on the page happened to outrank it.
-- **Byte Foundry's corner needle-speedometer replaced with a center-grow multiplier bar** — the
-  fill-based Speed/Bandwidth multiplier now shows as a compact bar that grows and shrinks from the
-  middle (200% fills the full width) instead of a tall dial, with a live tap bonus rendered as a
-  highlighted band in the bar's own middle, and its own percent readout on a line below the bar.
-  Each tile (Data Stream and every pool) was reorganized around it: title top-left with that
-  section's own current full-disk count top-right, the balance alone in a bigger centered font
-  below that, the bar full-width below the balance, then Speed/Bandwidth and Capacity split across
-  the bottom row's left and right halves — each now prefixed with its own icon (⚡ for
-  Speed/Bandwidth, 🪣 for Capacity) for at-a-glance scanning; the "Capacity ×2" milestone button's
-  icon was also switched from 🧠 to the same 🪣, since the brain emoji was already doing double duty
-  elsewhere for the unrelated "Smart" autobuyer concept.
-- **Read cache blocks now show their fill level, not just full/empty** — a partially-filled block
-  (whether filling up from Memory or draining down during a flush to disk) now renders a
-  proportional fill overlay instead of looking identical to an empty block until it snapped
-  straight to full; a full block also gets the same accent-colored border a full Disk circle
-  already used, for a consistent "this slot is full" signal across both rows.
-- **The Data Stream/pool balance now shows a stable, non-trimmed decimal digit count** — a balance
-  that floors to a round fraction now reads e.g. "5.600 KiB" instead of "5.6 KiB", matching the 3
-  decimal places a non-round balance ("3.578 KiB") already showed, so the balance's own displayed
-  width doesn't jitter tick to tick purely because a digit happens to land on zero. Every other
-  memory-scaled reading on the page (Capacity, Bandwidth, Disk/Cache sizes) is unaffected.
-- **Consistent, properly-scaled rate units on Byte Foundry** — the Data Stream's own rate readout
-  now reads e.g. "4 bits/s" / "1 B/s" / "2 KiB/s" (the same binary B/KiB/MiB/… ladder its balance
-  line already uses, scaling up automatically instead of showing an unscaled raw Byte count like
-  "2048 B/s") instead of the old spelled-out "+4 bits/sec" / "+1 Byte/sec", with no leading "+".
-  Pool Bandwidth figures switch from "/sec" to the same short "/s" suffix for consistency.
-- **Data Stream and pool header rows now render inside the same tappable balance button** instead
-  of sitting as a separate header above it — title, fill-multiplier gauge, and Speed/Bandwidth
-  figure are now the first line of the one bordered tap button, with the bits/Buffer (or Memory
-  buffer) balance as its second line, so the whole thing reads as one control. For pool cards,
-  where the header used to also toggle that pool's expand/collapse, that action moved to a new
-  slim chevron (▲/▼) strip rendered just below the merged button.
-- **Trimmed dead space below the Data Stream/pool fill-multiplier gauge** — the dial's SVG canvas
-  used to reserve a full circle's worth of height even though the needle only ever sweeps the top
-  half, leaving a large empty band below the percent label. The canvas now crops to just past the
-  label itself; the dial, needle, and label render at identical coordinates, only the unused canvas
-  beneath them is gone.
-- **Provision Disk's build cost is now paid in installments ("passes") instead of one lump sum, and
-  early disks in an array are now cheaper than later ones** — each pass costs exactly the disk's own
-  face-value size, so a pool's local buffer only ever needs to hold one pass at a time rather than
-  the disk's full build cost. The number of passes now scales with the disk's own position in the
-  array (1 for the very first disk, 2 for the second, … up to 10 for the tenth and last), instead of
-  every disk costing a flat 10 passes regardless — a 1 KB array's first disk now costs just 1 KB
-  total to build (was 10 KB), its last disk still costs 100 KB, unchanged. A click collects as many
-  whole passes as the buffer currently affords (every required pass at once if it already holds the
-  full cost, fewer otherwise, banking the remainder); the button's label and progress bar reflect
-  passes collected so far while funding is in progress, now including a "0/N" count on the button's
-  own idle label before the first pass ever lands (for any disk needing more than one), so it's
-  clear upfront that a multi-pass disk isn't a single-click purchase. Once a click leaves a build
-  only partially funded, the remaining passes now fire themselves automatically as the buffer
-  refills — no more manual re-clicking between passes; only starting a brand-new disk's build still
-  needs one click. A stale, already-over-required pass count (e.g. from a hand-edited save) now
-  completes immediately even with an empty pool buffer, rather than being gated out by Provision
-  Disk's own availability check before it ever got a chance to self-heal; and a save already
-  carrying a genuine partial pass count auto-resumes the auto-continue behavior on load, with no
-  extra click needed to "wake it up." Reset Byte Foundry's convenience replay (which auto-plays
-  Provision Disk up to what was already earned before the reset) no longer lets the new auto-continue
-  behavior carry it past its own cap under any of the ways that could happen — a replay-driven
-  partial fund no longer arms auto-continue, a single replay call can no longer collect more passes
-  than the cap allows even when the pool buffer can afford the disk's full remaining cost, and the
-  automatic queue itself (regardless of what armed it, including a reload mid-replay) now always
-  stops exactly at an active cap's own remaining allowance instead of an abundant buffer refill
-  carrying it past — anything beyond what was already re-earned still needs a genuine manual click,
-  same as before.
-- **Provision Disk's own first click no longer requires its first pass to already be banked** —
-  clicking it while the buffer doesn't yet cover a whole pass, or while a higher-priority action
-  currently outranks it, now queues the build (the same `diskBuildQueued` mechanism the automatic
-  mid-build continuation above already uses) instead of the button simply refusing the click. The
-  build then fires itself the instant it's affordable, with no further click needed — the same
-  "click once, then it just happens" treatment every pass past the first already had.
-- **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
-  2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
-  cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the
-  subsequent flush-into-target-disk phase is unchanged at 2x — so collecting no longer happens to
-  take the same total time as flushing, and completes noticeably sooner.
-- **Storage pools now top out at 100x their own base unit instead of 1000x** — e.g. the MB Pool's
-  Memory Capacity now maxes at 100 MB instead of 1 GB (pool 1/KB Pool: 100 KB instead of 1 MB; pool
-  3/GB Pool: 100 GB instead of 1 TB; and so on). Enabled directly by the Provision Disk pass change
-  above: a pool's buffer ceiling only ever needs to fund one pass of its own largest disk (that
-  disk's own face value) now, not the disk's whole 10x build cost, so the ceiling itself shrinks by
-  the same 10x. Data Lake capacity is unaffected — a lake still climbs to 1,000 units at its own max
-  level.
-- **Removed the standalone Data Lake fill bar from each Storage pool card** — the always-visible
-  "`<symbol>` Lake · NN%" tile between the pool's Memory buffer and Provision Disk is gone; the same
-  fill level is already shown by the Data Lake panel's own tile once that pool's card is expanded,
-  so the duplicate copy above the fold added nothing.
-- **Byte Foundry storage funding is now fully automatic (pull-based)** — Storage no longer pushes
-  redemption into the Byte Factory tier ladder via a click or an autobuyer gate; instead, every
-  tick, Byte Foundry pulls a full, clean-slate (zero purchase-level-progress) matching disk into
-  its own tier's current level the instant that tier sits at exactly the required level, or — for a
-  tier still sitting at its own level 1 with no fresh disk to pull — spends that tier's pool cache
-  directly instead. A level with existing progress (from a manual buy or an autobuyer) is never
-  later topped off by a disk; the disk simply waits for that tier's next fresh level. Byte Foundry
-  has no proactive knowledge of Byte Factory beyond this: "it simply supplies if asked and
-  otherwise minds its own business" (issue #571). This generalizes tier01's own pre-Storage
-  bootstrap (unchanged) to every tier's own level 1, and retires the manual Redeem button and the
-  cache-release-to-Bits control — see the matching entry under Removed above.
-- **Compute Boost's Reclaim and Forfeit controls are now mutually exclusive** — Reclaim (instant,
-  no confirmation) shows only while more than 1 stack is held; Forfeit (clears the boost entirely
-  with no refund, confirmation required) shows only once down to the last remaining, still-active
-  stack. Previously both sat visible together the whole time a boost was active, with Forfeit able
-  to cancel several stacks' worth of tokens outright instead of nudging toward Reclaim's
-  incremental, refundable path first. Switching to a different boost preset entirely (which also
-  forfeits whatever's currently running) is now restricted the same way — only possible once
-  Reclaimed down to the last stack, closing a second path to the same outcome. The standalone
-  Forfeit action itself now enforces this restriction too (not just its own button's visibility),
-  so every way to end a boost with no refund agrees on when that's allowed.
-- **A Data Lake now unlocks with its own matching Storage pool's real progress, not its own internal
-  fill state.** Boosters become buyable the instant a pool has built its first real disk
-  (`isDataLakePoolReady`), not once the lake's own first disk completes — and overflow no longer
-  feeds a lake at all until then, so a pool can't bank lake progress before any real Storage disk
-  exists. Capacity upgrades (1 → 10 → 100 → 1,000) now require the CORRESPONDING Storage array to be
-  fully built (the smallest/middle/largest array for level 0→1/1→2/2→3 respectively) rather than the
-  lake's own escalating Booster cost exceeding its capacity — the Upgrade button is hidden (not just
-  disabled) until that array is actually complete. This is no longer guaranteed mutually exclusive
-  with an affordable Booster purchase, unlike under the old cost-based condition; `DataLakePanel`
-  still repurposes one button slot, preferring Upgrade when both apply. See `docs/DESIGN_HISTORY.md`.
-- **A pool's multiplier gauge and Data Lake reading are now one continuous speedometer, not two
-  stacked dials** — the earlier design rendered a separate bottom-half arc for the Data Lake's own
-  overflow rate. Now the same dial switches from the fill-based Speed/Bandwidth multiplier to that
-  pool's own Data Lake overflow rate the instant the pool's Memory buffer is completely full, on the
-  identical 0–200% scale, transitioning cleanly at the shared 50% value both readings meet at — a
-  pool's own live tap bonus is now forced to 0 the instant its buffer is full so a leftover bonus
-  can't make the transition visibly jump. The Data Lake's own accumulated fill level (as opposed to
-  that rate) now has its own separate bar below the Memory buffer tile, always visible.
-- **The Byte Foundry gate is now one-time-ever, not per-Prestige-cycle** — reaching the main game
-  no longer resets on a real Prestige or an Era ascension. The standalone Tap button disappears and
-  Factory becomes reachable the instant Storage's own capacity threshold is crossed (the same "1
-  KiB" moment that already reveals Storage pool cards and switches tapping into fill-multiplier-
-  bonus mode), and once that's happened, it's permanent: every future cycle starts with Factory
-  already reachable, with no Byte Foundry replay. (Previously, every real Prestige — via the
-  auto-convert mechanic that funds tier01 purchases — reset the gate and sent the player back
-  through the standalone Tap button each cycle.)
-- **Tier per-level costs now grow more slowly from level 6 onward** — `getCostEpochExponent`'s
-  per-epoch increment changed from a Fibonacci progression (`1, 1, 2, 3, 5, 8, 13, …`) to a linear
-  one (`1, 1, 2, 3, 4, 5, 6, …`), giving exponents `1, 2, 3, 5, 8, 12, 17, 23, 30, …` instead of
-  `1, 2, 3, 5, 8, 13, 21, 34, 55, …` for epochs 0-8. Levels 1-5 are priced identically to before;
-  every tier's level 6 and beyond (and PP Compute/Flops tiers, which reuse the same formula) now
-  cost noticeably less as levels climb, since the sequence grows quadratically rather than
-  exponentially. See `docs/DESIGN_HISTORY.md`.
-- **A pool's read cache now only ever fills once a disk of that size has actually been built** — a
-  since-reverted change (never cut into a dated release — see `### Fixed` above) briefly keyed cache
-  eligibility off which pools were unlocked instead of `disksBuiltTotal`, so a freshly-unlocked pool's
-  cache would start filling from Memory before any disk existed to receive it, silently draining the
-  buffer toward a cache with nowhere to flush. It had already reached the live GitHub Pages
-  deployment (which auto-publishes on every push to `main`, independent of any release tag), so real
-  saves could carry cache staged under it — see the migration note under `### Fixed`.
+### Added
+- **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
+  (`getVisibleStoragePoolCount`) needs the Data Stream's raw Capacity (`intro.capacity`) to have
+  reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on — on top of
+  its existing disk-build condition before it renders. In practice this rarely changes pool 1's own
+  reveal timing (Storage's own reveal threshold is already stricter), but it adds a real gate for
+  pools 2 and up. See `docs/DESIGN_HISTORY.md`.
+
+### Changed
 - **Pool cards: Bandwidth moved onto the title line, compacting each card** — each pool's own
   Bandwidth figure ("+N/sec") now renders beside its "`<symbol>` Pool" title instead of inside the
   Memory buffer block below, saving a row per pool card.
@@ -1103,17 +1300,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   grows via an SI-clean sequence (plain doubling except a 64→125 deviation), matching pool
   Capacity's own end-boundary convention. Only the max-level value changes (1,024 → 1,000); the
   number of purchasable levels (0–10) is unchanged.
-- **Ladder screen renamed to Byte Factory (nav short label "Factory")** — reverses #399/#431's
-  "Factory → Ladder" rename: AppNav label/accessible name, the MainPage `<h1>`, the Factory |
-  Upgrades peer tabs, cache-transfer hints, Settings danger-zone copy, confirm dialogs, the Guide,
-  and the ComputeFlopsPage/DevModePage copy that named the screen all use **Byte Factory** (full)
-  / **Factory** (short) again. Internal ids (`page === 'game'`, `showTiers`, `hasTiersAttention`,
-  etc.) and the unrelated **Factory Bytes** resource pool (`BYTES_ID`) are unchanged.
-- **Byte Foundry storage pools (#456)** — the Foundry now derives storage pools 1–10 from one
-  shared Data Stream. Completing a pool unlocks the next disk-array sizes; earlier pools stay
-  available as compact summaries and no longer scale down from higher unlocked pools. Capacity ×2 uses
-  the restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
-  the shared Disk Build control is now labeled **Provision Disk**.
 - **Provision Disk button moved back inside its pool card** — the button now renders inside the
   pool card matching the disk ladder's current offer, right after that pool's title, instead of
   standalone in the Data Stream section — pulling it back out had separated the control from the
@@ -1130,32 +1316,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   is always exactly far enough ahead to afford its own next disk the moment the threshold is
   crossed. Bandwidth is unaffected — it still uses the finer SI-clean sequence. See
   `docs/DESIGN_HISTORY.md`.
-- **Data Lake capacity ladder switched from its own finer SI-clean sequence to the same
-  decade-power-of-10 shape pool Capacity uses** — a lake's own deposit capacity previously climbed
-  1, 2, 4, 8, …, 64, 125, 250, 500, 1,000 over 11 levels; it now climbs 1 → 10 → 100 → 1,000 over 4
-  levels, matching how a pool's own Capacity now derives (see above). Each level's own upgrade cost
-  is unchanged in shape — always exactly the capacity of the level below it (1 unit to reach 10, 10
-  to reach 100, 100 to reach 1,000) — only the values themselves changed. The button's visible
-  label/tooltip moved from "⚡ ×2"/"double…capacity" to "⚡ ×10"/"increase…capacity ×10" to match.
-  See `docs/DESIGN_HISTORY.md`.
-- **Storage reveals a full decade earlier — right when the Data Stream hits 1 KiB, matching pool
-  1's own capacity-threshold gate** — `INTRO_DISK_UNLOCK_CAPACITY` moves from 80,000 bits ("9.765
-  KiB") to 8,192 bits ("1 KiB"), now expressed as `BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` — the
-  same product `getPoolCapacityUnlockThresholdBits(1)` computes — so the whole Storage section and
-  pool 1's own card reveal at the exact same instant, with pool 1 already showing a clean "1 KB"
-  Capacity rather than one that had already advanced to "10 KB" by the time a player first saw it.
-  See `docs/DESIGN_HISTORY.md`.
-- **Data Lake panel redesigned around fewer labels and bigger numbers, matching the rest of the
-  page** — each lake now renders as a self-contained block (title + a big fillable
-  deposited/capacity number + a compact actions row) instead of a dense grid table with explicit
-  Lake/Deposited/Capacity/Bought/Next column headers, mirroring the same `FillableStatCard`/
-  `BalanceText`/`StatusText` shape every other Byte Foundry balance already uses. A lake's visible
-  name now includes its own size unit — "KB Lake," not just "KB". See `docs/DESIGN_HISTORY.md`.
+
+### Removed
+- **Manual transfer-block row on the Byte Foundry screen** — the row of clickable blocks that let a
+  player manually convert Data Stream bits into `tier01` (Kilobyte) units is gone. The always-on
+  auto-convert (`tickIntroAutoInvest`) already handled this automatically with no per-cycle cap, so
+  it's now the sole path from Data Stream bits to `tier01` units and to unlocking the main game — no
+  functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
+
+### Fixed
+- **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
+  "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
+  amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
+  it's an exact whole-Byte figure with no precision lost dividing by 8. `PRESTIGE_THRESHOLD`
+  (`8e100`) is a real example this also affects.
+- **"0.xyz `<unit>`" fractions in Byte/bit-denominated displays** (e.g. "0.125 B/sec" Bandwidth,
+  "0.5 B" Disk sizes) — `formatMemoryAmount` (backing `formatDiskSize`/`formatBitsInNearestUnit`/
+  `formatCacheSize`) now falls back to a raw bit count whenever the value would floor to a nonzero
+  fraction below 1 in its chosen unit, so every such figure always has at least one significant
+  digit before the decimal point (a true zero still renders as a clean "0 `<unit>`", unaffected).
+- **Storage pool Capacity/Bandwidth showing non-round SI figures** (e.g. "16.384 KB" / "128 B/sec"
+  instead of a clean "16 KB" / "250 B/sec") — each pool now derives its own SI-clean Capacity from
+  `intro.capacity`'s plain binary doubling count via a rounded-log2 lookup into the SI-clean
+  switchover sequence, computed in closed form (`getSiCleanEquivalentBits`) rather than iterated —
+  robust to floating-point drift both from chained purchases/boosts (the rounded log2) and at very
+  large doubling counts past `Number.MAX_SAFE_INTEGER` (the closed form; an iterative approach
+  would silently pick the wrong decade multiplier once reachable, around pool 8's own boundary
+  within a single Era — see `getStoragePoolCapacity`). Bandwidth simply follows that same raw
+  production rate through the identical transform, with `sqrt(Capacity)` acting only as a bound on
+  the raw rate before the transform (a guideline for bandwidth's bounds, not the formula — see
+  `getStoragePoolBandwidth`). This is fully decoupled from `intro.capacity` itself, which keeps
+  doubling plainly and unclamped in binary for the Data Stream tile's own display — standing rule
+  going forward: the SI-clean switchover sequence is for storage-pool-scoped values only. See
+  `docs/DESIGN_HISTORY.md` for earlier reverted attempts that instead shared one raw value between
+  both displays.
+
+## [0.16.0] - 2026-08-31
+
+### Added
+- **Idle disk liquidation**: once a storage pool's Data Lake is completely full (capacity maxed) and there's nothing else left to do in the Byte Foundry, that pool's LAST (largest) disk array's own idle output — full disks the Lake can no longer absorb — now automatically liquidates into Bits instead of sitting stranded, funding whatever Provision Disk needs next (typically the next pool's first disk). The lowest-priority action in the whole forced priority chain, ranked below even Lake Capacity doubling.
+
+### Changed
+- **Ladder screen renamed to Byte Factory (nav short label "Factory")** — reverses #399/#431's
+  "Factory → Ladder" rename: AppNav label/accessible name, the MainPage `<h1>`, the Factory |
+  Upgrades peer tabs, cache-transfer hints, Settings danger-zone copy, confirm dialogs, the Guide,
+  and the ComputeFlopsPage/DevModePage copy that named the screen all use **Byte Factory** (full)
+  / **Factory** (short) again. Internal ids (`page === 'game'`, `showTiers`, `hasTiersAttention`,
+  etc.) and the unrelated **Factory Bytes** resource pool (`BYTES_ID`) are unchanged.
+- Each storage pool's own Bandwidth is now hard-capped at the square root of that pool's own Memory Capacity **converted to Bytes** (the result converted back to bits/sec), instead of always matching the raw, uncapped Byte Foundry production rate — a pool with a small Capacity window can now lag behind the raw rate once production has outgrown it. Every disk/cache fill speed and Booster live-transfer pace derives from this same capped figure, so they all re-pace automatically. Storage pools now display Bandwidth, Capacity, and the Memory buffer in **SI units** (matching Disks/Data Lake/caches) rather than the binary units the Data Stream card's own balance/Buffer display still uses.
+- Each storage pool's own Memory Capacity end bound now lands on a clean SI power of 1000 Bytes (pool 1 → exactly 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …) instead of a binary power of 1024 (previously 1 MiB/1 GiB/1 TiB) — so pool 1's Bandwidth now permanently tops out at a clean 8,000 bits/sec (1 KB/sec) no matter how far Speed ×2 grows the raw rate, matching the SI-unit convention Storage pools already display in, rather than a binary value merely reformatted into SI units after the fact. The Capacity ×2 purchase mechanic itself is unchanged (still a plain doubling each time, clamped to the pool's own end bound); only where that end bound itself sits moved. One accepted side effect: the Data Stream card's own binary balance/Buffer display of this same value is no longer a round binary figure either (pool 1's cap now reads "976.562 KiB," not "1 MiB") — its own display convention deliberately stays binary regardless.
+- A Data Lake's Capacity ×2 upgrade is now funded by draining the lake itself instead of spending Data Stream Bits — it requires the lake to be completely full and empties every deposit back to zero on purchase, the same "requires a full Buffer, drains it" shape Memory's own Capacity ×2 already uses.
+- The pool summary card (Byte Foundry → Storage) is redesigned to match the rest of the app's styled-component conventions — a proper heading (tier symbol + name), a color-coded status badge, and labeled Bandwidth/Capacity stat blocks — replacing the earlier single plain-text sentence.
+- Each storage pool now has its own small local Memory buffer (shown as a compact bar on its pool card) that it spends from directly — Provision Disk's build cost and the read-cache fill from Memory now draw exclusively from that pool's own buffer, not the shared Data Stream Buffer. The buffer itself tops up from the Data Stream, bandwidth-limited, in pool order (pool 1 first, each pool claiming its own Bandwidth cap before any leftover throughput reaches the next), and never competes with unlocking the main game or a Capacity doubling already in progress.
+- Removed two redundant figures from the Byte Foundry UI: the Data Stream card no longer shows a
+  separate "Buffer Y" line, since the balance line right above it already reads "X / Y" with that
+  same capacity as its denominator; and each pool card's Memory buffer line no longer shows "X / Y",
+  since the buffer's own ceiling always equals the "Capacity" stat already shown in the same card —
+  it now shows just the current amount.
+
+### Fixed
+- **Storage pool bandwidth/capacity no longer divided by higher unlocked pools** —
+  `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
+  Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
+  stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
+
+## [0.15.3] - 2026-08-30
+
+### Changed
+- **Byte Foundry storage pools (#456)** — the Foundry now derives storage pools 1–10 from one
+  shared Data Stream. Completing a pool unlocks the next disk-array sizes; earlier pools stay
+  available as compact summaries and no longer scale down from higher unlocked pools. Capacity ×2 uses
+  the restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
+  the shared Disk Build control is now labeled **Provision Disk**.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
   and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)
   use them instead of `Array.find`/`findIndex`. Unknown ids — including `Object.prototype` member
   names like `toString` — still miss, preserving the previous fallback behavior.
+
+### Fixed
+- **Missing hover tooltips on tier autobuyer pause toggles** (#515) — they now carry `title`
+  tooltips matching their `aria-label`s and the global automation toggles.
+
+## [0.15.2] - 2026-08-27
+
+### Changed
 - **Byte Foundry: Data Stream / Buffer rename; Sacrifice removed; Buffer snaps on Combine** (#506) —
   player-facing "Memory" is now **Data Stream** (balance) with capacity labeled **Buffer**;
   "Bandwidth ×2" is **Speed ×2**. The Sacrifice / "Memory ×2" capacity ladder is removed —
@@ -1175,6 +1420,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   purchase (spending the lake's own
   current capacity in Bits, the same shape Memory's Sacrifice uses), permanently hard-capped at
   1,024 units ("1024 KB") via a compact "⚡ ×2" button in the panel's new Capacity column.
+
+### Fixed
+- **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
+  (banked units, purchased Boosters, and capacity level) unchanged, matching
+  Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
+  with the rest of the Foundry.
+
+## [0.15.1] - 2026-08-26
+
+### Changed
 - **Disk/Cache fill speeds now tied to Memory bandwidth (Byte Foundry production rate), not flat or
   unbounded rates** — a fresh disk build now takes exactly the time to fill it at 1x Memory
   bandwidth (was a flat "1 second per real KB," decoupled from Invest/Compute Boost); a disk filling
@@ -1208,6 +1463,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Memory ×2 (Sacrifice) fires immediately, no confirm prompt** — clicking the button now drains
   Memory and doubles Capacity right away, the same as every other Byte Foundry action; the
   "Sacrifice Memory?" confirm dialog (with its Compute-token-wipe warning) is removed.
+- **Sacrifice confirm** used an in-game `ConfirmDialog` (theme overlay) instead of
+  `window.confirm`, with a "future Cores cost more" warning shown only once Compute Cores were
+  unlocked — the confirm dialog itself was later removed entirely (see Memory ×2 above); Sacrifice
+  now fires directly on click.
+- **Sacrifice for 10x Capacity** is now offered only once every other currently-possible Byte Foundry action has been taken first — Combine into a Byte, Invest for Double Production, and building a Disk (once revealed) all block it while any of them is still affordable. Since Invest's own cost ladder tracks capacity's own growth, claiming the current Invest tier is now effectively a required click before Sacrificing again most cycles. (Clicking it once asked for confirmation first, spelling out that it's permanent and made future Cores cost more — see Memory ×2 above for the current, dialog-free behavior.)
+
+### Fixed
+- **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
+  cache flush bar inherited the same `aspect-ratio: 1` its 10 individual collecting segments use,
+  so stretching it to the full row width also stretched it to that same width in height. It now
+  uses `DISK_LADDER_SIZE_MULTIPLIER` as its aspect ratio instead, landing back near one segment's own
+  height.
+
+### Security
+- Harden `storage.js` JSON loads (`safeJsonParse`) against prototype pollution via `__proto__` /
+  `constructor` keys (supersedes #478 / #480).
+
+## [0.15.0] - 2026-08-25
+
+### Added
+- **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
+  `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
+  (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for
+  future `android/` / `ios/` build artifacts. Native platform projects and
+  `mobile-build.yml` are deferred to a later slice of #70.
+- **Dev Mode** — a local, dev-build-only sandbox (More → Dev Mode, rendered only when
+  `import.meta.env.DEV`; absent from the production build) for seeding and experimenting with game
+  state on a save entirely separate from any real player slot. Toggle it on/off without touching
+  your real progress — enforced at the storage layer, not just by hiding UI: Settings' save-slot
+  actions (Play/Clear/Erase all) refuse to run while Dev Mode is active rather than risk touching a
+  real slot. Quick-seed presets, a Variables editor auto-generated by recursively walking the live
+  game state (so it always matches whatever `engine.js` currently defines — no hand-maintained
+  field list to keep in sync), and a raw state-JSON editor that merges a partial object (only the
+  fields you're changing) onto the current dev save.
+
+### Changed
 - **Screen reader accessibility** — `ButtonIcon` decorative icons are now `aria-hidden` so screen
   readers announce only a button's own `aria-label`, not redundant icon content; the offline-
   progress notice card now carries `role="status"`/`aria-live="polite"` so it's announced when it
@@ -1229,6 +1520,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   permanently unfundable sizes — Build shows a distinct "🏦 Pool complete" state once that size is
   fully built. First slice of a larger per-storage-pool generator epic (#456) — see
   `docs/DESIGN_HISTORY.md`.
+- **Ladder screen** (formerly **Factory** / **Byte Factory**): AppNav label **Ladder** /
+  accessible name `open ladder`; MainPage header is **Ladder** (not the game name “Tens”). Peer
+  tabs are **Ladder | Upgrades**. Cache-transfer hints, Settings danger-zone copy, and confirm
+  dialogs use **Ladder** instead of **Factory**.
+- **Prestige progress bar**: sits above the **Ladder** page title (formerly Factory) with a
+  simplified `"N% to Prestige"` label only (no unbounded-unlock hint or next-PP detail).
+
+### Removed
+- **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
+  minted a Compute Core by flushing the player's entire Memory capacity) are gone, superseded by
+  buying Boosters from the Data Lake for Cores. The Sacrifice confirm dialog's "every future Core
+  will cost more" warning is also gone (no longer true) — the dialog itself, including its "wipes
+  all held Compute tokens" warning, was later removed entirely (see the "Memory ×2 (Sacrifice)
+  fires immediately" entry under Changed below).
+
+### Fixed
+- **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
+  least one Flops tier (previously hardcoded off).
+- **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1
+  minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour) gave Sustain less total extra production
+  than Standard despite its much longer commitment. Replaced with `burst` ×20/10 minutes,
+  `standard` ×5/1 hour, `sustain` ×2/10 hours, whose total extra production now strictly increases
+  Burst → Standard → Sustain as intended.
+- **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
+  the **Bytes** pool (matching the buy button), not Bits.
+
+### Security
+- Pin transitive `uuid` to **11.1.1** via Yarn `resolutions` (Dependabot alert #185 /
+  moderate: missing buffer bounds check in v3/v5/v6 when `buf` is provided). Pulled in by
+  `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
+
+## [0.14.1] - 2026-08-23
+
+### Changed
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
   instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during
@@ -1236,56 +1561,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Byte Foundry layout** (#439) — Memory and Storage are one continuous Foundry screen (no
   Memory | Storage second-level tabs). **Memory ×10** always stays in the milestones row beside
   Bandwidth. Each disk array always shows all 10 disk slots in one unbroken row (no mobile wrap).
-- **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
-  fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
-- **Nav icons** — Foundry uses 🔥 (was ⚙️, which read as Settings); Settings in the More menu uses ⚙️
-  (was 🎚️). Byte Foundry page title matches the nav icon.
-- **Light theme** — improved surface hierarchy (buttons/nav no longer blend into the page),
-  stronger card shadows, and peer-tab / milestone badges now use theme tokens instead of
-  dark-mode-only hardcoded colors.
 - **Disk array layout** — in-cell disk/cache labels are slightly larger (`0.65rem`).
 - **Foundry tab label** — *(superseded by the continuous Foundry layout above)* the second-level
   Foundry peer tab formerly labeled **Disks** was briefly **Storage** (Memory | Storage).
-- **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
-  size first). Empty disks fill from a full read cache via a **timed flush** (one cache-block
-  production duration; see #445) when no tier claim blocks that size, or from the size below via
-  **write cache** (10 timed segments + one flush equal to a target build duration). Write-cache
-  collect pauses while the source size has an active tier match; flush never pauses. Tier match
-  still gives full disks first claim over read cache.
-- **Disk vs Cache priority** — when a tier’s level cost matches a disk size, full disks redeem
-  immediately (manual or via autobuyer); cache blocks are neither clickable nor auto-used while a
-  matching full disk exists. Cache is fallback only. Smart autobuyers auto-release cache when no
-  disk is available.
-- **Byte Foundry header**: removed the instructional subtitle under the page title — the on-screen
-  controls and unlock flow carry the guidance instead.
-- **Clock Speed** — the global tickspeed upgrade (MainPage card + Guide) is renamed from "Tickspeed" and
-  now costs **Bytes** instead of Bits (10 B to enable, then another power of ten each level).
-- **Kilobytes production** — the `tier01` tier now produces Factory **Bytes** (`resources.bytes`) instead
-  of Bits; Bits remain the purchase currency for every tier.
-- **Ladder screen** (formerly **Factory** / **Byte Factory**): AppNav label **Ladder** /
-  accessible name `open ladder`; MainPage header is **Ladder** (not the game name “Tens”). Peer
-  tabs are **Ladder | Upgrades**. Cache-transfer hints, Settings danger-zone copy, and confirm
-  dialogs use **Ladder** instead of **Factory**.
-- **Milestones → Chapters** — replaced the "Coming soon…" placeholder with **Open Compute** (100 PP
-  Compute screen reveal), **Go Unbounded** (100-prestige latch), and **Ascend an Era**; added a
-  **Compute Autobuyer Unlocks** category (Era-gated, visible once Compute is revealed).
-- **Tier row hierarchy polish** (#138): tier rows use `theme.space`/`theme.motion` tokens for
-  gaps and padding; `OwnedText`/`ProductionText` are token-native spans (no `MutedText` inheritance);
-  production reads at `theme.color.text`/`font-weight: 500` vs muted owned count; tier symbol uses
-  `font.display`; controls row separates from stats via top margin; expanded details get a border-top
-  divider.
-- **Prestige surfaces token migration** (#139): `FullScreenOverlay`/`FullScreenCard` and
-  `TopPrestigeBar` use design tokens (`surfaceRaised`, `warn`, `text`/`textMuted`, type scale,
-  `shadow`/`radius`/`space`); prestige buttons use `variant="prestige"`; copy via `PrestigeMutedText`.
-- **Light mode activation** (#140): `ThemeProvider` follows persisted `tens_theme_preference` or OS
-  `prefers-color-scheme`; fixed `ThemeToggle` (top-right) switches and persists; reset does not
-  clear theme preference. Prestige overlay AA pairs added to `tokens.contrast.test.js`.
 - **Disk array layout (mobile)** — *(superseded by the continuous Foundry layout / always-one-row
   disk strip above)* previously wrapped disk circles below 40rem; they now always stay ten inline.
-- **Prestige progress bar**: sits above the **Ladder** page title (formerly Factory) with a
-  simplified `"N% to Prestige"` label only (no unbounded-unlock hint or next-PP detail).
-- **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
-  from the global corner overlay and Settings header.
+
+### Fixed
+- **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
+  Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
+  `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
+
+## [0.14.0] - 2026-08-22
 
 ### Added
 - **Era ascension UI** (#411): Settings → Era ascension shows Eras/Eons, eligibility, and a
@@ -1311,16 +1598,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   forward-fill via `mergeState`. Stamped saves skip heuristic checks. `mergeState` still
   forward-fills missing fields for compatible partial saves.
 
-### Removed
-- **Legacy save migration**: `storage.js` no longer transforms pre-schema saves on load (old tier
-  name/id remapping, `resources.Ones` → `base`, `intro.completed` → `mainGameUnlocked`, Storage
-  bank field renames, purchase-level derivation, autobuyer milestone backfill on load, etc.). Saves
-  must match the current schema; `mergeState` only merges missing fields from fresh defaults. Meta
-  no longer infers Supporter unlock from `unlockedSlotCount` alone — only `supporterUnlocked: true`.
-
 ### Changed
-
-- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
+- **Theme preference** — light/dark switching moved to Settings → Appearance only (removed the
+  fixed top-right toggle). **System** is the default and follows `prefers-color-scheme`.
+- **Nav icons** — Foundry uses 🔥 (was ⚙️, which read as Settings); Settings in the More menu uses ⚙️
+  (was 🎚️). Byte Foundry page title matches the nav icon.
+- **Light theme** — improved surface hierarchy (buttons/nav no longer blend into the page),
+  stronger card shadows, and peer-tab / milestone badges now use theme tokens instead of
+  dark-mode-only hardcoded colors.
+- **Disk read cache vs write cache** — Memory fills **read cache** only (whole blocks, smallest
+  size first). Empty disks fill from a full read cache via a **timed flush** (one cache-block
+  production duration; see #445) when no tier claim blocks that size, or from the size below via
+  **write cache** (10 timed segments + one flush equal to a target build duration). Write-cache
+  collect pauses while the source size has an active tier match; flush never pauses. Tier match
+  still gives full disks first claim over read cache.
+- **Disk vs Cache priority** — when a tier’s level cost matches a disk size, full disks redeem
+  immediately (manual or via autobuyer); cache blocks are neither clickable nor auto-used while a
+  matching full disk exists. Cache is fallback only. Smart autobuyers auto-release cache when no
+  disk is available.
+- **Byte Foundry header**: removed the instructional subtitle under the page title — the on-screen
+  controls and unlock flow carry the guidance instead.
+- **Clock Speed** — the global tickspeed upgrade (MainPage card + Guide) is renamed from "Tickspeed" and
+  now costs **Bytes** instead of Bits (10 B to enable, then another power of ten each level).
+- **Kilobytes production** — the `tier01` tier now produces Factory **Bytes** (`resources.bytes`) instead
+  of Bits; Bits remain the purchase currency for every tier.
+- **Milestones → Chapters** — replaced the "Coming soon…" placeholder with **Open Compute** (100 PP
+  Compute screen reveal), **Go Unbounded** (100-prestige latch), and **Ascend an Era**; added a
+  **Compute Autobuyer Unlocks** category (Era-gated, visible once Compute is revealed).
+- **Tier row hierarchy polish** (#138): tier rows use `theme.space`/`theme.motion` tokens for
+  gaps and padding; `OwnedText`/`ProductionText` are token-native spans (no `MutedText` inheritance);
+  production reads at `theme.color.text`/`font-weight: 500` vs muted owned count; tier symbol uses
+  `font.display`; controls row separates from stats via top margin; expanded details get a border-top
+  divider.
+- **Prestige surfaces token migration** (#139): `FullScreenOverlay`/`FullScreenCard` and
+  `TopPrestigeBar` use design tokens (`surfaceRaised`, `warn`, `text`/`textMuted`, type scale,
+  `shadow`/`radius`/`space`); prestige buttons use `variant="prestige"`; copy via `PrestigeMutedText`.
+- **Light mode activation** (#140): `ThemeProvider` follows persisted `tens_theme_preference` or OS
+  `prefers-color-scheme`; fixed `ThemeToggle` (top-right) switches and persists; reset does not
+  clear theme preference. Prestige overlay AA pairs added to `tokens.contrast.test.js`.
+- **Version display**: app version (`v{version}`) now appears **only on the Guide page** — removed
+  from the global corner overlay and Settings header.
 - **Compute (Flops) cumulative total** — hero displays **E = k + 10M + 100G + 1000T + … + 10⁹Q**
   (each tier's cumulative boost weighted by 10<sup>n</sup>); production multipliers stay unweighted.
 - **Compute (Flops) costs** — per-unit PP price now rises after every purchase on the triangular
@@ -1330,7 +1647,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`adaptSaveForCurrentSchema` → current-compatible state or failure); `storage.js` only persists and
   mergeState-forward-fills afterward. Legacy steps not yet reimplemented still discard +
   `IncompatibleSaveNotice`.
-
 - **Version badge**: app version sits as a fixed, low-emphasis corner overlay (no header row /
   dedicated vertical space on Factory). Settings / Guide may still mention version in page body.
 - **Tier ladder row**: owned count sits on the first line, right-aligned to the row center
@@ -1351,22 +1667,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
   (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk
   Path 2 is unchanged for Dependabot/small diffs; workflow-file PRs stay human-gated.
-- **Disk Cache** stays full as its steady state (except right after a block is released or a size
-  is newly unlocked). Memory refills Cache in whole-block transfers so Memory progress stays
-  visible between transfers; empty disks fill from Memory directly (Cache no longer pours into
-  disks). Cache’s only use remains manually funding matching main-game tier level blocks
-  (e.g. a 1 MB array → 8 × 1 Mb).
-- **Compute Boost duration** scales with merge tier again: **×2 per tier**
-  (`durationSeconds * 2^(tierIndex-1)`), alongside the existing **×4** effect step. Restores
-  “effect time doubles after merge” after #363/#364 had flattened duration.
-- **Sacrifice confirm** used an in-game `ConfirmDialog` (theme overlay) instead of
-  `window.confirm`, with a "future Cores cost more" warning shown only once Compute Cores were
-  unlocked — the confirm dialog itself was later removed entirely (see Memory ×2 above); Sacrifice
-  now fires directly on click.
-- **Disk build ladder** now offers every Byte power-of-ten size (1 KB → 10 KB → 100 KB → **1 MB** →
-  10 MB → …) instead of walking Kilobytes’ level-cost sequence (which skipped 1 MB). A 1 MB disk
-  redeems into Megabytes at level 1; building it costs 10 MB of Memory. Saves that already own
-  larger disks are migrated so the ladder does not rewind through newly inserted sizes.
+
+### Removed
+- **Legacy save migration**: `storage.js` no longer transforms pre-schema saves on load (old tier
+  name/id remapping, `resources.Ones` → `base`, `intro.completed` → `mainGameUnlocked`, Storage
+  bank field renames, purchase-level derivation, autobuyer milestone backfill on load, etc.). Saves
+  must match the current schema; `mergeState` only merges missing fields from fresh defaults. Meta
+  no longer infers Supporter unlock from `unlockedSlotCount` alone — only `supporterUnlocked: true`.
+
+## [0.13.0] - 2026-08-21
 
 ### Added
 - **Bandwidth via Compute tokens** (#323): when Invest’s bit cost exceeds Memory capacity, the
@@ -1405,26 +1714,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Settings holds About / Appearance notes, Supporter pack / save slots / museum / ops, and Reset;
   Milestones mirrors the MainPage Milestones
   view (Chapters always, prestige-gated unlock lists after a first Prestige).
-- A new **Byte Foundry** pre-game screen, shown before the main game on every fresh save: tap to generate bits, combine your first 8 into a permanent Byte generator that then produces bits passively, and grow two independent tracks each time your bit balance fills — sacrifice it all for 10x capacity, or invest in "double production" via its own independent cost ladder (1/10/100/1000/10000 Bytes, 2 claims per tier for the first three tiers and 1 for every tier after — no need to be full to claim). Once capacity reaches 1000 Bytes, a row of transfer blocks lets you convert bits into Kilobytes, each block costing whatever Kilobytes' own current per-level price is (8000 bits at first, growing from there): only the leftmost not-yet-transferred block is clickable at a time, and the very first transfer unlocks the main game immediately, but blocks stay on screen once spent, greying out to show they're consumed rather than disappearing. There's no cap on further transfers — clicking through blocks manually, or converting live, one block at a time, the instant enough Memory accumulates — the row simply mirrors the Kilobyte tier's own live purchase-block progress (8 blocks — 64,000 bits — at the start of a run, growing later), rolling over to a fresh block set the instant a level completes rather than ever running out. Replaces the old self-producing Bytes tier as the game's actual bootstrap.
-- A new **Quettabytes** tier (10^30) at the top of the tier ladder.
-- A new **Chapters** category on the Milestones page — "The first KiloByte", "Go Googol", and a "Coming soon…" placeholder for future content — now reachable before your first Prestige (previously the whole Milestones tab, and the Game tab alongside it, waited until after a first Prestige; only the Upgrades tab still does).
-- A new **Guide** page (`ℹ️ Guide` link beside the page title) holding every mechanic's evergreen explanation — Overview, Tickspeed, Speed Up, Overclock, Tier Autobuyers, and Milestones — that used to live inline on the main game page as click-to-expand disclosures. A "← Back to game" button returns without losing any game state.
-- Auto-Prestige Autobuyer: a new PP Upgrades purchase that automates re-leveling Auto-Prestige itself once activated, with its own pause/resume toggle.
-- A new **Milestones** view (a third page tab alongside Game/Upgrades) tracking every tier's autobuyer-unlock and tier-tickspeed-autobuyer-unlock progress in one place — which tiers are already unlocked, and how many more prestiges each locked tier still needs.
-- **Overclock**: a new soft-reset button, next to Speed Up below the tier list, requiring the last tier to reach level 10 (20 for the second activation, 30 for the third, …). Like Speed Up, it resets your tiers and resources (keeping unlocked autobuyers and Prestige Points) — but it also wipes Speed Up's own stacking production bonus back to zero, and in exchange permanently raises the (Money-funded) Tickspeed upgrade's own per-level rate by another 1 percentage point (1% → 2% → 3% → … per activation), rather than adding a separate multiplier — so its effect only shows up once you've bought at least one Tickspeed level. Unlike Speed Up's own bonus, Overclock's boost survives an ordinary Speed Up and only resets on a real Prestige.
 - **Storage**, its own labeled section on the Byte Foundry screen — hidden until Memory's own capacity reaches 10 KB (a later, more deliberate reveal than the Kilobyte-transfer row's own 8000-bit / 1000 Byte gate). A genuine storage medium, not a one-shot purchase. Building a Disk constructs a permanent, empty container, in KB/MB/GB/… sizes matching one of Kilobytes' own real per-level costs (the ladder skips sizes Kilobytes itself skips, like 1 MB) for a cost of 10x that size; building also takes real time — the array's very first disk takes 1 second per "KB" of its size, and every further disk added to that same array takes that same base time again, multiplied by its own position in the array (its 6th disk takes 6x as long as its 1st) — and every disk already in that array goes offline (no filling, releasing, or redeeming) for the whole rebuild. Once built, each array tops up its own small staging cache first — a handful of blocks together holding one disk's worth of bits — before any of it pours into an empty container, smallest array first; a full cache block can be released into your Bits balance by hand while some tier's current price matches that size. Redeem a full disk for 1 free unit of whichever tier's current per-unit price exactly matches its size right now — any tier, not just Kilobytes, with ties between coincidentally-equal-priced tiers always breaking toward whichever ranks earlier in the tier list — redeeming empties it again, ready to be auto-filled and redeemed once more, so nothing is ever single-use. Every size ever built shows as a row of up to 10 squares — currently full (clickable/highlighted once redeemable), built-but-empty (waiting on its cache), and not-yet-built — reading left to right as one progress bar. A full, redeemable disk auto-redeems whenever the matching tier's own autobuyer is active, and only once per Prestige cycle per size — further full disks of that size, or a matching tier with no active autobuyer, need a manual click instead. A disk already full when a Prestige fires stays full, giving the next run a head start. Redeeming a disk advances the matching tier's own current purchase-progress the same way a manual Buy would (visible on the Kilobyte transfer-block row below when it's the one redeemed into).
-- **Compute Cores/Compute Nodes**, a new automatic Byte Foundry mechanic shown in a small "Compute" status section, revealed once Memory's capacity reaches 1 MB: from then on, Memory automatically converts into 1 Compute Core every time it fills, flushing your entire current capacity (the same way Sacrifice for 10x Capacity spends a full balance) — so a higher capacity makes each future Core cost more, and it's up to you how far to keep growing capacity before letting this take over. Every 8 Compute Cores then automatically convert into 1 Compute Node. You can hold at most 10 of each — once maxed, production simply pauses (Memory stays full, nothing is lost) until you spend one down. Both counters are permanent, carried over every Prestige like the Byte generator and Storage itself.
 - **Compute Boost**: click any Compute tier row (Cores, Nodes, Clusters, … all the way up to Megacomputers — finally giving the top of the merge chain a use) to arm the 3 preset buttons — Burst, Standard, or Sustain — at that tier's own power level, then spend 1 token of that tier to temporarily multiply both Memory's own production (Byte Foundry) and Kilobytes' production (the main game) at once. At the base (Cores) tier: Burst is ×32 for 1 minute, Standard is ×8 for 10 minutes, Sustain is ×2 for 1 hour — each tier above that is 4× as powerful at the same base duration (e.g. Clusters, the 3rd tier, is 16× as powerful and lasts just as long). Only one boost can run at a time, and starting a new one is blocked entirely while one is already active — instead, a Stack button (next to Reclaim, both appearing once a boost is running) extends the current boost by spending another token of its own funding tier, up to 10 times. Reclaiming undoes the most recently added, still-unused stack, refunding a token and its duration. A status line on the Byte Foundry screen shows the active preset, multiplier, and time left; the main game page shows a matching read-only line while Kilobytes' own production is boosted.
-- The **Compute** page now also lets you merge Nodes further upward, entirely by your own choice — nothing here happens automatically. Merge 8 of one tier into 1 of the next, all the way up the full progression: Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer; each tier caps at 10 held, same as Cores/Nodes. This section of the page reveals once you've ever earned 8 Cores — genuinely *ever earned*, tracked separately from your current balance, so spending a Compute Boost before ever holding 8 at once still unlocks it once your lifetime total crosses 8. Every new counter is permanent, carried over every Prestige. Every entity name in Compute now drops the redundant word "Compute" (e.g. "Compute Core" → "Core") — "Compute" is the page's own name, not repeated for each entity on it.
-- The **Guide** page now also explains the Byte Foundry pre-game loop: Memory/tapping and the Byte generator, Sacrifice/Invest, Storage (Disks), and Compute (Cores/Nodes, the full merge chain, and Compute Boost) — previously the Guide covered only the main game.
-- **Auto-merge automation**: each of the 8 manual Compute merges (Node→Cluster through Supercomputer→Megacomputer) can now be permanently automated one tier at a time — sacrifice all 10 currently-held units of the tier that merge produces (e.g. 10 Clusters to automate Nodes→Clusters) to unlock it. Once unlocked, that merge also fires on its own whenever its input tier is completely full (10 held, not the manual button's own 8) — the manual button stays just as usable alongside it either way, so nothing is taken away, only added.
-- **Auto-claim for Cores**: claiming a Compute Core from a full Memory balance is now a manual "Claim Core" button on the Byte Foundry screen by default (previously fully automatic). Sacrificing 10 held Nodes permanently unlocks auto-claim — Memory→Core conversion then resumes automatically exactly as before, and the manual button disappears.
-- **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
-- **Idle disk liquidation**: once a storage pool's Data Lake is completely full (capacity maxed) and there's nothing else left to do in the Byte Foundry, that pool's LAST (largest) disk array's own idle output — full disks the Lake can no longer absorb — now automatically liquidates into Bits instead of sitting stranded, funding whatever Provision Disk needs next (typically the next pool's first disk). The lowest-priority action in the whole forced priority chain, ranked below even Lake Capacity doubling.
 
 ### Changed
-
-- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
+- **Disk Cache** stays full as its steady state (except right after a block is released or a size
+  is newly unlocked). Memory refills Cache in whole-block transfers so Memory progress stays
+  visible between transfers; empty disks fill from Memory directly (Cache no longer pours into
+  disks). Cache’s only use remains manually funding matching main-game tier level blocks
+  (e.g. a 1 MB array → 8 × 1 Mb).
+- **Compute Boost duration** scales with merge tier again: **×2 per tier**
+  (`durationSeconds * 2^(tierIndex-1)`), alongside the existing **×4** effect step. Restores
+  “effect time doubles after merge” after #363/#364 had flattened duration.
+- **Disk build ladder** now offers every Byte power-of-ten size (1 KB → 10 KB → 100 KB → **1 MB** →
+  10 MB → …) instead of walking Kilobytes’ level-cost sequence (which skipped 1 MB). A 1 MB disk
+  redeems into Megabytes at level 1; building it costs 10 MB of Memory. Saves that already own
+  larger disks are migrated so the ladder does not rewind through newly inserted sizes.
 - **Compute reserve-merge durations** are no longer a fixed 1–256 minute doubling table. Core→Node
   takes **10× live Core earn time** (Memory capacity ÷ Byte generator bits/sec, before Boost); each
   next boundary is ×10 the previous, or ×5 after that boundary’s sequential duration upgrade
@@ -1457,6 +1762,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `engine.js` constants. Stale docs (`README.md`, `docs/ECONOMY_REFERENCE.md`,
   `docs/MAINPAGE_REFERENCE.md`) that still described outdated cache-release / Compute Boost /
   README economy details were corrected to match current engine behavior.
+
+## [0.12.0] - 2026-08-20
+
+### Added
+- **Reserve-slot timed merging**: unlocking auto-merge for a Compute tier boundary (Core→Node included, now a full merge boundary of its own — same as every other tier) now adds a second, 8-slot reserve pool alongside the tier's normal 10 slots. Starting a merge (manually, once at least 8 tokens are held across both pools, or automatically once the normal slots are completely full) instantly moves 8 tokens into the reserve and begins a timed merge instead of completing instantly: 1 minute for Core→Node, doubling at every tier after (Cluster→Network takes 4 minutes, and so on up to 256 minutes for Supercomputer→Megacomputer). Before a tier's auto-merge is unlocked, merging stays the old instant, untimed action. An in-flight merge survives a Prestige uninterrupted. The Compute page now shows two rows per tier — the normal slots plus the tier's name/symbol on top, and either the old Merge/Unlock-auto-merge buttons or the clickable reserve slots (with a countdown) below, depending on whether that boundary is unlocked yet.
+
+### Changed
 - The Byte Foundry's Disk/Cache detail row now hides once the current size isn't redeemable by
   any tier right now — no more inert cache/disk squares with nothing to release or redeem toward.
   The Build button stays visible/usable regardless (building ahead of the curve is still a
@@ -1488,6 +1800,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - The Byte Foundry's per-size Storage summary chip now shows only the single currently-active/
   buildable disk size, not every size the ladder has ever reached — StoragePage's own fuller
   detail view still lists every size's full history.
+
+### Fixed
+- A Disk array's cache could get stuck fully staged, never converting into its disk, if a
+  *smaller* size's cache was still mid-fill and exhausted that tick's available Memory first —
+  `tickDiskAutoFill` picked one global smallest-still-needs-bits size each pass, so a larger size's
+  already-complete cache (pouring needs no further bits at all) never got its turn once a smaller,
+  unrelated size claimed the tick. It now visits every size in one ascending pass and always pours
+  an already-full cache regardless of other sizes' bit contention — a completed cache converts to
+  its disk (and starts refilling again) the instant it's ready, matching the cache's whole purpose.
+
+## [0.11.0] - 2026-08-19
+
+### Added
+- The **Compute** page now also lets you merge Nodes further upward, entirely by your own choice — nothing here happens automatically. Merge 8 of one tier into 1 of the next, all the way up the full progression: Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer; each tier caps at 10 held, same as Cores/Nodes. This section of the page reveals once you've ever earned 8 Cores — genuinely *ever earned*, tracked separately from your current balance, so spending a Compute Boost before ever holding 8 at once still unlocks it once your lifetime total crosses 8. Every new counter is permanent, carried over every Prestige. Every entity name in Compute now drops the redundant word "Compute" (e.g. "Compute Core" → "Core") — "Compute" is the page's own name, not repeated for each entity on it.
+- The **Guide** page now also explains the Byte Foundry pre-game loop: Memory/tapping and the Byte generator, Sacrifice/Invest, Storage (Disks), and Compute (Cores/Nodes, the full merge chain, and Compute Boost) — previously the Guide covered only the main game.
+- **Auto-merge automation**: each of the 8 manual Compute merges (Node→Cluster through Supercomputer→Megacomputer) can now be permanently automated one tier at a time — sacrifice all 10 currently-held units of the tier that merge produces (e.g. 10 Clusters to automate Nodes→Clusters) to unlock it. Once unlocked, that merge also fires on its own whenever its input tier is completely full (10 held, not the manual button's own 8) — the manual button stays just as usable alongside it either way, so nothing is taken away, only added.
+- **Auto-claim for Cores**: claiming a Compute Core from a full Memory balance is now a manual "Claim Core" button on the Byte Foundry screen by default (previously fully automatic). Sacrificing 10 held Nodes permanently unlocks auto-claim — Memory→Core conversion then resumes automatically exactly as before, and the manual button disappears.
+
+### Changed
+- The **⚙️ Byte Foundry** and **ℹ️ Guide** links on the main game page are now real buttons, matching the same nav-button styling every other page-to-page link in the app already uses (e.g. the Byte Foundry screen's own "🏦 Storage"/"⚡ Compute" buttons) — previously they were a small underlined text link, easy to miss.
+- The **Compute** page's layout: each entity's count now sits in the same row as its own action button(s) instead of a separate counters section at the top. Burst/Standard/Sustain now render as small buttons with icons, alongside the currently-available Core count in the same row, instead of full-size text-only buttons with the count shown elsewhere. The active Boost's status (effect, countdown, stack count, and the Reclaim control) now renders at the very top of the screen, right below the header, instead of below the preset buttons — so it stays visible no matter what else is on screen.
+- **Compute Boost durations**: Burst is now 1 minute (was 10 seconds), Standard is now 10 minutes (was 1 minute), and Sustain is now 1 hour (was 10 minutes) — the ×16/×4/×2 multipliers are unchanged.
+- Once the main game (Kilobytes) is reached, the standalone Tap button on the Byte Foundry screen is removed — Memory's own tile becomes the tap target instead, with the identical effect. Before that point, tapping still works exactly as before via the standalone button.
+- Reaching the main game no longer requires filling Memory all the way to a full block — clicking the first transfer block (converting Memory into a Kilobyte) now unlocks it immediately. Further block clicks, or the existing "Memory fills to a full block → auto-transfer" convenience, keep working indefinitely after that — there's no per-cycle cap. The transfer row mirrors the Kilobyte tier's own live purchase-block progress, so it rolls over to a fresh, empty block set for the next level the instant one completes, rather than ever going fully consumed. Each block's own cost now tracks Kilobytes' own current per-unit level cost (1 KB at a fresh cycle's starting level, 10 KB once Kilobytes reaches level 2, and so on) instead of staying pinned at a flat 1 KB forever, so a transfer's real value never falls behind what a level actually costs; a Disk (see Added, above) is likewise redeemable only once its size exactly matches a matching tier's current cost, not merely at or below it.
+- The Byte Foundry's tap button now always renders last on the page, below every other action (Combine/Sacrifice/Invest/Storage/transfer blocks) instead of near the top, since once passive production starts it's a secondary/backup action rather than the primary loop — it stays full width and just as tappable either way, and deliberately shows no fill progress of its own, since Memory's own tile already shows the identical bits/capacity fill. The "← Back to game" exit (once the main game is unlocked) now sits beside the page title instead of at the bottom of the page. "Sacrifice for 10x Capacity" and "Invest for Double Production" now sit side by side (each taking an equal share of the row) instead of stacked, with shortened visible labels ("💥 Memory ×10" and "⚡ Bandwidth ×2") in place of the full sentence, each with its own cost on a second line below (what Sacrifice will drain — the current capacity — and Invest's own cost, respectively) instead of crammed inline in parentheses — their full descriptions still reach assistive tech via `aria-label`/`title`. The production-rate readout below 1 Byte/sec now shows an 8-block segmented bar alongside the "+N bits/sec" text; at/above 1 Byte/sec it switches to a "+N Byte(s)/sec" label instead. Every other Byte Foundry action button (Combine/Sacrifice/Invest/Build Disk, and the active transfer block) shows its own fill progress toward affordability, matching the main game's Buy/Upgrade button convention. The bit balance is labeled "Memory" on its own filling tile, denominated in whatever unit actually fits (raw bits, then B/KB/MB/…/QB by 1000 each step) instead of staying in raw bits until a Byte generator exists, then Bytes forever after. Every Memory-denominated cost shown on the page (Sacrifice's cost, Invest's cost, Storage's build cost) now renders in whichever B/KB/MB/…/QB unit best fits that specific amount, the same scale Memory's own balance uses, instead of a fixed unit (Invest was always Bytes), no unit at all (Storage's build cost), or no cost shown at all (Sacrifice). The transfer-block section label now reads "Transfer to Main Game" instead of "Transfer to Kilobytes", and the Tap button is slightly taller (aspect ratio 5:2 instead of 5:3).
+- A short absence of 10 minutes or less now catches up at full (100%) speed instead of the reduced offline rate, as if the screen had stayed on the whole time, and no longer shows the "Welcome back!" notice — there's nothing to report for that short a gap. Only once an absence exceeds 10 minutes does the reduced-speed catch-up and its notice kick in, same as before.
+- The Byte Foundry's five recurring "upgrade" actions now follow a forced priority order — Disk Fill > Bandwidth > Disk Build > Compute > Memory — so whenever a higher-priority action is currently available, every lower one is disabled (button and reducer alike), regardless of the two actions' relative cost. This generalizes what Sacrifice for 10x Capacity already did (offered only once Combine/Invest/a buildable Disk were all impossible) into a full five-item chain, adding two new blocking conditions to Sacrifice's own gate along the way (a redeemable Disk Fill, an activatable Compute Boost).
+- **Compute** moved off the Byte Foundry screen onto its own dedicated screen (reached via a new "⚡ Compute" nav button, shown once revealed) — always enabled once revealed (a permanent, voluntarily-revisitable screen, same as the existing "⚙️ Byte Foundry" link), so a player can check on banked Cores/Nodes even when nothing there is currently actionable; only the individual Boost activation buttons inside are gated by the new forced priority order.
+- **Storage** split across two places: starting the next Disk's build stays on the Byte Foundry screen itself (its own core-loop action, alongside Sacrifice/Invest), now paired with a brief per-size summary (e.g. "10 KB 3/8" — 8 disks of 10 KB ever built, 3 currently full) for an at-a-glance view of your holdings; the fuller per-size detail (cache blocks and full/empty/not-built squares) and redeeming a full disk move to a new dedicated **Storage** screen, reached via a "🏦 Storage" nav button shown once revealed and always enabled regardless of what's currently actionable there. The Build button and the individual cache/redeem controls stay gated by the new forced priority order (or by that specific size's array being mid-build).
+- **Storage Banks renamed to Disks** throughout, with several genuinely new mechanics layered on: building one now takes real time (not just Bits) — the array's first disk takes 1 second per "KB" of its size, and every further disk added to the same array takes that base time again, scaled by its own position in the array — during which every disk already in that array goes offline; each array now stages Memory through its own small cache (a handful of blocks, together holding one disk's worth of bits, a full block manually releasable back into Memory) before any of it can reach an empty container; and a full disk now redeems against whichever main-game tier's current price matches its size, not just Kilobytes — with ties between coincidentally-equal-priced tiers always breaking toward whichever ranks earlier in the tier list, and auto-redeeming only once that matching tier's own autobuyer is active (replacing the old standalone, never-exposed-in-UI auto-redeem toggle).
+- MainPage's main balance display now switches from Bits to whole Bytes once it reaches 8000 Bits (1000 Bytes) — every other Bits figure on the page (costs, production rates, the Prestige-threshold progress text) is unaffected and keeps reading in Bits.
+
+### Fixed
+- The Byte Foundry's Disk size labels (the Build button, and each size's row of full/empty/not-built squares) briefly showed sizes in the wrong unit scale (e.g. "125 B" for what should read "1 KB") after a rename mixed up two different formatting scales; a related transfer-block tooltip and the "smallest disk always auto-redeems" check had similar mix-ups. All now consistently use the right scale for what they're displaying.
+- A Disk's size/build cost were computed in raw bits, not real Bytes — a "1 KB" disk needed only 1000 bits to fill (a "Kilobit," not a real 1000-Byte Kilobyte) and cost 10,000 bits to build, rather than the real 8000 bits/80,000 bits a genuine Kilobyte scale requires. Disk sizes now use the exact same real-Byte scale Memory's own balance and the Kilobyte transfer blocks already did, so a "1 KB" Disk now means an actual Kilobyte everywhere it's shown or spent.
+
+## [0.10.0] - 2026-08-18
+
+### Added
+- A new **Byte Foundry** pre-game screen, shown before the main game on every fresh save: tap to generate bits, combine your first 8 into a permanent Byte generator that then produces bits passively, and grow two independent tracks each time your bit balance fills — sacrifice it all for 10x capacity, or invest in "double production" via its own independent cost ladder (1/10/100/1000/10000 Bytes, 2 claims per tier for the first three tiers and 1 for every tier after — no need to be full to claim). Once capacity reaches 1000 Bytes, a row of transfer blocks lets you convert bits into Kilobytes, each block costing whatever Kilobytes' own current per-level price is (8000 bits at first, growing from there): only the leftmost not-yet-transferred block is clickable at a time, and the very first transfer unlocks the main game immediately, but blocks stay on screen once spent, greying out to show they're consumed rather than disappearing. There's no cap on further transfers — clicking through blocks manually, or converting live, one block at a time, the instant enough Memory accumulates — the row simply mirrors the Kilobyte tier's own live purchase-block progress (8 blocks — 64,000 bits — at the start of a run, growing later), rolling over to a fresh block set the instant a level completes rather than ever running out. Replaces the old self-producing Bytes tier as the game's actual bootstrap.
+- **Overclock**: a new soft-reset button, next to Speed Up below the tier list, requiring the last tier to reach level 10 (20 for the second activation, 30 for the third, …). Like Speed Up, it resets your tiers and resources (keeping unlocked autobuyers and Prestige Points) — but it also wipes Speed Up's own stacking production bonus back to zero, and in exchange permanently raises the (Money-funded) Tickspeed upgrade's own per-level rate by another 1 percentage point (1% → 2% → 3% → … per activation), rather than adding a separate multiplier — so its effect only shows up once you've bought at least one Tickspeed level. Unlike Speed Up's own bonus, Overclock's boost survives an ordinary Speed Up and only resets on a real Prestige.
+- **Compute Cores/Compute Nodes**, a new automatic Byte Foundry mechanic shown in a small "Compute" status section, revealed once Memory's capacity reaches 1 MB: from then on, Memory automatically converts into 1 Compute Core every time it fills, flushing your entire current capacity (the same way Sacrifice for 10x Capacity spends a full balance) — so a higher capacity makes each future Core cost more, and it's up to you how far to keep growing capacity before letting this take over. Every 8 Compute Cores then automatically convert into 1 Compute Node. You can hold at most 10 of each — once maxed, production simply pauses (Memory stays full, nothing is lost) until you spend one down. Both counters are permanent, carried over every Prestige like the Byte generator and Storage itself.
+
+### Changed
 - **Overclock**'s requirement and reward both reworked: instead of a fixed +10-level-per-activation
   ladder (level 10, 20, 30, …), the last tier now just needs to reach one more level than the last
   claim (level 2 for the first claim, 3, 4, … — never level 1, so the first claim of a cycle always
@@ -1501,94 +1857,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Speed Up**'s first activation now requires the last tier to reach level 5 instead of level 1;
   each subsequent activation still needs exactly one more level than the last.
 - Every tier's per-level cost now scales along a Fibonacci-driven exponent sequence (1, 2, 3, 5, 8, 13, … per level, versus a flatter triangular-number sequence before) — costs grow the same way through level 2, then noticeably faster from level 3 on, and skip specific round numbers along the way (e.g. a level costing exactly 1,000,000× `baseCost` never occurs — the sequence jumps straight from 100,000× to 10,000,000×).
-- **Sacrifice for 10x Capacity** is now offered only once every other currently-possible Byte Foundry action has been taken first — Combine into a Byte, Invest for Double Production, and building a Disk (once revealed) all block it while any of them is still affordable. Since Invest's own cost ladder tracks capacity's own growth, claiming the current Invest tier is now effectively a required click before Sacrificing again most cycles. (Clicking it once asked for confirmation first, spelling out that it's permanent and made future Cores cost more — see Memory ×2 above for the current, dialog-free behavior.)
-- The **⚙️ Byte Foundry** and **ℹ️ Guide** links on the main game page are now real buttons, matching the same nav-button styling every other page-to-page link in the app already uses (e.g. the Byte Foundry screen's own "🏦 Storage"/"⚡ Compute" buttons) — previously they were a small underlined text link, easy to miss.
-- The **Compute** page's layout: each entity's count now sits in the same row as its own action button(s) instead of a separate counters section at the top. Burst/Standard/Sustain now render as small buttons with icons, alongside the currently-available Core count in the same row, instead of full-size text-only buttons with the count shown elsewhere. The active Boost's status (effect, countdown, stack count, and the Reclaim control) now renders at the very top of the screen, right below the header, instead of below the preset buttons — so it stays visible no matter what else is on screen.
-- **Compute Boost durations**: Burst is now 1 minute (was 10 seconds), Standard is now 10 minutes (was 1 minute), and Sustain is now 1 hour (was 10 minutes) — the ×16/×4/×2 multipliers are unchanged.
-- Once the main game (Kilobytes) is reached, the standalone Tap button on the Byte Foundry screen is removed — Memory's own tile becomes the tap target instead, with the identical effect. Before that point, tapping still works exactly as before via the standalone button.
-- The Byte Foundry no longer disappears once the main game is unlocked — a new "⚙️ Byte Foundry" link beside the page title reopens it at any time, and it stays every bit as interactive there as it is on the mandatory gate (Tap/Sacrifice/Invest/Convert never stop working — there's no per-cycle cap on transfers), with its own "← Back to game" exit. It's still a mandatory gate whenever a fresh Kilobyte run is needed (before your very first Kilobytes, and after every Prestige), just no longer a one-time screen you can never see again once past it.
-- The Byte Foundry pre-game screen is no longer a one-time bootstrap — every real Prestige now sends you back through it before your next run begins, resetting your "Memory" (bit balance) to 0 and reopening it as a gate. Your Byte generator itself — capacity, whether it exists, its speed, its production rate, and its "Invest for Double Production" cost-ladder progress — is now **permanent** and carries over from cycle to cycle, so every pit-stop after the first is fast, not a full replay. Speed Up and Overclock (the smaller, more frequent soft-resets) are unaffected and still leave the whole thing, Memory included, untouched. A full Reset restarts everything from true scratch, generator included.
-- Reaching the main game no longer requires filling Memory all the way to a full block — clicking the first transfer block (converting Memory into a Kilobyte) now unlocks it immediately. Further block clicks, or the existing "Memory fills to a full block → auto-transfer" convenience, keep working indefinitely after that — there's no per-cycle cap. The transfer row mirrors the Kilobyte tier's own live purchase-block progress, so it rolls over to a fresh, empty block set for the next level the instant one completes, rather than ever going fully consumed. Each block's own cost now tracks Kilobytes' own current per-unit level cost (1 KB at a fresh cycle's starting level, 10 KB once Kilobytes reaches level 2, and so on) instead of staying pinned at a flat 1 KB forever, so a transfer's real value never falls behind what a level actually costs; a Disk (see Added, above) is likewise redeemable only once its size exactly matches a matching tier's current cost, not merely at or below it.
 - Tapping now credits "one second's worth" at the Byte's current production rate instead of a flat 1 bit, so it scales right along with "Invest for Double Production" — previously a tap stayed stuck at 1 no matter how fast your Byte had gotten. The Byte's production now runs on an explicit 1-second base tickspeed, matching how tiers already work: "Invest for Double Production" first speeds up delivery (until the tick loop's own real-time resolution), then grows the batch size instead. It now runs on its own independent cost ladder (1/10/100/1000/10000 Bytes, …) entirely unrelated to your current capacity — so a claim never requires a full balance, only enough bits to cover that tier's own cost — and grants 2 claims for the first three tiers, then 1 claim per tier from there on, before advancing.
-- The Byte Foundry's tap button now always renders last on the page, below every other action (Combine/Sacrifice/Invest/Storage/transfer blocks) instead of near the top, since once passive production starts it's a secondary/backup action rather than the primary loop — it stays full width and just as tappable either way, and deliberately shows no fill progress of its own, since Memory's own tile already shows the identical bits/capacity fill. The "← Back to game" exit (once the main game is unlocked) now sits beside the page title instead of at the bottom of the page. "Sacrifice for 10x Capacity" and "Invest for Double Production" now sit side by side (each taking an equal share of the row) instead of stacked, with shortened visible labels ("💥 Memory ×10" and "⚡ Bandwidth ×2") in place of the full sentence, each with its own cost on a second line below (what Sacrifice will drain — the current capacity — and Invest's own cost, respectively) instead of crammed inline in parentheses — their full descriptions still reach assistive tech via `aria-label`/`title`. The production-rate readout below 1 Byte/sec now shows an 8-block segmented bar alongside the "+N bits/sec" text; at/above 1 Byte/sec it switches to a "+N Byte(s)/sec" label instead. Every other Byte Foundry action button (Combine/Sacrifice/Invest/Build Disk, and the active transfer block) shows its own fill progress toward affordability, matching the main game's Buy/Upgrade button convention. The bit balance is labeled "Memory" on its own filling tile, denominated in whatever unit actually fits (raw bits, then B/KB/MB/…/QB by 1000 each step) instead of staying in raw bits until a Byte generator exists, then Bytes forever after. Every Memory-denominated cost shown on the page (Sacrifice's cost, Invest's cost, Storage's build cost) now renders in whichever B/KB/MB/…/QB unit best fits that specific amount, the same scale Memory's own balance uses, instead of a fixed unit (Invest was always Bytes), no unit at all (Storage's build cost), or no cost shown at all (Sacrifice). The transfer-block section label now reads "Transfer to Main Game" instead of "Transfer to Kilobytes", and the Tap button is slightly taller (aspect ratio 5:2 instead of 5:3).
+
+### Fixed
+- Offline progress often silently failed to apply after being away for hours, especially on mobile: it was only ever computed once, at the moment the app's React tree first mounted, but a backgrounded or suspended tab/PWA (the common case — mobile browsers routinely pause a background page's timers without ever tearing the page down) never remounts, so that one-time check never got a chance to re-run on resume — the game just silently picked up ticking from wherever it left off, with no catch-up and no "Welcome back!" notice. The live tick loop now also tracks real time between its own ticks and, on any gap far larger than its normal cadence (whether noticed by its timer or immediately on the page becoming visible again), replays that gap as offline progress the same way a fresh page load already did.
+
+## [0.9.2] - 2026-08-12
+
+### Changed
+- The Byte Foundry no longer disappears once the main game is unlocked — a new "⚙️ Byte Foundry" link beside the page title reopens it at any time, and it stays every bit as interactive there as it is on the mandatory gate (Tap/Sacrifice/Invest/Convert never stop working — there's no per-cycle cap on transfers), with its own "← Back to game" exit. It's still a mandatory gate whenever a fresh Kilobyte run is needed (before your very first Kilobytes, and after every Prestige), just no longer a one-time screen you can never see again once past it.
+- Offline progress now runs at 50% speed (previously 10%) — time away from the game catches up faster on return. Applies to the entire game, main-game tiers and the Byte Foundry alike, same as before.
+
+## [0.9.1] - 2026-08-11
+
+### Changed
+- The Byte Foundry pre-game screen is no longer a one-time bootstrap — every real Prestige now sends you back through it before your next run begins, resetting your "Memory" (bit balance) to 0 and reopening it as a gate. Your Byte generator itself — capacity, whether it exists, its speed, its production rate, and its "Invest for Double Production" cost-ladder progress — is now **permanent** and carries over from cycle to cycle, so every pit-stop after the first is fast, not a full replay. Speed Up and Overclock (the smaller, more frequent soft-resets) are unaffected and still leave the whole thing, Memory included, untouched. A full Reset restarts everything from true scratch, generator included.
 - Revealing the next tier now requires the tier below it to have fully purchased **two** levels (previously one) — e.g. Megabytes now needs Kilobytes at level 3 (16 owned, not 8).
+
+### Fixed
+- `ButtonContent` rendered a stray comma into any button label that mixed literal text with an embedded `{expression}` (e.g. "Invest for Double Production ({cost} B)" rendered as "...(,1, B)") — JSX hands such mixed content to `children` as an array of segments rather than one string, and the old `String(children)` call ran `Array.prototype.toString()` on it, which joins with a bare comma. `ButtonContent` now joins an array of children with `''` before splitting into icon/label.
+- The offline-progress "Welcome back!" notice only ever rendered on the main game page — a player who returned after being away and landed on (or was still gated to) the Byte Foundry screen got no acknowledgment that time had passed, even though the Byte generator's passive production and auto-transfer-into-Kilobytes both already caught up correctly in the background. The notice (extracted into a shared `OfflineProgressNotice` component) now also shows on the Byte Foundry screen.
+- The Byte Foundry's Memory balance rounded its Bytes-unit display (e.g. "1 KB") to the nearest of up to 3 decimal places, which could show a unit as complete one tick before it actually was (999.9 of 1000 bits rounding up to "1 KB"). It now floors instead, matching `formatCurrency`'s existing never-overstate convention for the money display.
+
+## [0.9.0] - 2026-08-10
+
+### Added
+- A new **Quettabytes** tier (10^30) at the top of the tier ladder.
+- A new **Chapters** category on the Milestones page — "The first KiloByte", "Go Googol", and a "Coming soon…" placeholder for future content — now reachable before your first Prestige (previously the whole Milestones tab, and the Game tab alongside it, waited until after a first Prestige; only the Upgrades tab still does).
+
+### Changed
 - Bytes is no longer a purchasable tier — it's produced entirely by the new Byte Foundry pre-game screen instead (see Added, above). Every remaining tier shifted down one slot to fill the vacated position: Kilobytes is now the first (cheapest) tier, through Ronnabytes as the second-to-last, with the new Quettabytes tier appended at the top.
 - Prestige now requires 1 Googol **Bytes** (8×10¹⁰⁰ Bits, since a Byte is 8 Bits) instead of 1 Googol Bits (1×10¹⁰⁰) — an 8x higher threshold.
+
+## [0.8.1] - 2026-08-08
+
+### Changed
 - The main game page no longer shows any explanatory prose about how a mechanic works (the Tickspeed/Speed Up/Overclock cards' click-to-expand explanations, the Tier Autobuyers category's "How these controls work" panel, the page header's tagline) — that content moved to the new Guide page (see Added, above). Headings with nothing left to show (Speed Up, the page title, the Tier Autobuyers category) are now plain text. Any number that reflects the current run's live state (like the Tickspeed card's current level/bonus, Overclock's current per-level rate, or the Milestones page's Tier Tickspeed Autobuyers start/step pattern) stays on the game page as before, collapsed by default behind its own heading — click the heading to reveal it, same convention the Milestones page's category headings already used; once revealed, clicking either the heading again or the revealed line itself collapses it back.
+
+## [0.8.0] - 2026-08-07
+
+### Added
+- A new **Guide** page (`ℹ️ Guide` link beside the page title) holding every mechanic's evergreen explanation — Overview, Tickspeed, Speed Up, Overclock, Tier Autobuyers, and Milestones — that used to live inline on the main game page as click-to-expand disclosures. A "← Back to game" button returns without losing any game state.
+
+### Changed
 - Below the mobile breakpoint (~640px), the Speed Up and Overclock cards now stack vertically (Speed Up above Overclock) instead of staying side by side — easier to tell the two soft-reset controls apart at a glance on a narrow screen. Unchanged above that width.
 - Removed the compact tickspeed-bonus badge (`⚙ +N%`/`⚙ 2x`) and the autobuyer active/paused icon (🤖) from each tier's Game view row — the row now shows just the tier name plus live production/owned figures and the two action buttons. Both numbers are still available: the cumulative tickspeed bonus in the row's own Details disclosure (click the tier name) and the tickspeed button's tooltip, and autobuyer active/paused status (still toggleable, not just read-only) on the PP Upgrades page's Tier Autobuyers category.
+- The Global Tickspeed card now renders near the top of the Game view, above the tier list, instead of as the last item after it. The "Global Tickspeed Multiplier" card/label was also renamed to the more concise "Tickspeed" throughout (via an intermediate "Global Tickspeed"). The Speed Up card stays below the tier list, now side by side with the new Overclock card (wrapping to stacked on narrow viewports).
+
+### Fixed
+- The Global Tickspeed/Speed Up card pair wrapped to stacked on ordinary phone widths (e.g. a 393px-wide iPhone 14) instead of staying side by side as intended — their shared row's per-card floor width (`flex-basis: 14rem`) was too high for real mobile viewports. Lowered to `8rem`, which keeps the pair side by side down to roughly 300px of page content width (below any real phone) while still wrapping on genuinely tiny viewports.
+- The `Button` component's `variant` prop (added in the tier row's Buy/tickspeed/XP-consume button migration) was leaking onto the rendered `<button>` DOM node as a raw, invalid HTML attribute, triggering a styled-components "unknown prop" console warning on every affected button. `variant` is now filtered from the DOM via `shouldForwardProp`, matching how every other internal-only prop is handled.
+
+## [0.7.1] - 2026-08-06
+
+### Changed
+- The PP Upgrades page's "Tier Autobuyers" category now shows one shared, collapsible "How these controls work" panel above the per-tier rows (unlock timing, pause/resume, and what Smart does) instead of repeating that explanation in every badge/button's hover tooltip, which are now removed. Each tier's row is also reordered — the tier tickspeed autobuyer cluster now comes before the unit-buying autobuyer cluster, with Smart grouped alongside the unit-buying autobuyer control it modifies — to match the same badge order already used on the tier's Game-view row, making the two views easier to correlate at a glance.
+- Tier row text now sizes from the shared `theme.type.scale` tokens instead of hand-tuned relative sizes, giving the tier name a clearer size/weight step above the production/owned/tickspeed-badge text and the two buttons below it; the Buy button is also bold now (vs. the tickspeed button's regular weight) so it reads as the more prominent of the two controls. Layout, spacing, and colors are unchanged.
+
+## [0.7.0] - 2026-08-05
+
+### Added
+- A new **Milestones** view (a third page tab alongside Game/Upgrades) tracking every tier's autobuyer-unlock and tier-tickspeed-autobuyer-unlock progress in one place — which tiers are already unlocked, and how many more prestiges each locked tier still needs.
+
+### Changed
 - Tier autobuyer unlock and the tier tickspeed autobuyer are no longer Prestige Point purchases — each unlocks automatically once you've prestiged enough times: the unit-buying autobuyer unlocks after the 1st prestige for the first tier, the 2nd for the second tier, … the 10th for the last tier; its own tickspeed autobuyer unlocks later, starting at the 12th prestige for the first tier and every 2 prestiges after that per subsequent tier (up to the 30th for the last tier). The PP Upgrades page's "Tier Autobuyers" category shows a locked tier as a `🔒 Prestige N` badge instead of a Buy button while its milestone is still pending. Every other PP Upgrades purchase (Smart, Auto Speed Up, the Tickspeed Autobuyer, Auto-Prestige, Auto-Prestige Autobuyer, the production speed bonus) is unaffected and still costs PP as before.
 - The Milestones page's two category descriptions are now collapsed by default (click the category heading to expand), matching the collapsed-by-default convention every other card description in the app already follows, and their text is shorter.
 - Trimmed redundant tooltip/label text on the milestone badges (locked/unlocked tier autobuyer and tier tickspeed autobuyer indicators, on both the PP Upgrades and Milestones pages) — a badge no longer restates the same milestone number its own visible text already shows; a locked badge's tooltip now surfaces only the one thing it wasn't already showing (your current prestige count), and an already-unlocked badge has no tooltip at all.
-- The PP Upgrades page's "Tier Autobuyers" category now shows one shared, collapsible "How these controls work" panel above the per-tier rows (unlock timing, pause/resume, and what Smart does) instead of repeating that explanation in every badge/button's hover tooltip, which are now removed. Each tier's row is also reordered — the tier tickspeed autobuyer cluster now comes before the unit-buying autobuyer cluster, with Smart grouped alongside the unit-buying autobuyer control it modifies — to match the same badge order already used on the tier's Game-view row, making the two views easier to correlate at a glance.
-- Speed Up's stacking production multiplier (`speedUpCount`) now resets to 0 on Prestige instead of carrying over permanently — it must be rebuilt within each Prestige cycle. The Auto Speed Up automation toggle itself is unaffected and still carries over.
+- Removed the bottom Prestige panel (Game view) entirely — the Prestige Points display at the top of the page already doubles as the Prestige button once available, so once the bottom panel's own button was removed as redundant, the panel had nothing left to offer beyond what's already shown in the sticky PP display and the PP Upgrades page.
+
+### Fixed
+- On iOS home-screen installs (the app's `black-translucent` status bar draws content edge-to-edge), the page's scrollable area didn't clear the home-indicator safe zone at the bottom, so on a tall tier list the last row's Buy button could be scrolled to but never fully into reach — not just visually clipped, unclickable. `index.html`'s viewport meta now sets `viewport-fit=cover`, and the page content plus every fixed/sticky overlay (offline-progress notice, sticky balances bar, the full-screen and top Prestige banners) now pad for `env(safe-area-inset-*)` so scrolling reaches the full page and none of that chrome sits under the status bar or home indicator.
+- Light theme's `good` token (`#12a150`) only reached 3.37:1 contrast against the `surface`/`surfaceSunken` backgrounds it renders text on — below WCAG AA's 4.5:1 threshold — caught by a new automated contrast audit (`src/theme/tokens.contrast.test.js`). Darkened to `#0a6b30` (6.65:1 / 5.87:1). No visible effect yet since light mode isn't activated until #140.
+
+## [0.6.2] - 2026-08-04
+
+### Security
+- Pinned the `vite-plugin-pwa` build toolchain's `workbox-build > ajv > fast-uri` dependency to `^3.1.5` via a `resolutions` override, fixing a high-severity host-confusion advisory (`yarn audit`) in the `3.1.4` version it previously resolved to. Build-time only — no runtime/user-facing impact.
+
+## [0.6.1] - 2026-07-29
+
+### Fixed
+- Speed Up left `prestige.highestMilestone` (the money-exponent watermark XP is earned against) untouched instead of resetting it like Prestige already did, so a run after at least one Speed Up earned far less XP than it should have — money had to silently re-climb past the previous run's peak exponent before any new XP accrued. `highestMilestone` now resets on Speed Up too, so a fresh run's unspent XP always matches its current money exponent.
+
+## [0.6.0] - 2026-07-28
+
+### Added
+- Auto-Prestige Autobuyer: a new PP Upgrades purchase that automates re-leveling Auto-Prestige itself once activated, with its own pause/resume toggle.
+
+### Changed
 - The Buy button's visible block-progress text drops the `Lv.` prefix and now shows `{progress}+{affordable}/{blockSize}` (e.g. `5+3/8`) instead of `Lv.{level} ({progress}/{blockSize})`.
 - Once the last tier's XP-funded tickspeed is unlocked, its existing tier tickspeed autobuyer (if bought) now automatically consumes XP each tick instead of sitting inert — no manual click needed. This repurposes the existing toggle: a player who bought it earlier for its original Money-funded purpose will start getting automatic, periodic resets of every other tier's progress once the last tier crosses the XP-unlock threshold.
 - Removed the per-tier unit-autobuyer pause/resume button from the Game view tier rows to reduce clutter — the row still shows a read-only status badge, and the actual pause/resume control now lives on the PP Upgrades page's Tier Autobuyers category alongside the tier tickspeed autobuyer's own toggle.
 - Renamed the tier tickspeed autobuyer's PP Upgrades purchase button from the ambiguous "Auto for {cost} PP" to "Auto-Tickspeed for {cost} PP".
 - Every automation status badge (unit autobuyer, tier tickspeed autobuyer, global tickspeed autobuyer, Auto Speed Up, Auto-Prestige Autobuyer, Auto-Prestige) now shows as a single icon — dimmed while paused, full opacity while active — instead of spelling out the word "Active"/"Paused"; the full status still reaches assistive tech via `aria-label`/`title`.
 - Any production-speed bonus that reaches or exceeds +100% (tier/global tickspeed bonus, Prestige's production speed bonus) now displays as an "Nx" multiplier (e.g. `2x`) instead of a percentage, matching Speed Up's own multiplier convention; bonuses under +100% still show as a percentage.
-- Removed the bottom Prestige panel (Game view) entirely — the Prestige Points display at the top of the page already doubles as the Prestige button once available, so once the bottom panel's own button was removed as redundant, the panel had nothing left to offer beyond what's already shown in the sticky PP display and the PP Upgrades page.
 - A tier row's expanded Details, and every other expandable card description (Header, Global Tickspeed Multiplier, Speed Up, Prestige, the PP Upgrades "full smart autobuyer" notice), now automatically collapses once it scrolls fully out of the viewport.
 - The Money balance's hero figure now renders in the body font (Inter) instead of the display font (Space Grotesk) — its large size/elevation is unchanged, only the typeface.
-- Tier row text now sizes from the shared `theme.type.scale` tokens instead of hand-tuned relative sizes, giving the tier name a clearer size/weight step above the production/owned/tickspeed-badge text and the two buttons below it; the Buy button is also bold now (vs. the tickspeed button's regular weight) so it reads as the more prominent of the two controls. Layout, spacing, and colors are unchanged.
-- The Global Tickspeed card now renders near the top of the Game view, above the tier list, instead of as the last item after it. The "Global Tickspeed Multiplier" card/label was also renamed to the more concise "Tickspeed" throughout (via an intermediate "Global Tickspeed"). The Speed Up card stays below the tier list, now side by side with the new Overclock card (wrapping to stacked on narrow viewports).
-- Offline progress now runs at 50% speed (previously 10%) — time away from the game catches up faster on return. Applies to the entire game, main-game tiers and the Byte Foundry alike, same as before.
-- A short absence of 10 minutes or less now catches up at full (100%) speed instead of the reduced offline rate, as if the screen had stayed on the whole time, and no longer shows the "Welcome back!" notice — there's nothing to report for that short a gap. Only once an absence exceeds 10 minutes does the reduced-speed catch-up and its notice kick in, same as before.
-- The Byte Foundry's five recurring "upgrade" actions now follow a forced priority order — Disk Fill > Bandwidth > Disk Build > Compute > Memory — so whenever a higher-priority action is currently available, every lower one is disabled (button and reducer alike), regardless of the two actions' relative cost. This generalizes what Sacrifice for 10x Capacity already did (offered only once Combine/Invest/a buildable Disk were all impossible) into a full five-item chain, adding two new blocking conditions to Sacrifice's own gate along the way (a redeemable Disk Fill, an activatable Compute Boost).
-- **Compute** moved off the Byte Foundry screen onto its own dedicated screen (reached via a new "⚡ Compute" nav button, shown once revealed) — always enabled once revealed (a permanent, voluntarily-revisitable screen, same as the existing "⚙️ Byte Foundry" link), so a player can check on banked Cores/Nodes even when nothing there is currently actionable; only the individual Boost activation buttons inside are gated by the new forced priority order.
-- **Storage** split across two places: starting the next Disk's build stays on the Byte Foundry screen itself (its own core-loop action, alongside Sacrifice/Invest), now paired with a brief per-size summary (e.g. "10 KB 3/8" — 8 disks of 10 KB ever built, 3 currently full) for an at-a-glance view of your holdings; the fuller per-size detail (cache blocks and full/empty/not-built squares) and redeeming a full disk move to a new dedicated **Storage** screen, reached via a "🏦 Storage" nav button shown once revealed and always enabled regardless of what's currently actionable there. The Build button and the individual cache/redeem controls stay gated by the new forced priority order (or by that specific size's array being mid-build).
-- **Storage Banks renamed to Disks** throughout, with several genuinely new mechanics layered on: building one now takes real time (not just Bits) — the array's first disk takes 1 second per "KB" of its size, and every further disk added to the same array takes that base time again, scaled by its own position in the array — during which every disk already in that array goes offline; each array now stages Memory through its own small cache (a handful of blocks, together holding one disk's worth of bits, a full block manually releasable back into Memory) before any of it can reach an empty container; and a full disk now redeems against whichever main-game tier's current price matches its size, not just Kilobytes — with ties between coincidentally-equal-priced tiers always breaking toward whichever ranks earlier in the tier list, and auto-redeeming only once that matching tier's own autobuyer is active (replacing the old standalone, never-exposed-in-UI auto-redeem toggle).
-- MainPage's main balance display now switches from Bits to whole Bytes once it reaches 8000 Bits (1000 Bytes) — every other Bits figure on the page (costs, production rates, the Prestige-threshold progress text) is unaffected and keeps reading in Bits.
-- Each storage pool's own Bandwidth is now hard-capped at the square root of that pool's own Memory Capacity **converted to Bytes** (the result converted back to bits/sec), instead of always matching the raw, uncapped Byte Foundry production rate — a pool with a small Capacity window can now lag behind the raw rate once production has outgrown it. Every disk/cache fill speed and Booster live-transfer pace derives from this same capped figure, so they all re-pace automatically. Storage pools now display Bandwidth, Capacity, and the Memory buffer in **SI units** (matching Disks/Data Lake/caches) rather than the binary units the Data Stream card's own balance/Buffer display still uses.
-- Each storage pool's own Memory Capacity end bound now lands on a clean SI power of 1000 Bytes (pool 1 → exactly 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …) instead of a binary power of 1024 (previously 1 MiB/1 GiB/1 TiB) — so pool 1's Bandwidth now permanently tops out at a clean 8,000 bits/sec (1 KB/sec) no matter how far Speed ×2 grows the raw rate, matching the SI-unit convention Storage pools already display in, rather than a binary value merely reformatted into SI units after the fact. The Capacity ×2 purchase mechanic itself is unchanged (still a plain doubling each time, clamped to the pool's own end bound); only where that end bound itself sits moved. One accepted side effect: the Data Stream card's own binary balance/Buffer display of this same value is no longer a round binary figure either (pool 1's cap now reads "976.562 KiB," not "1 MiB") — its own display convention deliberately stays binary regardless.
-- A Data Lake's Capacity ×2 upgrade is now funded by draining the lake itself instead of spending Data Stream Bits — it requires the lake to be completely full and empties every deposit back to zero on purchase, the same "requires a full Buffer, drains it" shape Memory's own Capacity ×2 already uses.
-- The pool summary card (Byte Foundry → Storage) is redesigned to match the rest of the app's styled-component conventions — a proper heading (tier symbol + name), a color-coded status badge, and labeled Bandwidth/Capacity stat blocks — replacing the earlier single plain-text sentence.
-- Each storage pool now has its own small local Memory buffer (shown as a compact bar on its pool card) that it spends from directly — Provision Disk's build cost and the read-cache fill from Memory now draw exclusively from that pool's own buffer, not the shared Data Stream Buffer. The buffer itself tops up from the Data Stream, bandwidth-limited, in pool order (pool 1 first, each pool claiming its own Bandwidth cap before any leftover throughput reaches the next), and never competes with unlocking the main game or a Capacity doubling already in progress.
-- Removed two redundant figures from the Byte Foundry UI: the Data Stream card no longer shows a
-  separate "Buffer Y" line, since the balance line right above it already reads "X / Y" with that
-  same capacity as its denominator; and each pool card's Memory buffer line no longer shows "X / Y",
-  since the buffer's own ceiling always equals the "Capacity" stat already shown in the same card —
-  it now shows just the current amount.
 
 ### Fixed
-- A Disk array's cache could get stuck fully staged, never converting into its disk, if a
-  *smaller* size's cache was still mid-fill and exhausted that tick's available Memory first —
-  `tickDiskAutoFill` picked one global smallest-still-needs-bits size each pass, so a larger size's
-  already-complete cache (pouring needs no further bits at all) never got its turn once a smaller,
-  unrelated size claimed the tick. It now visits every size in one ascending pass and always pours
-  an already-full cache regardless of other sizes' bit contention — a completed cache converts to
-  its disk (and starts refilling again) the instant it's ready, matching the cache's whole purpose.
-- The Global Tickspeed/Speed Up card pair wrapped to stacked on ordinary phone widths (e.g. a 393px-wide iPhone 14) instead of staying side by side as intended — their shared row's per-card floor width (`flex-basis: 14rem`) was too high for real mobile viewports. Lowered to `8rem`, which keeps the pair side by side down to roughly 300px of page content width (below any real phone) while still wrapping on genuinely tiny viewports.
-- On iOS home-screen installs (the app's `black-translucent` status bar draws content edge-to-edge), the page's scrollable area didn't clear the home-indicator safe zone at the bottom, so on a tall tier list the last row's Buy button could be scrolled to but never fully into reach — not just visually clipped, unclickable. `index.html`'s viewport meta now sets `viewport-fit=cover`, and the page content plus every fixed/sticky overlay (offline-progress notice, sticky balances bar, the full-screen and top Prestige banners) now pad for `env(safe-area-inset-*)` so scrolling reaches the full page and none of that chrome sits under the status bar or home indicator.
-- Light theme's `good` token (`#12a150`) only reached 3.37:1 contrast against the `surface`/`surfaceSunken` backgrounds it renders text on — below WCAG AA's 4.5:1 threshold — caught by a new automated contrast audit (`src/theme/tokens.contrast.test.js`). Darkened to `#0a6b30` (6.65:1 / 5.87:1). No visible effect yet since light mode isn't activated until #140.
 - The Speed Up card's displayed last-tier level and requirement (`Lv.{level}/{requirement}`) were both off by one from what a player would intuitively expect from purchase counts — completing the last tier's first purchase block (8 purchases at the default block size) showed `Lv.2` instead of `Lv.1`, and two blocks (16 purchases) showed `Lv.3` instead of `Lv.2`. The displayed numbers (and the requirement shown in the card's description/`aria-label`/money-balance breakdown) now read as completed blocks, matching purchase counts directly; the underlying eligibility check is unchanged.
 - Fixed a visual flicker in the sticky Money/Prestige Points balance bar while scrolling, caused by its compressed/expanded layout toggling right at the scroll boundary that triggers it.
-- Speed Up left `prestige.highestMilestone` (the money-exponent watermark XP is earned against) untouched instead of resetting it like Prestige already did, so a run after at least one Speed Up earned far less XP than it should have — money had to silently re-climb past the previous run's peak exponent before any new XP accrued. `highestMilestone` now resets on Speed Up too, so a fresh run's unspent XP always matches its current money exponent.
-- The `Button` component's `variant` prop (added in the tier row's Buy/tickspeed/XP-consume button migration) was leaking onto the rendered `<button>` DOM node as a raw, invalid HTML attribute, triggering a styled-components "unknown prop" console warning on every affected button. `variant` is now filtered from the DOM via `shouldForwardProp`, matching how every other internal-only prop is handled.
-- `ButtonContent` rendered a stray comma into any button label that mixed literal text with an embedded `{expression}` (e.g. "Invest for Double Production ({cost} B)" rendered as "...(,1, B)") — JSX hands such mixed content to `children` as an array of segments rather than one string, and the old `String(children)` call ran `Array.prototype.toString()` on it, which joins with a bare comma. `ButtonContent` now joins an array of children with `''` before splitting into icon/label.
-- The offline-progress "Welcome back!" notice only ever rendered on the main game page — a player who returned after being away and landed on (or was still gated to) the Byte Foundry screen got no acknowledgment that time had passed, even though the Byte generator's passive production and auto-transfer-into-Kilobytes both already caught up correctly in the background. The notice (extracted into a shared `OfflineProgressNotice` component) now also shows on the Byte Foundry screen.
-- The Byte Foundry's Memory balance rounded its Bytes-unit display (e.g. "1 KB") to the nearest of up to 3 decimal places, which could show a unit as complete one tick before it actually was (999.9 of 1000 bits rounding up to "1 KB"). It now floors instead, matching `formatCurrency`'s existing never-overstate convention for the money display.
-- Offline progress often silently failed to apply after being away for hours, especially on mobile: it was only ever computed once, at the moment the app's React tree first mounted, but a backgrounded or suspended tab/PWA (the common case — mobile browsers routinely pause a background page's timers without ever tearing the page down) never remounts, so that one-time check never got a chance to re-run on resume — the game just silently picked up ticking from wherever it left off, with no catch-up and no "Welcome back!" notice. The live tick loop now also tracks real time between its own ticks and, on any gap far larger than its normal cadence (whether noticed by its timer or immediately on the page becoming visible again), replays that gap as offline progress the same way a fresh page load already did.
-- The Byte Foundry's Disk size labels (the Build button, and each size's row of full/empty/not-built squares) briefly showed sizes in the wrong unit scale (e.g. "125 B" for what should read "1 KB") after a rename mixed up two different formatting scales; a related transfer-block tooltip and the "smallest disk always auto-redeems" check had similar mix-ups. All now consistently use the right scale for what they're displaying.
-- A Disk's size/build cost were computed in raw bits, not real Bytes — a "1 KB" disk needed only 1000 bits to fill (a "Kilobit," not a real 1000-Byte Kilobyte) and cost 10,000 bits to build, rather than the real 8000 bits/80,000 bits a genuine Kilobyte scale requires. Disk sizes now use the exact same real-Byte scale Memory's own balance and the Kilobyte transfer blocks already did, so a "1 KB" Disk now means an actual Kilobyte everywhere it's shown or spent.
 
 ### Security
 - Pinned the `vite-plugin-pwa` build toolchain's `glob > minimatch > brace-expansion` dependency to `^5.0.8` via a `resolutions` override, fixing a high-severity ReDoS/OOM advisory (`yarn audit`) in the version it previously resolved to. Build-time only — no runtime/user-facing impact.
-- Pinned the `vite-plugin-pwa` build toolchain's `workbox-build > ajv > fast-uri` dependency to `^3.1.5` via a `resolutions` override, fixing a high-severity host-confusion advisory (`yarn audit`) in the `3.1.4` version it previously resolved to. Build-time only — no runtime/user-facing impact.
+
+## [0.5.1] - 2026-07-27
 
 ### Changed
-
-- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
-- **"Speed Up" renamed to "Scale Up," and redesigned to unlock tiers one at a time instead of gating only on the last tier.** A Scale Up is now available once the tier it's currently working through (starting with Kilobytes) hits level 3 (displayed Lv.2) — firing it doubles production speed (stacking, same as before) and permanently unlocks the next tier, on top of keeping every tier already reached. The Scale Up card is now always shown from the very first cycle, rather than staying hidden until the last tier unlocks. Once every tier has been reached, Scale Up settles into a repeating "every 3 levels of the last tier" endgame phase (level 3, then 6, then 9, …) instead of its old +1-per-activation last-tier-only ladder.
-- **Data Lake's capacity-increase button now reads "⚡ Scale Out"** (was "⚡ Upgrade") — same action, cost, and gating as before.
-
-### Fixed
-- **Scale Up and Overclock no longer erase Era ascension progress.** Both soft-resets were silently
-  wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
-  unlock/pause flags back to fresh defaults on every activation; they now carry these permanent
-  fields through unchanged, same as every other permanent field they already preserve.
-- **Typing inside an in-game confirm dialog no longer loses focus** after the first character.
+- Speed Up's stacking production multiplier (`speedUpCount`) now resets to 0 on Prestige instead of carrying over permanently — it must be rebuilt within each Prestige cycle. The Auto Speed Up automation toggle itself is unaffected and still carries over.
 
 ## [0.5.0] - 2026-07-14
 

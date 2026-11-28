@@ -19,7 +19,7 @@
 # zero-work evidence (num_turns <= 1, total_cost_usd == 0, empty modelUsage):
 # a run that did real work before dying keeps its red check — its partial
 # commits/comments may need a retry pass, which the next trigger (or the
-# failed CI workflow_run itself, for the followup workflow) provides.
+# failed CI workflow_run itself) provides.
 #
 #   1. api_error_status ∈ {429, 500, 502, 503, 529} — usage-quota exhaustion
 #      ("session limit") or an Anthropic-side 5xx overload (e.g. 529
@@ -39,13 +39,9 @@
 #
 # A run that did real work and then hit a real error fails red as before.
 #
-# Both workflows invoke this from a copy staged into $RUNNER_TEMP BEFORE the
-# Claude step runs — never straight out of the workspace. In
-# autonomous-pr-followup.yml the staged copy comes from the sparse `main`
-# checkout (the pinned-SHA checkout would otherwise substitute the PR's own
-# version of this script, or delete it); in autonomous-maintenance.yml the
-# staging just stops a run that can Edit/Write scripts/ from weakening the
-# classification of its own failure.
+# autonomous-maintenance.yml invokes this from a copy staged into $RUNNER_TEMP
+# BEFORE the Claude step runs — never straight out of the workspace — so a run
+# that can Edit/Write scripts/ can't weaken the classification of its own failure.
 
 set -euo pipefail
 

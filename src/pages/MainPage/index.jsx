@@ -7,7 +7,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getLevelMultiplierBase, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { getAchievementProductionMultiplier, formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getLevelMultiplierBase, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -575,7 +575,8 @@ const TierDetailsContent = styled.div`
 // below, the only thing left clickable while frozen).
 const FullScreenOverlay = styled.div`
   align-items: center;
-  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.78);
   bottom: 0;
   display: flex;
   justify-content: center;
@@ -594,10 +595,14 @@ const FullScreenCard = styled.div`
   background: ${props => props.theme.color.surfaceRaised};
   border: 1px solid ${props => props.theme.color.borderStrong};
   border-radius: ${props => props.theme.radius.lg};
+  border-top: 4px solid ${props => props.theme.color.warn};
   box-shadow: ${props => props.theme.shadow.md};
   color: ${props => props.theme.color.text};
-  max-width: 28rem;
-  padding: ${props => props.theme.space.xl} ${props => props.theme.space.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.lg};
+  max-width: 24rem;
+  padding: ${props => props.theme.space.xl} ${props => props.theme.space.lg} ${props => props.theme.space.lg};
   text-align: center;
   width: 100%;
 
@@ -607,20 +612,59 @@ const FullScreenCard = styled.div`
     font-size: ${props => props.theme.type.scale.xl.size};
     font-weight: 700;
     line-height: ${props => props.theme.type.scale.xl.lineHeight};
-    margin: 0 0 ${props => props.theme.space.md};
+    margin: 0;
   }
 
-  ul {
+  > button {
+    justify-content: center;
+    width: 100%;
+  }
+`
+
+const DiskFullIcon = styled.div`
+  font-size: ${props => props.theme.type.scale.hero.size};
+  line-height: 1;
+`
+
+const DiskFullHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.xs};
+`
+
+// The one number that matters on this screen: what the Purge awards.
+const DiskFullReward = styled.div`
+  color: ${props => props.theme.color.warn};
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.lg.size};
+  font-variant-numeric: ${props => props.theme.type.numeric};
+  font-weight: 700;
+  line-height: ${props => props.theme.type.scale.lg.lineHeight};
+`
+
+// Two equal, centered columns so every block on the card shares one center axis.
+const DiskFullEffects = styled.dl`
+  border-top: 1px solid ${props => props.theme.color.border};
+  display: grid;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  grid-template-columns: 1fr 1fr;
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  margin: 0;
+  padding-top: ${props => props.theme.space.md};
+
+  > div + div {
+    border-left: 1px solid ${props => props.theme.color.border};
+  }
+
+  dt {
     color: ${props => props.theme.color.textMuted};
-    font-size: ${props => props.theme.type.scale.sm.size};
-    line-height: ${props => props.theme.type.scale.sm.lineHeight};
-    margin: ${props => props.theme.space.lg} 0 ${props => props.theme.space.xl};
-    padding-left: 1.25rem;
-    text-align: left;
+    font-size: ${props => props.theme.type.scale.xs.size};
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  li {
-    margin: 0.3rem 0;
+  dd {
+    margin: 0;
   }
 `
 
@@ -877,6 +921,7 @@ const MainPage = ({ game }) => {
   // Passive Purge-count production-speed bonus: flat ×1 until bought with 1 PP (see engine.js).
   const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
   const prestigeBonus = getPrestigeProductionMultiplier(purge.count, prestigeBonusUnlocked)
+  const achievementBonus = getAchievementProductionMultiplier(state)
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel, isOverflowModeUnlocked(state))
   const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID], getPurgeGoalBits(state))
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
@@ -1089,7 +1134,7 @@ const MainPage = ({ game }) => {
   // The last tier's XP-funded tickspeed — a separate upgrade shown below Accelerate once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
-  // Bits; still clickable while the last tier owns nothing (restageManually — the Spent QB stall; Auto
+  // Bits; still clickable while the last tier owns nothing (restageManually — the Quetta broke stall; Auto
   // Restage keeps consumeXpForLastTierTickspeed's 0-owned guard). The compounding bonus of spending N XP is
   // getLastTierXpTickspeedMultiplier(N) regardless of XP already consumed.
   const isLastTierXpUnlocked = isLastTierTickspeedXpUnlocked(state)
@@ -1172,20 +1217,24 @@ const MainPage = ({ game }) => {
     return (
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Purge required">
         <FullScreenCard>
-          <h2>💾 Disk full</h2>
-          <PurgeMutedText>
-            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
-            production has stopped.
-          </PurgeMutedText>
-          <ul>
-            <li>Resets your resources, owned tiers, and purchases</li>
-            <li>
-              Awards {formatAmount(prestigePointsPreview)} Purge Point
-              {prestigePointsPreview === 1 ? '' : 's'} — spend them on the Firmware page for
-              automation and production bonuses
-            </li>
-            <li>Keeps your unlocked autobuyers and Purge Points</li>
-          </ul>
+          <DiskFullHeader>
+            <DiskFullIcon aria-hidden="true">💾</DiskFullIcon>
+            <h2>Disk full</h2>
+            <PurgeMutedText>Production stopped</PurgeMutedText>
+          </DiskFullHeader>
+          <DiskFullReward role="group" aria-label="purge reward">
+            +{formatAmount(purgeAwardPreview)} Purge Point{purgeAwardPreview === 1 ? '' : 's'}
+          </DiskFullReward>
+          <DiskFullEffects>
+            <div>
+              <dt>Resets</dt>
+              <dd>Bits, tiers, Accelerate</dd>
+            </div>
+            <div>
+              <dt>Keeps</dt>
+              <dd>Purge Points, Foundry</dd>
+            </div>
+          </DiskFullEffects>
           <Button
             ref={fullScreenPurgeButtonRef}
             aria-label="Purge now"
@@ -1195,7 +1244,7 @@ const MainPage = ({ game }) => {
             type="button"
             $pulse
           >
-            <ButtonContent>✦ Purge Now</ButtonContent>
+            ✦ Purge now
           </Button>
         </FullScreenCard>
       </FullScreenOverlay>
@@ -1324,6 +1373,9 @@ const MainPage = ({ game }) => {
                     ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.count)} Purge${purge.count === 1 ? '' : 's'}`
                     : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Firmware → Prestige)`}
                 </li>
+              )}
+              {achievementBonus > 1 && (
+                <li>Achievement stars: {formatBonusOrMultiplier(achievementBonus)} production speed</li>
               )}
               <li>
                 Scale Up: {scaleUpCount > 0
@@ -1523,7 +1575,7 @@ const MainPage = ({ game }) => {
           // preview could show a fraction that never actually lands.
           const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel, getLevelMultiplierBase(state))
           const tierScaleUpMultiplier = getTierScaleUpMultiplier(state, tier.id)
-          const production = Math.floor(owned * prestigeBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
+          const production = Math.floor(owned * prestigeBonus * achievementBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
           const productionText = tier.producesResourceId === MONEY_ID
             ? formatCurrency(production)
             : tier.producesResourceId === BYTES_ID

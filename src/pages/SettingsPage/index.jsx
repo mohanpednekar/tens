@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
-import { formatAmount, formatCurrency, formatMoneyBalance, getEonsAwarded, isEraEligible, isProductionFrozen } from 'game/engine'
+import { formatAmount, formatCurrency, formatMoneyBalance, getEonsAwarded, isAchievementConditionMet, isEraEligible, isProductionFrozen } from 'game/engine'
 import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import styled, { css } from 'styled-components'
@@ -10,7 +10,7 @@ import ManualSaveSection from './ManualSaveSection'
 import LegalSection from './LegalSection'
 import StoreSection from './StoreSection'
 import { CodeForm, CodeInput, Row, Section, StatusText } from './styles'
-import { CLOUD_SAVE_ENABLED } from 'services/config'
+import { CLOUD_SAVE_ENABLED, IS_NATIVE_BUILD } from 'services/config'
 import { getMonetizationService } from 'services/monetization'
 
 // Always-reachable Settings screen (via AppNav → More). Holds Supporter pack
@@ -298,9 +298,11 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   // at build time instead of leaving inert-but-textually-present strings in the shipped bundle, the
   // same "absent from yarn build" guarantee the rest of Dev Mode gets. See CLAUDE.md's "Dev Mode".
   const devModeActive = import.meta.env.DEV && Boolean(game.devModeActive)
-  const supporter = Boolean(game.savesMeta?.supporterUnlocked)
+  const supporter = game.supporterUnlocked
+  const canRedeemSupporterCode = !IS_NATIVE_BUILD && !devModeActive
   const [code, setCode] = useState('')
   const [codeStatus, setCodeStatus] = useState(null)
+  const [dummyPurchaseFailed, setDummyPurchaseFailed] = useState(false)
   const [eraConfirmOpen, setEraConfirmOpen] = useState(false)
 
   const eraCount = game.state.era?.count ?? 0
@@ -309,6 +311,10 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   const eonsAwarded = getEonsAwarded(game.state)
   const unspentPp = game.state.purge?.points ?? 0
   const eonWord = count => (count === 1 ? 'Kernel' : 'Kernels')
+  // Progressive reveal: rows for layers the save hasn't reached stay hidden (no spoilers).
+  const rebootRevealed = isAchievementConditionMet(game.state, { kind: 'rebootReached' })
+  const systemLogRevealed = isAchievementConditionMet(game.state, { kind: 'googolReached' })
+  const taskManagerRevealed = isAchievementConditionMet(game.state, { kind: 'storageUnlocked' })
 
   const museum = game.state.prestigeMuseum ?? { history: [], pinnedIds: [] }
   const pinnedSet = new Set(museum.pinnedIds ?? [])
@@ -327,16 +333,6 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
     setCodeStatus({
       error: false,
       text: result.already ? 'Supporter pack already unlocked.' : 'Supporter pack unlocked.',
-    })
-  }
-
-  const handleDummyPurchase = () => {
-    const result = game.purchaseSupporterDummy()
-    setCodeStatus({
-      error: false,
-      text: result.already
-        ? 'Supporter pack already unlocked.'
-        : 'Dummy checkout complete — Supporter pack unlocked (no real charge).',
     })
   }
 
@@ -375,50 +371,58 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       </Header>
 
       <SettingsGroup label="Game">
-        <SettingsItem icon="💛" label="Supporter" value={supporter ? 'Unlocked' : 'Free'}>
-          <Section aria-label="supporter pack section">
-            <h2>Supporter pack</h2>
-            <p>
-              Optional meta extras only — extra save slots, System log pins, and the Task
-              Manager. Never changes Bits, PP, Disks, Compute, or unlock order. Real payment comes
-              later; for now use a code or the dummy checkout.
-            </p>
-            {supporter ? (
-              <StatusText>
-                Unlocked
-                {game.savesMeta?.supporterSource === 'dummy_purchase' ? ' (dummy checkout)' : ' (unlock code)'}.
-                {' '}{SUPPORTER_SLOT_COUNT} save slots · System log · Task Manager.
-              </StatusText>
-            ) : (
-              <>
-                <LockedNote>
-                  Free: {FREE_SLOT_COUNT} save slot. Unlock code (placeholder): <code>{UNLOCK_CODE}</code>
-                </LockedNote>
-                <CodeForm onSubmit={handleRedeem}>
-                  <CodeInput
-                    aria-label="supporter unlock code"
-                    autoComplete="off"
-                    onChange={event => setCode(event.target.value)}
-                    placeholder="Enter unlock code"
-                    value={code}
-                  />
-                  <Button aria-label="redeem supporter unlock code" type="submit" variant="primary">
-                    <ButtonContent>Redeem code</ButtonContent>
-                  </Button>
-                </CodeForm>
+        {devModeActive && (
+          <SettingsItem icon="💛" label="Test Supporter" value={supporter ? 'Unlocked' : null}>
+            <Section aria-label="test supporter section">
+              <h2>Test Supporter</h2>
+              {supporter ? (
+                <StatusText>Unlocked for the Dev Mode save.</StatusText>
+              ) : (
                 <Button
                   aria-label="dummy supporter checkout"
-                  onClick={handleDummyPurchase}
+                  onClick={() => setDummyPurchaseFailed(!game.purchaseSupporterDummy().ok)}
                   type="button"
                   variant="neutral"
                 >
                   <ButtonContent>Dummy checkout (free)</ButtonContent>
                 </Button>
-              </>
-            )}
-            {codeStatus && <StatusText $error={codeStatus.error}>{codeStatus.text}</StatusText>}
-          </Section>
-        </SettingsItem>
+              )}
+              {dummyPurchaseFailed && (
+                <StatusText $error role="alert">Couldn’t save the test unlock. Try again.</StatusText>
+              )}
+            </Section>
+          </SettingsItem>
+        )}
+        {canRedeemSupporterCode && (
+          <SettingsItem icon="💛" label="Supporter" value={supporter ? 'Unlocked' : 'Free'}>
+            <Section aria-label="supporter pack section">
+              <h2>Supporter pack</h2>
+              <p>Optional extras for save slots, the System log, and Task Manager.</p>
+              {supporter ? (
+                <StatusText>Unlocked. {SUPPORTER_SLOT_COUNT} save slots · System log · Task Manager.</StatusText>
+              ) : (
+                <>
+                  <LockedNote>
+                    Free: {FREE_SLOT_COUNT} save slot. Unlock code (placeholder): <code>{UNLOCK_CODE}</code>
+                  </LockedNote>
+                  <CodeForm onSubmit={handleRedeem}>
+                    <CodeInput
+                      aria-label="supporter unlock code"
+                      autoComplete="off"
+                      onChange={event => setCode(event.target.value)}
+                      placeholder="Enter unlock code"
+                      value={code}
+                    />
+                    <Button aria-label="redeem supporter unlock code" type="submit" variant="primary">
+                      <ButtonContent>Redeem code</ButtonContent>
+                    </Button>
+                  </CodeForm>
+                </>
+              )}
+              {codeStatus && <StatusText $error={codeStatus.error}>{codeStatus.text}</StatusText>}
+            </Section>
+          </SettingsItem>
+        )}
         <SettingsItem icon="💾" label="Save slots" value={game.saveSlots?.find(slot => slot.isActive)?.name}>
           <Section aria-label="save slots section">
             <h2>Save slots</h2>
@@ -438,7 +442,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                   <strong>{slot.name}{slot.isActive ? ' · active' : ''}</strong>
                   <span>
                     {!slot.unlocked
-                      ? 'Locked — unlock Supporter pack'
+                      ? (canRedeemSupporterCode ? 'Locked — unlock Supporter pack' : 'Locked')
                       : slot.isEmpty
                         ? 'Empty (starts at Byte Foundry)'
                         : 'Has saved progress'}
@@ -488,138 +492,145 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             ))}
           </Section>
         </SettingsItem>
-        <SettingsItem icon="⏻" label="Reboot" value={`${eonsBalance} ${eonWord(eonsBalance)}`}>
-          <Section aria-label="reboot section">
-            <h2>Reboot</h2>
-            <p>
-              Voluntary meta-prestige when you hold enough unspent Purge Points — no production
-              freeze. Awards Kernels for future upgrades.
-            </p>
-            <Row>
-              <span>Reboots</span>
-              <strong>{eraCount}</strong>
-            </Row>
-            <Row>
-              <span>Kernels</span>
-              <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
-            </Row>
-            <p>
-              {eraEligible
-                ? `Ready — next Reboot awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
-                : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
-            </p>
-            <Button
-              aria-label={
-                eraEligible
-                  ? 'Reboot — open confirmation'
-                  : 'Reboot — requires 1 Googol unspent Purge Points'
-              }
-              disabled={!eraEligible}
-              onClick={() => setEraConfirmOpen(true)}
-              type="button"
-              variant="prestige"
-            >
-              <ButtonContent>⏻ Reboot…</ButtonContent>
-            </Button>
-          </Section>
-        </SettingsItem>
-        <SettingsItem icon="📜" label="System log" value={supporter ? `${history.length}` : '🔒'}>
-          <Section aria-label="system log section">
-            <h2>System log</h2>
-            {!supporter ? (
-              <LockedNote>
-                History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
-                {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
-              </LockedNote>
-            ) : (
-              <>
-                <p>Pin standout runs — display only, no bonuses. Cap {MUSEUM_PIN_CAP} pins.</p>
-                {pinnedEntries.length > 0 && (
-                  <>
-                    <LockedNote>Pinned</LockedNote>
-                    <MuseumList aria-label="pinned purge entries">
-                      {pinnedEntries.map(entry => (
-                        <MuseumItem key={`pin-${entry.id}`}>
+        {rebootRevealed && (
+          <SettingsItem icon="⏻" label="Reboot" value={`${eonsBalance} ${eonWord(eonsBalance)}`}>
+            <Section aria-label="reboot section">
+              <h2>Reboot</h2>
+              <p>
+                Voluntary meta-prestige when you hold enough unspent Purge Points — no production
+                freeze. Awards Kernels for future upgrades.
+              </p>
+              <Row>
+                <span>Reboots</span>
+                <strong>{eraCount}</strong>
+              </Row>
+              <Row>
+                <span>Kernels</span>
+                <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
+              </Row>
+              <p>
+                {eraEligible
+                  ? `Ready — next Reboot awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
+                  : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
+              </p>
+              <Button
+                aria-label={
+                  eraEligible
+                    ? 'Reboot — open confirmation'
+                    : 'Reboot — requires 1 Googol unspent Purge Points'
+                }
+                disabled={!eraEligible}
+                onClick={() => setEraConfirmOpen(true)}
+                type="button"
+                variant="prestige"
+              >
+                <ButtonContent>⏻ Reboot…</ButtonContent>
+              </Button>
+            </Section>
+          </SettingsItem>
+        )}
+        {systemLogRevealed && (
+          <SettingsItem icon="📜" label="System log" value={supporter ? `${history.length}` : '🔒'}>
+            <Section aria-label="system log section">
+              <h2>System log</h2>
+              {!supporter ? (
+                <LockedNote>
+                  History still records in the background.
+                  {canRedeemSupporterCode && ` Unlock Supporter to browse past purges and pin up to ${MUSEUM_PIN_CAP}.`}
+                  {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
+                </LockedNote>
+              ) : (
+                <>
+                  <p>Pin standout runs — display only, no bonuses. Cap {MUSEUM_PIN_CAP} pins.</p>
+                  {pinnedEntries.length > 0 && (
+                    <>
+                      <LockedNote>Pinned</LockedNote>
+                      <MuseumList aria-label="pinned purge entries">
+                        {pinnedEntries.map(entry => (
+                          <MuseumItem key={`pin-${entry.id}`}>
+                            <div>
+                              <strong>Purge #{entry.purgeNumber}</strong>
+                              <div>
+                                <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
+                              </div>
+                            </div>
+                            <Button
+                              aria-label={`unpin purge ${entry.purgeNumber}`}
+                              onClick={() => game.actions.unpinMuseumEntry(entry.id)}
+                              type="button"
+                              variant="neutral"
+                            >
+                              <ButtonContent>Unpin</ButtonContent>
+                            </Button>
+                          </MuseumItem>
+                        ))}
+                      </MuseumList>
+                    </>
+                  )}
+                  <LockedNote>Recent history</LockedNote>
+                  {visibleHistory.length === 0 ? (
+                    <LockedNote>No purges recorded yet.</LockedNote>
+                  ) : (
+                    <MuseumList aria-label="system log history">
+                      {visibleHistory.map(entry => (
+                        <MuseumItem key={entry.id}>
                           <div>
                             <strong>Purge #{entry.purgeNumber}</strong>
                             <div>
-                              <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
+                              <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
                             </div>
                           </div>
-                          <Button
-                            aria-label={`unpin purge ${entry.purgeNumber}`}
-                            onClick={() => game.actions.unpinMuseumEntry(entry.id)}
-                            type="button"
-                            variant="neutral"
-                          >
-                            <ButtonContent>Unpin</ButtonContent>
-                          </Button>
+                          {pinnedSet.has(entry.id) ? (
+                            <Button
+                              aria-label={`unpin purge ${entry.purgeNumber}`}
+                              onClick={() => game.actions.unpinMuseumEntry(entry.id)}
+                              type="button"
+                              variant="neutral"
+                            >
+                              <ButtonContent>Unpin</ButtonContent>
+                            </Button>
+                          ) : (
+                            <Button
+                              aria-label={`pin purge ${entry.purgeNumber}`}
+                              disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
+                              onClick={() => game.actions.pinMuseumEntry(entry.id)}
+                              type="button"
+                              variant="neutral"
+                            >
+                              <ButtonContent>Pin</ButtonContent>
+                            </Button>
+                          )}
                         </MuseumItem>
                       ))}
                     </MuseumList>
-                  </>
-                )}
-                <LockedNote>Recent history</LockedNote>
-                {visibleHistory.length === 0 ? (
-                  <LockedNote>No purges recorded yet.</LockedNote>
-                ) : (
-                  <MuseumList aria-label="system log history">
-                    {visibleHistory.map(entry => (
-                      <MuseumItem key={entry.id}>
-                        <div>
-                          <strong>Purge #{entry.purgeNumber}</strong>
-                          <div>
-                            <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
-                          </div>
-                        </div>
-                        {pinnedSet.has(entry.id) ? (
-                          <Button
-                            aria-label={`unpin purge ${entry.purgeNumber}`}
-                            onClick={() => game.actions.unpinMuseumEntry(entry.id)}
-                            type="button"
-                            variant="neutral"
-                          >
-                            <ButtonContent>Unpin</ButtonContent>
-                          </Button>
-                        ) : (
-                          <Button
-                            aria-label={`pin purge ${entry.purgeNumber}`}
-                            disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
-                            onClick={() => game.actions.pinMuseumEntry(entry.id)}
-                            type="button"
-                            variant="neutral"
-                          >
-                            <ButtonContent>Pin</ButtonContent>
-                          </Button>
-                        )}
-                      </MuseumItem>
-                    ))}
-                  </MuseumList>
-                )}
-              </>
-            )}
-          </Section>
-        </SettingsItem>
-        <SettingsItem icon="📈" label="Task Manager" value={supporter ? null : '🔒'}>
-          <Section aria-label="task manager section">
-            <h2>Task Manager</h2>
-            {!supporter ? (
-              <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
-            ) : (
-              <>
-                <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
-                <LockedNote>Bits</LockedNote>
-                <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
-                  <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
-                </SparklineSvg>
-                <LockedNote>Purge Points</LockedNote>
-                <SparklineSvg aria-label="purge points sparkline" role="img" viewBox="0 0 100 40">
-                  <path d={ppPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
-                </SparklineSvg>
-              </>
-            )}
-          </Section>
-        </SettingsItem>
+                  )}
+                </>
+              )}
+            </Section>
+          </SettingsItem>
+        )}
+        {taskManagerRevealed && (
+          <SettingsItem icon="📈" label="Task Manager" value={supporter ? null : '🔒'}>
+            <Section aria-label="task manager section">
+              <h2>Task Manager</h2>
+              {!supporter ? (
+                <LockedNote>{canRedeemSupporterCode ? 'Unlock Supporter for live Bits and Purge Point sparklines.' : 'Live Bits and Purge Point sparklines are locked.'}</LockedNote>
+              ) : (
+                <>
+                  <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
+                  <LockedNote>Bits</LockedNote>
+                  <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
+                    <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  </SparklineSvg>
+                  <LockedNote>Purge Points</LockedNote>
+                  <SparklineSvg aria-label="purge points sparkline" role="img" viewBox="0 0 100 40">
+                    <path d={ppPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  </SparklineSvg>
+                </>
+              )}
+            </Section>
+          </SettingsItem>
+        )}
       </SettingsGroup>
 
       <SettingsGroup label="Data">
