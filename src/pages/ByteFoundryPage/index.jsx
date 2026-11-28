@@ -1269,12 +1269,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
         </ActionsRow>
         )}
+        {visiblePoolCount >= 2 && intro.byteCreated && (
+          <FoundrySpeed key={`${visiblePoolCount}:${foundrySpeed}`} actions={actions} state={state}
+            speed={foundrySpeed} maximum={visiblePoolCount} />
+        )}
       </DataStreamCard>
-
-      {visiblePoolCount >= 2 && intro.byteCreated && (
-        <FoundrySpeed key={`${visiblePoolCount}:${foundrySpeed}`} actions={actions} state={state}
-          speed={foundrySpeed} maximum={visiblePoolCount} />
-      )}
 
       {intro.byteCreated && storageRevealed && (
         <ProvisionCard aria-label="Provision Disk">{provisionDiskButton}</ProvisionCard>

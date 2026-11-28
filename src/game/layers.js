@@ -255,13 +255,16 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'pingOfDeath', details: 'Counts every Ping you have ever made, across Purges and Reboots.', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   ...[
-    ['foundrySprint', 'Sprint and Spend', 'At maximum speed, reach 10% in the test buffer faster than at 1×, then fund the test disk before it reaches 50%.', '1 hour'],
-    ['foundrySlowWins', 'Slow Wins', 'Record a maximum-speed test fill, then beat it at 1× in the same pool.', '10 minutes'],
-    ['foundryHandoff', 'Perfect Handoff', 'In a late-game test fill, reach 25% at maximum speed within 3.6 seconds, switch to 1×, and fill by 24.9 seconds.', '1 minute'],
+    ['foundrySprint', 'Sprint and Spend', 'In live staging, fill from 10% to 25% at maximum faster than at 1×, then fund a manually queued disk before staging reaches half full.', '1 hour'],
+    ['foundrySlowWins', 'Slow Wins', 'After Sprint and Spend, beat a maximum-speed fill from 10% to full at 1× in the same pool, with matching capacity and fill rate.', '10 minutes'],
+    ['foundryHandoff', 'Perfect Handoff', 'After Slow Wins, cross 10% at maximum in a TB or larger pool, reach 25% quickly, then save 1× near halfway and beat any fixed speed to full.', '1 minute'],
   ].map(([id, name, trigger, duration]) => ({
     id, name, trigger, group: 'foundrySpeed', bonus: `Foundry speed cooldown: ${duration}`,
     condition: { kind: 'counter', key: id, min: 1 },
-    ...(id === 'foundryHandoff' ? { reveal: { kind: 'foundrySpeedUnlocked', min: 4 } } : {}),
+    ...(id === 'foundryHandoff' ? {
+      reveal: { kind: 'foundrySpeedUnlocked', min: 4 },
+      details: 'Save 1× at 40–60% staging. From the 10% mark, reach 25% within 10% of the pool’s base fill time and finish within 87%. Base fill time is capacity divided by the unscaled fill rate.',
+    } : {}),
   })),
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
   // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake; level 5 (the grand reward) syncs Bitrate to Capacity (one Upgrade does both). The per-pool Bitrate exponent upgrades are separate: they come

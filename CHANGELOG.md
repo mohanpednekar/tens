@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Foundry speed settings unlock at MB, with three achievements that shorten the wait between changes.
 
 ### Changed
+- Foundry cooldown achievements are earned during ordinary pool fills and disk funding. The dedicated achievement tests are removed.
 - Each ping before Compile produces one bit. Foundry fill speed is fixed at 1× through KB, and Provision Disk appears when the KB pool unlocks.
 
 ### Deprecated

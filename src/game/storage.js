@@ -589,6 +589,8 @@ const mergeState = rawSaved => {
     computeBandwidthSacrificeIndex: _legacySacrificeIndex,
     // Removed with the merge-duration upgrade (#755).
     computeMergeDurationUpgrades: _legacyComputeMergeDurationUpgrades,
+    foundrySpeedTrial: _removedFoundryTrial,
+    foundrySpeedBenchmark: _removedFoundryTrialBenchmark,
     ...savedIntroClean
   } = saved.intro ?? {}
 
@@ -688,8 +690,8 @@ const mergeState = rawSaved => {
     intro: applyPendingComputeGrants({
       ...fresh.intro,
       ...savedIntroClean,
-      // Timed attempts start afresh after a reload or slot switch, but a completed comparison survives.
-      foundrySpeedTrial: null,
+      // Keep completed comparisons, but reloads start timing the next ordinary fill.
+      foundrySpeedFills: {},
       dataLakes,
     }, pendingComputeGrants),
     computeFlops: {
