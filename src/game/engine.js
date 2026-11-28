@@ -1,4 +1,7 @@
-import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, ACHIEVEMENT_STAR_PRODUCTION_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS, AUTO_PURGE_MAX_PP_EXPONENT, AUTO_PURGE_MIN_SECONDS_OPTIONS, AUTO_PURGE_BEST_MULTIPLIER_OPTIONS, EON_AMPLIFIER_AWARD_BASE, EON_UPGRADE_BY_ID, AUTO_HYPERSCALER_EON_COST, BUY_MAX_ACHIEVEMENT_ID, BUY_MAX_RUSH_CLICKS, BUY_MAX_RUSH_WINDOW_MS } from './layers.js'
+import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, ACHIEVEMENT_STAR_PRODUCTION_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, HARD_REFRESH_INTERVAL_SECONDS, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS, AUTO_PURGE_MAX_PP_EXPONENT, AUTO_PURGE_MIN_SECONDS_OPTIONS, AUTO_PURGE_BEST_MULTIPLIER_OPTIONS, EON_AMPLIFIER_AWARD_BASE, EON_UPGRADE_BY_ID, AUTO_HYPERSCALER_EON_COST, BUY_MAX_ACHIEVEMENT_ID, BUY_MAX_RUSH_CLICKS, BUY_MAX_RUSH_WINDOW_MS } from './layers.js'
+import { clampNonNegative } from './engine/core.js'
+import { getActiveChallenge, isChallengeCompleted, mergeRunPeaks, getChallengeProductionMultiplier, getChallengeTier, getEffectiveTierCount, getEffectiveLastTier, getPurgeGoalBits, isChallengeLive, hasChallengeEffect, getChallengeEffectTier, getChallengeLever, getEffectiveTickspeedLevel, isSpeedUpgradeChallengeGated } from './engine/challenges.js'
+export { getActiveChallenge, isChallengeCompleted, mergeRunPeaks, getChallengeProductionMultiplier, getChallengeTier, getEffectiveTierCount, getEffectiveLastTier, getPurgeGoalBits, getLiveChallengeForAutomation } from './engine/challenges.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -6,7 +9,6 @@ import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED
 // consumeXpForLastTierTickspeed below).
 const getLastTierId = () => TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
 
-const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
 // Run-scoped state of the active challenge (reset on enter/exit/completion/Reboot): seconds since the cycle
 // started (F9), Hard Refreshes survived (F5), remaining Write Lock halt (F2), fractional Memory Leak remainder (F8).
 export const createChallengeRun = () => ({ cycleSeconds: 0, refreshes: 0, haltSeconds: 0, leakRemainder: 0 })
@@ -1187,7 +1189,6 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
     currentOwned++
   }
 
-
   return { affordable: quantity, totalCost }
 }
 
@@ -1463,7 +1464,6 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
   })
   return result
 }
-
 
 const buildEraIntroReset = (state, initial) => {
   const byteCreated = Boolean(state.intro?.byteCreated)
@@ -1752,7 +1752,6 @@ export const buyPrestigeDoublePp = state => {
   }
 }
 
-
 // Production is multiplied by the level multiplier base (getLevelMultiplierBase: 1.0 + 0.05 per Level power achievement) every time a tier
 // completes another level — the same boundary where getTierCost's cost-epoch exponent steps up, so
 // completing a fresh level always pays off with production alongside the steeper price. But every
@@ -1902,72 +1901,6 @@ export const isOverflowModeUnlocked = state =>
   || ((state.autoPurge ?? null) !== null
     && getAutomationIntervalSeconds(state, 'purge') <= OVERFLOW_MODE_MAX_INTERVAL_SECONDS)
 
-// ── Challenge mode (epic #1037) ───────────────────────────────────────────────────────────────────
-// A challenge is "live" only while its id is in LIVE_CHALLENGE_IDS (empty in shipped code until #1039);
-// an active challenge that is not live is ignored everywhere, so nothing changes for players.
-const isChallengeLive = id => Boolean(CHALLENGE_BY_ID[id]) && LIVE_CHALLENGE_IDS.has(id)
-
-export const getActiveChallenge = state => {
-  const id = state.challenges?.active
-  return id && isChallengeLive(id) ? CHALLENGE_BY_ID[id] : null
-}
-
-export const isChallengeCompleted = (state, id) => Boolean(state.challenges?.completed?.[id])
-
-const hasChallengeEffect = (state, effect) => getActiveChallenge(state)?.effect === effect
-
-// The tier (id) a tier-scoped challenge rule applies to, or null when that rule is not the active one.
-const getChallengeEffectTier = (state, effect) => {
-  const def = getActiveChallenge(state)
-  return def?.effect === effect ? def.automation.key : null
-}
-
-// Peaks of an isolated Daily challenge run (see tickGame): `previous` raised to what `state` holds now.
-export const mergeRunPeaks = (previous, state) => ({
-  balance: Math.max(previous.balance ?? 0, clampNonNegative(state.resources?.[MONEY_ID])),
-  clock: Math.max(previous.clock ?? 0, state.globalTickspeedMultiplier ?? 0),
-  owned: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, Math.max(previous.owned?.[tier.id] ?? 0, state.owned?.[tier.id] ?? 0)])),
-  purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, Math.max(previous.purchaseLevels?.[tier.id] ?? 1, state.purchaseLevels?.[tier.id] ?? 1)])),
-})
-
-// Run-wide lever of the active challenge (see tierChallenge in layers.js); `fallback` when none applies.
-// `state.runLevers` carries the same levers for an isolated Daily challenge run (dailyChallenges.js) — the main
-// save never has that field.
-const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? state.runLevers?.[name] ?? fallback
-
-// Challenge-driven output factor of one tier (F1 Half Duplex on Kilobytes, plus the run-wide `production` lever) —
-// shared by tickGame's production and MainPage's per-delivery preview so the two always agree.
-export const getChallengeProductionMultiplier = (state, tierId) =>
-  (getChallengeEffectTier(state, 'halfDuplex') === tierId ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1) * getChallengeLever(state, 'production', 1)
-
-// The tier as priced during the run (F4 Premium Tier and the `costMultiplier` lever; a copy — TIER_DEFINITIONS is never edited).
-export const getChallengeTier = (state, tierId) => {
-  const tier = TIER_BY_ID[tierId]
-  if (!tier) return tier
-  const factor = (getChallengeEffectTier(state, 'premiumTier') === tierId ? PREMIUM_TIER_COST_MULTIPLIER : 1) * getChallengeLever(state, 'costMultiplier', 1)
-  return factor === 1 ? tier : { ...tier, baseCost: tier.baseCost * factor }
-}
-
-// F6 Address Space: only the first ADDRESS_SPACE_TIER_COUNT tiers exist for the run.
-export const getEffectiveTierCount = state => (hasChallengeEffect(state, 'addressSpace') ? ADDRESS_SPACE_TIER_COUNT : TIER_DEFINITIONS.length)
-export const getEffectiveLastTier = state => TIER_DEFINITIONS[getEffectiveTierCount(state) - 1]
-
-// F19 Duty Cycle: whether the on-window is currently open (30 s on, 30 s off of challenge time).
-const isDutyCycleOn = state => Math.floor(clampNonNegative(state.challenges?.activeSeconds) / DUTY_CYCLE_WINDOW_SECONDS + 1e-9) % 2 === 0
-
-// The tier's tickspeed level as it acts on production (F11 gated, F18 chained, F19 off-window read as baseline 1).
-const getEffectiveTickspeedLevel = (state, tierId) => {
-  const level = state.tickspeedLevels?.[tierId] ?? 1
-  if (!getActiveChallenge(state)) return level
-  if (getChallengeEffectTier(state, 'clockGated') === tierId) return 1
-  if (getChallengeEffectTier(state, 'dutyCycle') === tierId && !isDutyCycleOn(state)) return 1
-  if (getChallengeEffectTier(state, 'daisyChain') === tierId) {
-    const predecessor = TIER_DEFINITIONS[(TIER_INDEX_BY_ID[tierId] ?? 1) - 1]
-    return Math.min(level, state.tickspeedLevels?.[predecessor.id] ?? 1)
-  }
-  return level
-}
-
 // F9 Bit Rot: corruption (Bits) of the current cycle — 0 through the grace period, then exponential, capped.
 export const getBitRotCorruption = state => {
   if (!hasChallengeEffect(state, 'bitRot')) return 0
@@ -1980,9 +1913,6 @@ export const getBitRotCorruption = state => {
   const ladderStep = getUnlockedDiskSteps(state.intro)
   return raw / BIT_ROT_DISK_RELIEF ** (ladderStep - 1)
 }
-
-// The Money level a run must reach to Purge: PURGE_THRESHOLD, or the active challenge's raised goal.
-export const getPurgeGoalBits = state => getActiveChallenge(state)?.goal ?? PURGE_THRESHOLD
 
 const getChallengeAutomationLevel = (state, { kind, key }) => {
   if (kind === 'tierAutobuyer') return state.autobuyerIntervalLevels?.[key] ?? 0
@@ -2010,16 +1940,6 @@ export const isChallengeUnlocked = (state, id) => {
     : kind === 'tierTickspeed' ? Boolean(state.tierTickspeedAutobuyer?.[key])
       : isAutomationIntervalChainAvailable(state, key)
   return automationUnlocked && clampNonNegative(state.purge?.count ?? 0) >= getChallengeUnlockPurges(def)
-}
-
-// Gate for the three speed-upgrade buyers: refused while the target automation has a LIVE challenge
-// that is not yet completed. Costs are untouched.
-export const getLiveChallengeForAutomation = (kind, key) =>
-  CHALLENGE_DEFINITIONS.find(def => def.automation.kind === kind && def.automation.key === key && isChallengeLive(def.id)) ?? null
-
-const isSpeedUpgradeChallengeGated = (state, kind, key) => {
-  const def = getLiveChallengeForAutomation(kind, key)
-  return Boolean(def) && !isChallengeCompleted(state, def.id)
 }
 
 // Existing saves: any automation that already holds a speed level has its live challenge marked
@@ -2353,7 +2273,6 @@ const runGlobalIntervalAutomation = (state, elapsedSeconds, key, attempt) => {
   )
   return { ...next, automationAttemptBudgets: { ...next.automationAttemptBudgets, [key]: budget } }
 }
-
 
 // autobuyerBatchSize mirrors the manual ×1/×10 toggle, but only governs autobuyer purchases
 // (the manual Buy button always buys 1 — see buyTier). At 1 (default), each attempt buys a
@@ -6489,7 +6408,6 @@ export const fillDataLakeManually = tierIndex => state => {
   }
 }
 
-
 // Sets (or clears) a lake's one-shot autoConvertActive flag directly — shared by
 // startDataLakeAutoConvert (turns it on) and tickDataLakeAutoConvert (turns it back off once that
 // one conversion completes or can no longer proceed). Same-reference no-op for an out-of-range
@@ -7177,7 +7095,6 @@ export const getComputeMergeDurationSeconds = (state, boundaryIndex) => {
   const normalDiskBits = getDiskLadderSizeBits((poolIndex - 1) * DATA_LAKE_SUB_SIZES.length + 1)
   return COMPUTE_MERGE_RATIO * getDiskReadCacheFlushSeconds(state, normalDiskBits)
 }
-
 
 // UI mirror of enableAutoMerge's own gate — whether sacrificing the output entity right now would
 // actually unlock automation for this tier boundary.

@@ -77,7 +77,7 @@ docs/
 src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
-    engine.js              ← pure state functions (no React, no side effects)
+    engine.js              ← pure state functions (no React, no side effects); domains being split into engine/*.js leaf modules, re-exported by engine.js
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage
     save-migration/        ← offloads save adaptation; adaptSaveForCurrentSchema returns current-compatible state
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.

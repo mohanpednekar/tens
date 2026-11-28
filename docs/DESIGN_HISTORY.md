@@ -9780,3 +9780,16 @@ direct-merge exclusions apply) with a current-head `APPROVE` (or passing `verify
 still never do. Accepted trade-offs, documented in `docs/AUTOMATION.md` "Auto-merge": only required
 checks gate it, PRs can land out of PR-number order, and a write-access push doesn't disarm it before
 the next daily run. "Allow auto-merge" must stay on (it was previously described as best turned off).
+
+## engine.js split: barrel + one leaf domain per PR (2026-11, #1212)
+
+`engine.js` (~8.8k lines, 226 commits in 30 days) was a merge-conflict magnet. Strategy: extract one
+domain per PR into `src/game/engine/<domain>.js`, pure move with no logic change, `engine.js` re-exporting
+the originally-public names (explicit `export { … } from`, not `export *`, so module-internal helpers
+stay off the public surface) — no importer changes, tests untouched. Extracted modules never import
+`engine.js` (no cycle); shared primitives live in `engine/core.js`. Slice 1 moved the leaf Challenge-rule
+helpers (`isChallengeLive` … `isSpeedUpgradeChallengeGated`) plus `clampNonNegative`. Left behind because
+they reach engine internals (`getUnlockedDiskSteps`, autobuyer-milestone getters, `createInitialGameState`,
+`resetFactoryCycle`, `tickGameCore`): `getBitRotCorruption`, `getChallengeUnlockPurges`,
+`isChallengeUnlocked`, `autoCompleteChallenges`, `tickChallengeRun` and the step/purchase effects. One
+domain per PR keeps each diff reviewable and rebases cheap.

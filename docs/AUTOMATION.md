@@ -675,7 +675,7 @@ follow-up PR or autonomous maintenance (Phase 0 CI/CD failures), not a PR gate. 
 ### Mutation testing (`mutation-testing.yml`, #592)
 
 Weekly (Sun 03:23 UTC) and `workflow_dispatch` job — **not** a PR check and never gates a merge. Runs
-Stryker (`stryker.config.json`, Vitest runner, `perTest` coverage) over `src/game/engine.js`: each
+Stryker (`stryker.config.json`, Vitest runner, `perTest` coverage) over `src/game/engine.js` and `src/game/engine/*.js`: each
 mutant reruns only the tests covering it. The initial dry run takes ~1 min; a full engine run has
 thousands of mutants, so the job allows up to 330 min. `workflow_dispatch`'s `mutate` input takes a
 Stryker range override (e.g. `src/game/engine.js:100-400`) for a quick check. Read the output in the
