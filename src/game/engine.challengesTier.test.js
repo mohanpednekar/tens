@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getChallengeProductionMultiplier, getScaleUpStepMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
-  isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
+  applyOfflineProgress, isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
 import { ADDRESS_SPACE_TIER_COUNT, HALF_DUPLEX_PRODUCTION_MULTIPLIER, BIT_ROT_DISK_RELIEF, BIT_ROT_GRACE_SECONDS, DISK_LADDER_BASE_SIZE_BITS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
@@ -411,5 +411,65 @@ describe('lever behaviour through the engine', () => {
     const reset = { ...grown, intro: { ...grown.intro, disksBuiltTotal: {} } }
     expect(getBitRotCorruption(grown)).toBeCloseTo(getBitRotCorruption(rotting) / BIT_ROT_DISK_RELIEF ** 2)
     expect(getBitRotCorruption(reset)).toBeCloseTo(getBitRotCorruption(grown))
+  })
+})
+
+describe('offline replay equals one long tick for time-based rules', () => {
+  const seedOf = (tierIndex, tickLevel = 0) => state => ({
+    owned: { ...state.owned, [T(tierIndex)]: 50 },
+    resources: { ...state.resources, [T(tierIndex)]: 50 },
+    tickspeedLevels: { ...state.tickspeedLevels, [T(tierIndex)]: tickLevel || state.tickspeedLevels?.[T(tierIndex)] },
+  })
+  // 600 s is within the full-speed window, so the replay simulates exactly 600 s.
+  const replay = (id, tierIndex, level) => {
+    const start = runOf(id, seedOf(tierIndex, level))
+    return { offline: applyOfflineProgress(600)(start), long: tickGame(600)(start) }
+  }
+  it.each([
+    ['F5', 4, 0],
+    ['F15', 4, 5],
+    ['F19', 8, 5],
+  ])('%s: applyOfflineProgress(600) matches tickGame(600)', (id, tierIndex, level) => {
+    const { offline, long } = replay(id, tierIndex, level)
+    expect(offline.challenges.activeSeconds).toBeCloseTo(600)
+    expect(offline.challenges.activeSeconds).toBeCloseTo(long.challenges.activeSeconds)
+    expect(offline.tickspeedLevels[T(tierIndex)]).toBe(long.tickspeedLevels[T(tierIndex)])
+  })
+
+  it('F5: Hard Refresh fires at 300 s and 600 s in both paths, leaving Petabytes empty', () => {
+    const { offline, long } = replay('F5', 4, 0)
+    expect(offline.challenges.run.refreshes).toBe(2)
+    expect(long.challenges.run.refreshes).toBe(2)
+    expect(offline.owned[T(4)]).toBe(0)
+  })
+
+  it('F15: Clock Drift fires once at 600 s, dropping Petabytes tickspeed from level 5 to 4', () => {
+    const { offline, long } = replay('F15', 4, 5)
+    expect(offline.tickspeedLevels[T(4)]).toBe(4)
+    expect(long.tickspeedLevels[T(4)]).toBe(4)
+  })
+
+  it('F19: Duty Cycle output matches across paths, and the on-window out-produces the off-window', () => {
+    const produced = state => state.owned[T(7)]
+    const { offline, long } = replay('F19', 8, 5)
+    expect(produced(offline)).toBeGreaterThan(50)
+    expect(Math.abs(produced(offline) - produced(long)) / produced(long)).toBeLessThan(0.02)
+    // Nothing produces Ronnabytes here, so each window's gain depends only on the effective tickspeed:
+    // [0, 30) is on (level 5), [30, 60) is off (read as level 1). Measured ~1.33x; without the rule the off-window gains more.
+    const start = runOf('F19', seedOf(8, 5))
+    const afterOn = applyOfflineProgress(30)(start)
+    const afterOff = applyOfflineProgress(30)(afterOn)
+    const onGain = produced(afterOn) - produced(start)
+    const offGain = produced(afterOff) - produced(afterOn)
+    expect(offGain).toBeGreaterThan(0)
+    expect(onGain).toBeGreaterThan(offGain * 1.2)
+  })
+
+  it('F9: a Bit Rot restart during the gap is counted and the challenge stays active', () => {
+    const start = withRun(runOf('F9'), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const offline = applyOfflineProgress(600)(start)
+    expect(offline.challenges.active).toBe('F9')
+    expect(offline.challenges.bitRotLosses).toBeGreaterThanOrEqual(1)
+    expect(offline.challenges.bitRotLosses).toBe(tickGame(600)(start).challenges.bitRotLosses)
   })
 })
