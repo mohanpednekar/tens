@@ -181,7 +181,7 @@ progress resets per cycle (the Data Stream balance is kept). Nothing here ever f
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Foundry fill speed** (`foundryFillCurve.js`): 1× through KB, then selectable from 1× to the live pool count.
   The selected speed and its reciprocal are the empty and full endpoints of the log-linear primary fill.
-  Save starts a 10-hour cooldown, reducible by three achievements. Before Compile, each ping adds one bit.
+  Save starts a 10-hour cooldown, reducible by three achievements earned through ordinary staging, disk funding, and slider changes. Before Compile, each ping adds one bit.
   Provision Disk appears at KB. **Tap bonuses speed consumers** ×(1 + bonus%),
   decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool ping →
   Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).

@@ -1,10 +1,10 @@
 import { PURGE_THRESHOLD } from './layers.js'
 import { loadGameState, saveGameState } from './storage.js'
 import {
-  applyOfflineProgress, combineIntroByte, createInitialGameState, getFillCurveDelta, getFillCurveSeconds,
-  getFoundrySpeed, getFoundrySpeedCooldownSeconds, getFoundrySpeedRemainingSeconds,
-  getPoolCapacityUnlockThresholdBits, purgeGame, resetByteFoundry, saveFoundrySpeed, spendFoundrySprintData,
-  startFoundrySpeedTrial, tapIntroBit, tickFoundrySpeedTrial,
+  combineIntroByte, createInitialGameState, getFillCurveDelta, getFillCurveSeconds, getFoundrySpeed,
+  getFoundrySpeedCooldownSeconds, getFoundrySpeedRemainingSeconds, getPoolAvailableFillRate,
+  getPoolBufferCapacity, getPoolCapacityUnlockThresholdBits, provisionDisk, purgeGame, resetByteFoundry,
+  saveFoundrySpeed, tapIntroBit, tickPoolBufferFill, tickQueuedDiskBuild,
 } from './engine.js'
 
 const SECOND = 1000
@@ -60,13 +60,14 @@ describe('Foundry speed progression', () => {
 
   it('keeps the saved speed, cooldown, and comparison benchmark through a Purge', () => {
     const initial = withEarned(atPool(2), 'foundrySprint')
-    const benchmark = tickFoundrySpeedTrial(40)(startFoundrySpeedTrial(0)(initial))
+    const benchmark = fillPool(initial, 1, 1)
     const selected = saveFoundrySpeed(1.5, 123)(benchmark)
     const purged = purgeGame({ ...selected, resources: { ...selected.resources, base: PURGE_THRESHOLD } })
     expect(purged.purge.count).toBe(1)
     expect(getFoundrySpeed(purged.intro)).toBe(1.5)
     expect(purged.intro.foundrySpeedSavedAtMs).toBe(123)
-    expect(purged.intro.foundrySpeedBenchmark).toEqual(benchmark.intro.foundrySpeedBenchmark)
+    expect(benchmark.intro.foundrySpeedFillTimes[1]).toBeDefined()
+    expect(purged.intro.foundrySpeedFillTimes).toEqual(benchmark.intro.foundrySpeedFillTimes)
   })
 
   it('loads old saves at the current maximum and keeps a chosen speed, cooldown, and completed benchmark', () => {
@@ -75,14 +76,16 @@ describe('Foundry speed progression', () => {
     try {
       expect(getFoundrySpeed(loadGameState().intro)).toBe(2)
       const initial = withEarned(atPool(2), 'foundrySprint')
-      const benchmark = tickFoundrySpeedTrial(40)(startFoundrySpeedTrial(0)(initial))
+      const benchmark = fillPool(initial, 1, 1)
       const one = saveFoundrySpeed(1, 0)(benchmark)
-      saveGameState(startFoundrySpeedTrial(0)(one))
+      saveGameState({ ...one, intro: { ...one.intro, foundrySpeedTrial: { kind: 'sprint' }, foundrySpeedBenchmark: { seconds: 30 } } })
       const loaded = loadGameState()
       expect(getFoundrySpeed(loaded.intro)).toBe(1)
       expect(getFoundrySpeedRemainingSeconds(loaded, 30_000)).toBe(3570)
-      expect(loaded.intro.foundrySpeedBenchmark).toEqual(benchmark.intro.foundrySpeedBenchmark)
-      expect(loaded.intro.foundrySpeedTrial).toBeNull()
+      expect(loaded.intro.foundrySpeedFillTimes).toEqual(benchmark.intro.foundrySpeedFillTimes)
+      expect(loaded.intro.foundrySpeedFills).toEqual({})
+      expect(loaded.intro.foundrySpeedTrial).toBeUndefined()
+      expect(loaded.intro.foundrySpeedBenchmark).toBeUndefined()
     } finally {
       localStorage.clear()
     }
@@ -97,50 +100,51 @@ describe('Foundry speed progression', () => {
   })
 })
 
-describe('Foundry speed achievement attempts', () => {
-  it('retries a missed Sprint and spends the test data while leaving actual staging alone', () => {
-    const initial = atPool(2, { poolBuffers: { 1: 8_000, 2: 8_000_000 } })
-    const firstAttempt = startFoundrySpeedTrial(0)(initial)
-    expect(spendFoundrySprintData(firstAttempt)).toBe(firstAttempt)
-    const missed = tickFoundrySpeedTrial(20)(firstAttempt)
-    expect(missed.intro.foundrySpeedTrial.result).toBe('missed')
-    expect(spendFoundrySprintData(missed)).toBe(missed)
-    const filled = tickFoundrySpeedTrial(2)(startFoundrySpeedTrial(20_000)(missed))
+// Prepare real staging supply and use the same delivery step that runs in normal tickGame.
+const fillPool = (state, pool, target, speed = getFoundrySpeed(state.intro)) => {
+  const capacity = getPoolBufferCapacity(state, pool)
+  const rate = getPoolAvailableFillRate(state, pool)
+  const elapsed = getFillCurveSeconds(state.intro.poolBuffers[pool] ?? 0, capacity * target, capacity, rate, speed)
+  return tickPoolBufferFill(elapsed + 0.01)({ ...state, intro: { ...state.intro, bits: state.intro.capacity } })
+}
+
+describe('Foundry speed achievements in live staging', () => {
+  it('recognizes a faster partial fill only after an ordinary manual Provision Disk draw', () => {
+    const filled = fillPool(atPool(2), 1, 0.3)
     expect(filled.achievements.earned.foundrySprint).toBeUndefined()
-    const spent = spendFoundrySprintData(filled)
-    expect(spent.intro.foundrySpeedTrial.bits).toBeCloseTo(filled.intro.foundrySpeedTrial.bits - filled.intro.foundrySpeedTrial.capacity * 0.1)
-    expect(spent.achievements.earned.foundrySprint).toBe(true)
-    expect(spent.intro.poolBuffers).toBe(initial.intro.poolBuffers)
+    expect(filled.intro.foundrySpeedFills[1].splitSeconds).toBeGreaterThan(0)
+    const armed = provisionDisk(filled)
+    const next = tickQueuedDiskBuild(0.1)(armed)
+    expect(next.intro.poolBuffers[1]).toBeLessThan(filled.intro.poolBuffers[1])
+    expect(next.achievements.earned.foundrySprint).toBe(true)
   })
 
-  it('compares two full fills at matching test capacity and in the same pool', () => {
+  it('beats an earlier maximum fill with a live 1× fill in the same pool', () => {
     const initial = withEarned(atPool(2), 'foundrySprint')
-    const benchmark = tickFoundrySpeedTrial(40)(startFoundrySpeedTrial(0)(initial))
-    expect(benchmark.intro.foundrySpeedBenchmark.seconds).toBeGreaterThan(30)
-    const one = saveFoundrySpeed(1, 0)(benchmark)
-    const expanded = { ...one, intro: { ...one.intro, capacity: getPoolCapacityUnlockThresholdBits(3) } }
-    expect(startFoundrySpeedTrial(0)(expanded)).toBe(expanded)
-    const won = tickFoundrySpeedTrial(30)(startFoundrySpeedTrial(0)(one))
+    const recorded = fillPool(initial, 1, 1)
+    expect(recorded.intro.foundrySpeedFillTimes[1].seconds).toBeGreaterThan(0)
+    const saved = saveFoundrySpeed(1, 0)(recorded)
+    const refill = { ...saved, intro: { ...saved.intro, poolBuffers: {} } }
+    const won = fillPool(refill, 1, 1)
     expect(won.achievements.earned.foundrySlowWins).toBe(true)
     expect(getFoundrySpeedCooldownSeconds(won)).toBe(600)
   })
 
-  it('requires an eligible mid-fill save and rules out every supported fixed setting', () => {
+  it('records a real maximum-to-1× handoff in a late pool and rejects fixed settings', () => {
     const initial = withEarned(atPool(4), 'foundrySprint', 'foundrySlowWins')
-    const start = startFoundrySpeedTrial(0)(initial)
     for (let tenth = 10; tenth <= 100; tenth += 1) {
-      expect(getFillCurveSeconds(0, 1, 1, 1 / 30, tenth / 10)).toBeGreaterThanOrEqual(30)
+      expect(getFillCurveSeconds(0.1, 1, 1, 1, tenth / 10)).toBeGreaterThanOrEqual(0.9)
     }
-    expect(tickFoundrySpeedTrial(25)(start).intro.foundrySpeedTrial.result).toBe('missed')
-    expect(saveFoundrySpeed(1, 0)(start).intro.foundrySpeedTrial).toBeNull()
-    expect(applyOfflineProgress(2)(start).intro.foundrySpeedTrial).toBeNull()
-
-    let state = start
-    for (let step = 0; step < 81; step += 1) state = tickFoundrySpeedTrial(0.1)(state)
-    state = saveFoundrySpeed(1, 8100)(state)
-    for (let step = 0; step < 170; step += 1) state = tickFoundrySpeedTrial(0.1)(state)
-    expect(state.intro.foundrySpeedTrial.result).toBe('passed')
-    expect(state.achievements.earned.foundryHandoff).toBe(true)
-    expect(getFoundrySpeedCooldownSeconds(state)).toBe(60)
+    const fixed = fillPool(initial, 4, 1)
+    expect(fixed.achievements.earned.foundryHandoff).toBeUndefined()
+    const halfway = fillPool(initial, 4, 0.5)
+    expect(halfway.intro.foundrySpeedFills[4]?.early).toBe(true)
+    const switched = saveFoundrySpeed(1, 12_300)(halfway)
+    expect(switched.intro.foundrySpeedFills[4]?.switched).toBe(true)
+    const purged = purgeGame({ ...switched, resources: { ...switched.resources, base: PURGE_THRESHOLD } })
+    expect(purged.intro.foundrySpeedFills[4]?.switched).toBe(true)
+    const won = fillPool(purged, 4, 1)
+    expect(won.achievements.earned.foundryHandoff).toBe(true)
+    expect(getFoundrySpeedCooldownSeconds(won)).toBe(60)
   })
 })

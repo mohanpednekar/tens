@@ -443,8 +443,8 @@ export const createInitialGameState = () => ({
     capacity: INTRO_STARTING_CAPACITY,
     foundrySpeedSelection: null, // null follows the maximum as new pools go live
     foundrySpeedSavedAtMs: null,
-    foundrySpeedBenchmark: null,
-    foundrySpeedTrial: null,
+    foundrySpeedFills: {},
+    foundrySpeedFillTimes: {},
     byteCreated: false,        // PERMANENT — one persistent Byte generator, a flag not a counter
     // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Provision
     // Disk, Capacity) after a Foundry wipe. null when inactive. Survives Prestige like other
@@ -2818,7 +2818,6 @@ export const getOfflineEffectiveSeconds = (elapsedRealSeconds, capSeconds = MAX_
 // (tickIntroProduction/tickIntroAutoInvest/tickStorage*), so this same speed and cadence apply to
 // the entire game, not just tiers.
 export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
-  state = cancelFoundrySpeedTrial(state)
   const effectiveSeconds = getOfflineEffectiveSeconds(elapsedRealSeconds, getMaxOfflineSeconds(state))
   let result = state
   for (let i = 0; i < effectiveSeconds; i++) {
@@ -2840,7 +2839,6 @@ export const getOfflineRewardBonusSeconds = (elapsedRealSeconds, capSeconds = MA
 // `capSeconds` is the cap the catch-up itself used (the notice summary's), so a Sleep mode upgrade bought
 // between catch-up and claim can't enlarge the bonus; defaults to the state's current cap.
 export const applyOfflineRewardBonus = (elapsedRealSeconds, autobuyerBatchSize = 1, capSeconds) => state => {
-  state = cancelFoundrySpeedTrial(state)
   const bonusSeconds = getOfflineRewardBonusSeconds(elapsedRealSeconds, capSeconds ?? getMaxOfflineSeconds(state))
   let result = state
   for (let i = 0; i < bonusSeconds; i++) {
@@ -3427,130 +3425,74 @@ export const saveFoundrySpeed = (selection, nowMs) => state => {
     selection < 1 || selection > maximum || getFoundrySpeedRemainingSeconds(state, nowMs) > 0) return state
   const speed = Math.round(selection / FOUNDRY_SPEED_STEP) / (1 / FOUNDRY_SPEED_STEP)
   if (speed === getFoundrySpeed(state.intro, maximum)) return state
-  const trial = state.intro.foundrySpeedTrial
-  const switched = trial?.kind === 'handoff' && trial.pool === maximum &&
-    !trial.switched && speed === 1 && trial.earlySeconds != null &&
-    trial.earlySeconds <= FOUNDRY_HANDOFF_EARLY_SECONDS && trial.result == null
+  const foundrySpeedFills = {}
+  if (speed === 1 && getFoundrySpeed(state.intro, maximum) === maximum && isAchievementEarned(state, 'foundrySlowWins')) {
+    for (const [pool, fill] of Object.entries(state.intro.foundrySpeedFills ?? {})) {
+      const fraction = getPoolBufferFillFraction(state, Number(pool))
+      if (Number(pool) >= 4 && fill.speed === maximum && fill.early && fraction >= 0.4 && fraction <= 0.6) {
+        foundrySpeedFills[pool] = { ...fill, switched: true }
+      }
+    }
+  }
   return {
     ...state,
     intro: {
       ...state.intro,
       foundrySpeedSelection: speed === maximum ? null : speed,
       foundrySpeedSavedAtMs: nowMs,
-      foundrySpeedTrial: switched ? { ...trial, switched: true } : trial?.result != null ? trial : null,
+      foundrySpeedFills,
     },
   }
 }
 
-// Repeatable isolated fills use a separate test buffer for the highest live pool. Fix
-// the base time so players get a reaction window regardless of live production/drains.
-const FOUNDRY_TRIAL_BASE_SECONDS = 30
-export const FOUNDRY_SPRINT_FILL_FRACTION = 0.1
-const FOUNDRY_HANDOFF_MIN_POOL = 4
-export const FOUNDRY_HANDOFF_EARLY_FRACTION = 0.25
-export const FOUNDRY_HANDOFF_EARLY_SECONDS = 3.6
-export const FOUNDRY_HANDOFF_TOTAL_SECONDS = 24.9
+// Observe ordinary staging between fixed marks. Time includes live delays and
+// consumers, even when they briefly reduce staging. Nothing here moves game resources.
+const FOUNDRY_FILL_START = 0.1
+const FOUNDRY_FILL_EARLY = 0.25
+const FOUNDRY_HANDOFF_SPLIT_LIMIT = 0.1
+const FOUNDRY_HANDOFF_TOTAL_LIMIT = 0.87
 
-export const getFoundrySpeedTrialOffer = (state, nowMs) => {
-  if (!ACHIEVEMENTS_FEATURE.enabled || isAchievementEarned(state, 'foundryHandoff')) return null
-  const pool = getFoundrySpeedMaximum(state.intro)
-  if (pool < 2) return null
-  const speed = getFoundrySpeed(state.intro, pool)
-  if (!isAchievementEarned(state, 'foundrySprint')) return { kind: 'sprint', ready: speed === pool }
-  if (!isAchievementEarned(state, 'foundrySlowWins')) {
-    const benchmark = state.intro.foundrySpeedBenchmark
-    if (speed === 1 && benchmark?.pool === pool && benchmark?.capacity === getPoolBufferCapacity(state, pool)) {
-      return { kind: 'baseline', ready: true }
-    }
-    return { kind: 'benchmark', ready: speed === pool }
-  }
-  if (pool < FOUNDRY_HANDOFF_MIN_POOL) return null
-  return { kind: 'handoff', ready: speed === pool && getFoundrySpeedRemainingSeconds(state, nowMs) === 0 }
-}
+const observeFoundryFill = (previous, capacity, rate, before, after, elapsed, speed, maximum) => {
+  const firstMark = capacity * FOUNDRY_FILL_START
+  if (!(capacity > 0 && rate > 0 && elapsed > 0) || after < firstMark) return null
 
-export const startFoundrySpeedTrial = nowMs => state => {
-  const offer = getFoundrySpeedTrialOffer(state, nowMs)
-  const current = state.intro.foundrySpeedTrial
-  if (!Number.isFinite(nowMs) || !offer?.ready || (current && current.result == null)) return state
-  const pool = getFoundrySpeedMaximum(state.intro)
-  const capacity = getPoolBufferCapacity(state, pool)
-  if (!(capacity > 0)) return state
-  const trial = { kind: offer.kind, pool, capacity, bits: 0, seconds: 0, earlySeconds: null, switched: false, result: null }
-  return { ...state, intro: { ...state.intro, foundrySpeedTrial: trial } }
-}
+  const starts = before < firstMark && (speed === maximum || speed === 1)
+  const startDelay = starts ? getFillCurveSeconds(before, firstMark, capacity, rate, speed) : 0
+  const fill = starts
+    ? { capacity, rate, speed, seconds: 0, splitSeconds: null, early: false, switched: false }
+    : previous
+  if (!fill || fill.capacity !== capacity || fill.rate !== rate ||
+    (fill.switched ? speed !== 1 : speed !== fill.speed)) return null
 
-export const cancelFoundrySpeedTrial = state => !state.intro.foundrySpeedTrial ? state : ({
-  ...state, intro: { ...state.intro, foundrySpeedTrial: null },
-})
-
-export const canSpendFoundrySprintData = state => {
-  const trial = state.intro.foundrySpeedTrial
-  return trial?.kind === 'sprint' && trial.result == null &&
-    getFoundrySpeedMaximum(state.intro) === trial.pool &&
-    getPoolBufferCapacity(state, trial.pool) === trial.capacity &&
-    trial.earlySeconds != null && trial.earlySeconds < FOUNDRY_TRIAL_BASE_SECONDS * FOUNDRY_SPRINT_FILL_FRACTION &&
-    trial.bits >= trial.capacity * FOUNDRY_SPRINT_FILL_FRACTION && trial.bits < trial.capacity / 2
-}
-
-export const spendFoundrySprintData = state => {
-  if (!canSpendFoundrySprintData(state)) return state
-  const trial = state.intro.foundrySpeedTrial
-  const next = {
-    ...state,
-    intro: {
-      ...state.intro,
-      foundrySpeedTrial: {
-        ...trial,
-        bits: trial.bits - trial.capacity * FOUNDRY_SPRINT_FILL_FRACTION,
-        result: 'passed',
-      },
-    },
-  }
-  return bumpAchievementCounter(next, 'foundrySprint', 1, 'max')
-}
-
-export const tickFoundrySpeedTrial = elapsed => state => {
-  const trial = state.intro.foundrySpeedTrial
-  if (!trial || trial.result != null || !(elapsed > 0)) return state
-  if (getFoundrySpeedMaximum(state.intro) !== trial.pool ||
-    getPoolBufferCapacity(state, trial.pool) !== trial.capacity) return cancelFoundrySpeedTrial(state)
-
-  const rate = trial.capacity / FOUNDRY_TRIAL_BASE_SECONDS
-  const speed = trial.kind === 'baseline' || trial.switched ? 1 : trial.pool
-  const remaining = getFillCurveSeconds(trial.bits, trial.capacity, trial.capacity, rate, speed)
-  const seconds = trial.seconds + Math.min(elapsed, remaining)
-  const full = elapsed >= remaining
-  const bits = full ? trial.capacity : trial.bits + getFillCurveDelta(trial.bits, trial.capacity, rate, elapsed, speed)
-  const earlyFraction = trial.kind === 'sprint' ? FOUNDRY_SPRINT_FILL_FRACTION : FOUNDRY_HANDOFF_EARLY_FRACTION
-  const earlyTarget = earlyFraction * trial.capacity
-  const earlySeconds = trial.earlySeconds ?? (bits >= earlyTarget
-    ? trial.seconds + getFillCurveSeconds(trial.bits, earlyTarget, trial.capacity, rate, speed)
+  const full = after >= capacity
+  const untilFull = full ? getFillCurveSeconds(before, capacity, capacity, rate, speed) : elapsed
+  const seconds = fill.seconds + Math.max(0, (untilFull ?? elapsed) - startDelay)
+  const splitBits = capacity * FOUNDRY_FILL_EARLY
+  const splitSeconds = fill.splitSeconds ?? (before < splitBits && after >= splitBits
+    ? fill.seconds + getFillCurveSeconds(before, splitBits, capacity, rate, speed) - startDelay
     : null)
+  const early = splitSeconds != null && splitSeconds <= FOUNDRY_HANDOFF_SPLIT_LIMIT * capacity / rate
+  return { ...fill, seconds, splitSeconds, early, full, reachedHalf: fill.reachedHalf || after >= capacity / 2 }
+}
 
-  let result = null
-  let achievement
-  let benchmark = state.intro.foundrySpeedBenchmark
-  if (trial.kind === 'sprint') {
-    if (bits >= trial.capacity / 2) result = 'missed'
-  } else if (trial.kind === 'handoff') {
-    if (full && trial.switched && seconds <= FOUNDRY_HANDOFF_TOTAL_SECONDS) {
-      result = 'passed'
-      achievement = 'foundryHandoff'
-    } else if (seconds >= FOUNDRY_HANDOFF_TOTAL_SECONDS ||
-      (!trial.switched && seconds >= FOUNDRY_HANDOFF_EARLY_SECONDS &&
-        (earlySeconds == null || earlySeconds > FOUNDRY_HANDOFF_EARLY_SECONDS))) {
-      result = 'missed'
-    }
-  } else if (full && trial.kind === 'benchmark') {
-    result = 'recorded'
-    benchmark = { pool: trial.pool, capacity: trial.capacity, seconds }
-  } else if (full) {
-    result = seconds < benchmark?.seconds ? 'passed' : 'missed'
-    if (result === 'passed') achievement = 'foundrySlowWins'
+const settleObservedFoundryFill = (state, pool, fill, maximum) => {
+  if (fill.switched && fill.seconds <= FOUNDRY_HANDOFF_TOTAL_LIMIT * fill.capacity / fill.rate) {
+    return bumpAchievementCounter(state, 'foundryHandoff', 1, 'max')
   }
-  const next = { ...state, intro: { ...state.intro, foundrySpeedBenchmark: benchmark,
-    foundrySpeedTrial: { ...trial, bits, seconds, earlySeconds, result } } }
-  return achievement ? bumpAchievementCounter(next, achievement, 1, 'max') : next
+  if (isAchievementEarned(state, 'foundrySlowWins')) return state
+  const fillTimes = state.intro.foundrySpeedFillTimes ?? {}
+  const benchmark = fillTimes[pool]
+  if (!fill.switched && fill.speed === maximum) {
+    // Keep the best observed fill for these conditions.
+    if (benchmark?.capacity === fill.capacity && benchmark.rate === fill.rate && benchmark.seconds <= fill.seconds) return state
+    const next = { capacity: fill.capacity, rate: fill.rate, seconds: fill.seconds }
+    return { ...state, intro: { ...state.intro, foundrySpeedFillTimes: { ...fillTimes, [pool]: next } } }
+  }
+  if (fill.speed === 1 && isAchievementEarned(state, 'foundrySprint') &&
+    benchmark?.capacity === fill.capacity && benchmark.rate === fill.rate && fill.seconds < benchmark.seconds) {
+    return bumpAchievementCounter(state, 'foundrySlowWins', 1, 'max')
+  }
+  return state
 }
 
 // Storage pools display Capacity/Bandwidth in SI units (formatDiskSize); intro.capacity itself
@@ -3908,10 +3850,14 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
   const poolBuffers = { ...(state.intro.poolBuffers ?? {}) }
   const dataLakes = { ...state.intro.dataLakes }
   let changed = false
+  const observe = ACHIEVEMENTS_FEATURE.enabled && unlockedCount >= 2 && !isAchievementEarned(state, 'foundryHandoff')
+  const previousFills = state.intro.foundrySpeedFills
+  const fills = observe ? {} : previousFills
+  let earned = state
 
   for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
     const fillRate = getPoolAvailableFillRate(state, poolIndex)
-    if (fillRate <= 0 || bits <= 0) continue
+    if (fillRate <= 0 || (bits <= 0 && !previousFills?.[poolIndex])) continue
 
     const current = poolBuffers[poolIndex] ?? 0
     const bufferCap = getPoolBufferCapacity(state, poolIndex)
@@ -3940,6 +3886,12 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
       }
       // The buffer didn't actually reach full capacity this tick (either `rawTransfer` itself
       // fell short of `room`, or `bits` ran out first) — nothing left to overflow either way.
+      if (observe) {
+        const fill = observeFoundryFill(previousFills?.[poolIndex], bufferCap,
+          unmultipliedRate, current, current + transfer, elapsedSeconds, speed, unlockedCount)
+        if (fill?.full) earned = settleObservedFoundryFill(earned, poolIndex, fill, unlockedCount)
+        else if (fill) fills[poolIndex] = fill
+      }
       if (transfer < room || bits <= 0) continue
       // Time along the fill curve to actually fill the remaining room, so the overflow formula
       // below — deliberately UNmultiplied, see this function's own doc comment above — applies to
@@ -3981,8 +3933,9 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     changed = true
   }
 
-  if (!changed) return state
-  return { ...state, intro: { ...state.intro, bits, poolBuffers, dataLakes } }
+  const observedChange = observe && (Object.keys(fills).length > 0 || Object.keys(previousFills ?? {}).length > 0)
+  if (!changed && !observedChange && earned === state) return state
+  return { ...earned, intro: { ...earned.intro, bits, poolBuffers, dataLakes, foundrySpeedFills: fills } }
 }
 
 // Clears a queued-Capacity-upgrade flag that can never fire on save load and sanitizes a missing/negative
@@ -5148,6 +5101,14 @@ export const tickQueuedDiskBuild = (elapsedSeconds = 0) => state => {
   const headroomPasses = Math.max(0, Math.min(required - collected, allowance))
   const drawBits = stale ? 0 : Math.min(Math.max(0, elapsedSeconds) * bandwidth, spendable, headroomPasses * size)
   if (!stale && !(drawBits > 0)) return state
+  const fill = state.intro.foundrySpeedFills?.[poolIndex]
+  const maximum = getFoundrySpeedMaximum(state.intro)
+  if (drawBits > 0 && !replayOwned && !isAchievementEarned(state, 'foundrySprint') &&
+    fill?.splitSeconds != null && fill.speed === maximum && !fill.switched && !fill.reachedHalf &&
+    bufferBits >= fill.capacity * FOUNDRY_FILL_EARLY && bufferBits < fill.capacity / 2 &&
+    fill.splitSeconds < (FOUNDRY_FILL_EARLY - FOUNDRY_FILL_START) * fill.capacity / fill.rate) {
+    state = bumpAchievementCounter(state, 'foundrySprint', 1, 'max')
+  }
   const next = collected + drawBits / size
   const poolBuffers = { ...state.intro.poolBuffers, [poolIndex]: bufferBits - drawBits }
   if (stale || next >= required - TICK_ACCUMULATION_EPSILON) {
@@ -8202,6 +8163,7 @@ const resetByteFoundryCore = state => {
       foundryResetCaps,
       foundrySpeedSelection: prev.foundrySpeedSelection ?? null,
       foundrySpeedSavedAtMs: prev.foundrySpeedSavedAtMs ?? null,
+      foundrySpeedFillTimes: prev.foundrySpeedFillTimes ?? {},
       // Unlocked disk sizes (and so the speed exponent) survive a Foundry reset.
       unlockedDiskSteps: getUnlockedDiskSteps(prev),
       poolExponentBonuses: { ...(prev.poolExponentBonuses ?? {}) },
@@ -8307,11 +8269,11 @@ const resetFactoryCycle = (state, awardPurge) => {
       mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
       capacity: state.intro?.capacity ?? initial.intro.capacity,
       byteCreated: state.intro?.byteCreated ?? initial.intro.byteCreated,
-      // Factory resets preserve the Foundry setting, cooldown, and test data.
+      // Factory resets preserve the live Staging buffers and their fill measurements.
       foundrySpeedSelection: state.intro?.foundrySpeedSelection ?? null,
       foundrySpeedSavedAtMs: state.intro?.foundrySpeedSavedAtMs ?? null,
-      foundrySpeedBenchmark: state.intro?.foundrySpeedBenchmark ?? null,
-      foundrySpeedTrial: state.intro?.foundrySpeedTrial ?? null,
+      foundrySpeedFills: state.intro?.foundrySpeedFills ?? {},
+      foundrySpeedFillTimes: state.intro?.foundrySpeedFillTimes ?? {},
       // The Data Stream balance survives a Factory-cycle reset (Purge / challenge enter/exit) — Prestige never empties it.
       bits: state.intro?.bits ?? initial.intro.bits,
       // Convenience caps from resetByteFoundry — permanent across Prestige so auto-replay keeps

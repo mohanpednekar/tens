@@ -142,16 +142,18 @@ keep the preference and cooldown, and temporarily
 clamp the effective setting to the live maximum. Full Reset clears both. Only a manual changed
 selection restarts the cooldown. Achievement rewards shorten it immediately from the last save.
 
-- **Sprint and Spend** shortens 10 hours to 1 hour. Fill the test buffer to 10% at maximum ahead of
-  the 1× time, then spend 10% on the test disk before the buffer reaches half full. The trial is
-  repeatable and keeps real pool staging and disk funding separate.
-- **Slow Wins** shortens the cooldown to 10 minutes. Record a maximum-speed full fill, then beat it
-  at 1× in the same selected pool and staging capacity. The test buffer is isolated and its base
-  fill lasts 30 seconds. A completed benchmark survives reloads but resets with Reformat/Reboot.
-- **Perfect Handoff** shortens the cooldown to 1 minute. From TB, start with maximum selected and
-  Save available. Reach 25% within 3.6 seconds, save 1× after that split, and finish by 24.9 seconds.
-  With `a = ln(s)`, every fixed speed takes `30·sinh(a)/a ≥ 30s`. At 4×, the halfway switch
-  can finish in about 23.1 seconds. Reloads and offline catch-up cancel attempts.
+The cooldown achievements observe normal Staging fills. Purge preserves in-progress measurements
+alongside Staging. Reloads clear those measurements.
+No achievement changes Staging, modifies its consumers, or starts a separate run.
+
+- **Sprint and Spend** (1 hour). At maximum speed, beat the 1× time from 10% to 25% Staging and
+  fund a manually queued real disk before Staging reaches half full.
+- **Slow Wins** (10 minutes). After Sprint and Spend, beat a full fill starting from 10% at maximum at 1×
+  with the same pool, capacity, and rate. Completed comparison times survive Reformat and Purge.
+- **Perfect Handoff** (1 minute). After Slow Wins, cross 10% in an ordinary TB-or-larger pool fill at the current
+  maximum. Reach 25% within 10% of the pool’s nominal Capacity ÷ Bandwidth time, switch to 1× at
+  40–60%, and reach full in at most 87% of that nominal time from the 10% mark. Even a lossless
+  fixed fill spends at least 90% of the nominal time from 10% to full.
 
 A collapsed pool card also shows its Data Lake title/action row (`DataLakePanel section="header"`; an
 expanded pool renders the full lake). Tap-bonus headroom clamping: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
