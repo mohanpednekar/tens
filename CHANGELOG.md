@@ -8,10 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Foundry speed settings unlock at MB, with three achievements that shorten the wait between changes.
 
 ### Changed
-- Each ping before Compile produces one bit. Foundry fill speed is fixed at 1× through KB, and Provision Disk appears when the KB pool unlocks.
 
 ### Deprecated
 
@@ -21,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+
+## [0.45.0] - 2026-11-28
+
+### Added
+- Foundry speed settings unlock at MB, with three achievements that shorten the wait between changes.
+
+### Changed
+- Each ping before Compile produces one bit. Foundry fill speed is fixed at 1× through KB, and Provision Disk appears when the KB pool unlocks.
 
 ## [0.44.0] - 2026-11-27
 

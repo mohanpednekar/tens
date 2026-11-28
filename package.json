@@ -1,7 +1,7 @@
 {
   "name": "tens",
-  "version": "0.44.0",
-  "versionCode": 263312211,
+  "version": "0.45.0",
+  "versionCode": 263321658,
   "private": true,
   "type": "module",
   "packageManager": "yarn@1.22.22",
