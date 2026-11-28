@@ -1159,14 +1159,14 @@
     "@babel/helper-string-parser" "^8.0.8"
     "@babel/helper-validator-identifier" "^8.0.6"
 
-"@capacitor-community/admob@^8.2.1":
-  version "8.3.0"
-  resolved "https://registry.yarnpkg.com/@capacitor-community/admob/-/admob-8.3.0.tgz#0ff79224bcdc0a858888c1134685c6068836244a"
-  integrity sha512-3KcvQ7eY05MwuR6ZyMj+XUMmjH2+dtOJPM8EFhO2dyVOmVxfQhgscI4puEjE29CAieCo3wybEJcCoST4uv2+1g==
+"@capacitor-community/admob@^8.4.2":
+  version "8.4.2"
+  resolved "https://registry.yarnpkg.com/@capacitor-community/admob/-/admob-8.4.2.tgz#e9de13e9fed5c6790d1b51e2e89f4a89e6f9b6f0"
+  integrity sha512-YDCGVyWyiD6iu44uigv6fgngTGLNeguRqJlkxws7pfNzsbnRooDrS60I1IOlmBZQQDpvx/5w49D6+RWWxfPl5Q==
   dependencies:
     "@capacitor/core" "^8.0.0"
     "@rdlabo/capacitor-docgen" "^0.4.1"
-    "@webview-native-ui/engine" "1.0.0"
+    "@webview-native-ui/engine" "^1.0.10"
 
 "@capacitor/android@^8.6.2":
   version "8.6.2"
@@ -2379,6 +2379,11 @@
     minimist "^1.2.8"
     typescript "~4.2.4"
 
+"@rdlabo/ionic-theme-utils@0.1.5":
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/@rdlabo/ionic-theme-utils/-/ionic-theme-utils-0.1.5.tgz#dcb81f90421cad77cb3f3e8a655d84708e8818d9"
+  integrity sha512-LTf+GQ3S786xF1R6ITs9PtfDfSZxPcWJqzIzk046X9dvwgS+9+cCmdA5ENXYbo2Xbdv4KnxS/LKvm4fPL9THGQ==
+
 "@revenuecat/purchases-capacitor@14.1.2":
   version "14.1.2"
   resolved "https://registry.yarnpkg.com/@revenuecat/purchases-capacitor/-/purchases-capacitor-14.1.2.tgz#77a6beb5d99bf930d7f6c04490b688c5541b3e6d"
@@ -2870,10 +2875,12 @@
   resolved "https://registry.yarnpkg.com/@vitest/spy/-/spy-5.1.0.tgz#0a10d0ca39c0df70951715ba1081dd186a451c23"
   integrity sha512-2DPO5OMHWKrBngC+fCmTQqemNF0gidRhp3lxbBmRhW+M1XJrfgPpqNqWVevXtn2f2ufD5ZaR1B6B641aAlcX5A==
 
-"@webview-native-ui/engine@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@webview-native-ui/engine/-/engine-1.0.0.tgz#57036341ae4539ece7b3581ef087b5642e0eddb1"
-  integrity sha512-BSjCUe6TDqJdoF4GNjwpyLU/ZWPTw9tTCMnmPVaAftjAWbhIrOVTpbYHJZnulmkMmfmoWi7s7qxML0gHLLS8RQ==
+"@webview-native-ui/engine@^1.0.10":
+  version "1.0.11"
+  resolved "https://registry.yarnpkg.com/@webview-native-ui/engine/-/engine-1.0.11.tgz#bc126d3f29077562abe1bea80018ee23ee4f9256"
+  integrity sha512-+gSA43PpzOflopNNpR0jyDYvnw39eMcy77vhziWOug6nLpEwj14WZschM8c6k4OUNT9iJpUxRpDsrYBV6HMQJg==
+  dependencies:
+    "@rdlabo/ionic-theme-utils" "0.1.5"
 
 "@xmldom/xmldom@^0.9.10":
   version "0.9.12"
