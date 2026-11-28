@@ -372,7 +372,9 @@ docs/                        ← DESIGN_HISTORY.md (the "why": superseded formul
 src/
   game/
     layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
-    engine.js             ← pure state functions (no React, no side effects)
+    engine.js             ← pure state functions (no React, no side effects); being split one domain per PR into
+                            `engine/*.js` leaf modules (`core.js` primitives, `challenges.js` Challenge-rule helpers) that
+                            never import engine.js; engine.js re-exports their public names, so importers don't change
     navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Factory cues muted while their automation is enabled and <1 s; Storage cues fold into Foundry;
                             Compute Flops affordability → `compute`)
     dailyChallenges.js    ← Daily-challenge logic ("Daily challenges")
