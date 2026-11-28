@@ -130,8 +130,8 @@ describe('detectAchievements', () => {
     const next = detectAchievements(lateGame())
     // Reclamation achievements require actual Compact Pool history; being far into Factory
     // progression does not earn rewards for Storage pool resets the player never performed.
-    expect(earnedIds(next)).toHaveLength(ACHIEVEMENT_DEFINITIONS.filter(d => d.group !== 'foundry').length)
-    expect(getCompletedAchievementGroups(next)).toEqual(ACHIEVEMENT_GROUPS.filter(g => g.id !== 'foundry').map(g => g.id))
+    expect(earnedIds(next)).toHaveLength(ACHIEVEMENT_DEFINITIONS.filter(d => !['foundry', 'foundrySpeed'].includes(d.group)).length)
+    expect(getCompletedAchievementGroups(next)).toEqual(ACHIEVEMENT_GROUPS.filter(g => !['foundry', 'foundrySpeed'].includes(g.id)).map(g => g.id))
     expect(detectAchievements(next)).toBe(next)
   })
 
@@ -139,8 +139,8 @@ describe('detectAchievements', () => {
     const previous = lateGame()
     const poolExponentBonuses = Object.fromEntries(Array.from({ length: 10 }, (_, index) => [index + 1, 2]))
     const awarded = detectAchievements({ ...previous, intro: { ...previous.intro, poolExponentBonuses } })
-    expect(earnedIds(awarded)).toHaveLength(ACHIEVEMENT_DEFINITIONS.length)
-    expect(getCompletedAchievementGroups(awarded)).toEqual(ACHIEVEMENT_GROUPS.map(g => g.id))
+    expect(earnedIds(awarded)).toHaveLength(ACHIEVEMENT_DEFINITIONS.filter(d => d.group !== 'foundrySpeed').length)
+    expect(getCompletedAchievementGroups(awarded)).toEqual(ACHIEVEMENT_GROUPS.filter(g => g.id !== 'foundrySpeed').map(g => g.id))
   })
 
   it('earns retroactively on a tick', () => {
@@ -157,6 +157,7 @@ describe('detectAchievements', () => {
     const fresh = createInitialGameState()
     const nearly = { ...fresh, achievements: { ...fresh.achievements, counters: { pings: 255 } } }
     expect(isAchievementEarned(tapIntroBit(nearly), 'pingOfDeath')).toBe(true)
+    for (let i = 1; i < 8; i += 1) state = tapIntroBit(state)
     expect(tapIntroBit(state)).toBe(state) // already full: not counted
   })
 

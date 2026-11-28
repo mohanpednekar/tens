@@ -204,6 +204,7 @@ export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry', reveal: null },
   { id: 'foundry', name: 'Foundry', boostArea: 'foundry', reveal: { kind: 'storageUnlocked' } },
+  { id: 'foundrySpeed', name: 'Foundry speed', boostArea: 'foundry', reveal: { kind: 'foundrySpeedUnlocked', min: 2 } },
   { id: 'power', name: 'Power', boostArea: 'power', reveal: { kind: 'anyOf', conditions: [{ kind: 'powerPageUnlocked' }, { kind: 'achievementEarned', id: 'powerUser' }] } },
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
@@ -253,6 +254,15 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
   { id: 'pingOfDeath', details: 'Counts every Ping you have ever made, across Purges and Reboots.', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
+  ...[
+    ['foundrySprint', 'Sprint and Spend', 'At maximum speed, reach 10% in the test buffer faster than at 1×, then fund the test disk before it reaches 50%.', '1 hour'],
+    ['foundrySlowWins', 'Slow Wins', 'Record a maximum-speed test fill, then beat it at 1× in the same pool.', '10 minutes'],
+    ['foundryHandoff', 'Perfect Handoff', 'In a late-game test fill, reach 25% at maximum speed within 3.6 seconds, switch to 1×, and fill by 24.9 seconds.', '1 minute'],
+  ].map(([id, name, trigger, duration]) => ({
+    id, name, trigger, group: 'foundrySpeed', bonus: `Foundry speed cooldown: ${duration}`,
+    condition: { kind: 'counter', key: id, min: 1 },
+    ...(id === 'foundryHandoff' ? { reveal: { kind: 'foundrySpeedUnlocked', min: 4 } } : {}),
+  })),
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
   // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake; level 5 (the grand reward) syncs Bitrate to Capacity (one Upgrade does both). The per-pool Bitrate exponent upgrades are separate: they come
   // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
@@ -453,21 +463,10 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // (tickPoolBufferFill) — every other consumer of these two rate functions, e.g. disk build time,
 // cache fill/flush, Data Lake transfer pacing, and Compute merge/boost pacing, keeps reading the
 // raw, un-multiplied rate exactly as before this mechanic existed). The
-// multiplier itself is fill-dependent: starts at FILL_MULTIPLIER_MAX_PERCENT when the Data Stream
-// Buffer / a pool's own local buffer (getPoolBufferBits/getPoolBufferCapacity) is empty, and falls
-// geometrically (10x -> 1x over the first half, 1x -> 0.1x over the second), reaching exactly 100%
-// at 50% full and FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
-// Data Stream (once Storage pools are revealed at 1 KiB — see getVisibleStoragePoolCount/
-// tapIntroBit) or a pool's own Memory tile (tapPoolBuffer) adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to a
-// decaying tap bonus that NEVER scales the fill itself (the fill curve already reaches
-// FILL_MULTIPLIER_MAX_PERCENT): it speeds that buffer's CONSUMERS ×(1 + bonus%) — the Data Stream's
-// Upgrade Capacity / Speed drains (getDataStreamTapMultiplier); a pool's provisioning draw, read-cache
-// flush, write-cache merges, lower-size rebuild and lake drain (getPoolTapMultiplier). Decays at
-// FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second (tickFillMultiplierDecay). Before
-// Storage pools are revealed, tapping the Data Stream keeps its original flat "one second's worth
-// of bits" effect instead (tapIntroBit) — this multiplier has no bearing pre-reveal.
-export const FILL_MULTIPLIER_MAX_PERCENT = 1000
-export const FILL_MULTIPLIER_MIN_PERCENT = 10
+// multiplier is fill-dependent (see foundryFillCurve.js); the player selects its reciprocal
+// endpoints once the second pool is live. Pings grant a separate bonus, added by tapIntroBit
+// after the KB pool is live or by tapPoolBuffer. The bonus speeds that buffer's consumers:
+// Data Stream upgrades or pool provisioning, disk/cache work, merges and the lake.
 export const FILL_MULTIPLIER_TAP_BONUS_PERCENT = 5
 export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
 // Hard ceiling on the manual tap bonus ITSELF (stored separately from the fill-based value — see
@@ -790,7 +789,7 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // rate — see docs/DESIGN_HISTORY.md. These two constants remain only as the fixed values
 // getDataLakeOverflowRatePercent (engine.js) now reports as a plain binary "receiving/not
 // receiving" indicator for ByteFoundryPage's own (removed) `mode="lake"` bar. They no longer
-// need to match FILL_MULTIPLIER_MIN_PERCENT (the UI bar that showed the handoff was removed).
+// need to match the Foundry fill curve’s final rate.
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
 

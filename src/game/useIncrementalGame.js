@@ -1,3 +1,4 @@
+import { cancelFoundrySpeedTrial, saveFoundrySpeed, spendFoundrySprintData, startFoundrySpeedTrial, tickFoundrySpeedTrial } from './engine'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { forfeitDailyRun, playDailyRun, restartDailyRun, startDailyRun, tickDailyRuns } from './dailyChallenges'
 import { addActivePlaySeconds, withManualPurchaseMark, recordRapidClick, resetRapidClicks, withRapidClickBest, buyCacheWarm, buyPlaytimeBonus, buyPrestigeSpeedBonus, buySleepModeCapUpgrade, getMaxOfflineSeconds, activateComputeBoost, applyOfflineProgress, AUTOBUYER_UNIT_BATCH, applyOfflineRewardBonus, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, restageManually, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry, setAutoPurgeSetting, buyEonUpgrade, buyAutoHyperscaler, setAutoHyperscalerEnabled } from './engine'
@@ -165,7 +166,7 @@ const computeInitialGame = () => {
         const elapsed = TICK_RATE_MS / 1000
         setState(prev => {
           const next = tickGame(elapsed, autobuyerBatchFor(buyUnitModeRef.current))(prev)
-          return document.visibilityState === 'visible' ? addActivePlaySeconds(elapsed)(next) : next
+          return document.visibilityState === 'visible' ? addActivePlaySeconds(elapsed)(tickFoundrySpeedTrial(elapsed)(next)) : next
         })
         lastTickRealTime = Date.now()
       }
@@ -177,6 +178,7 @@ const computeInitialGame = () => {
       // fully suspended timer may never reach on its own until some other event wakes the page.
       const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') runTick()
+        else setState(cancelFoundrySpeedTrial)
       }
       document.addEventListener('visibilitychange', handleVisibilityChange)
 
@@ -305,6 +307,10 @@ const computeInitialGame = () => {
       setTierTickspeedAutobuyerEnabled: (tierId, enabled) => setState(setTierTickspeedAutobuyerEnabled(tierId, enabled)),
       setComputeFlopsAutobuyerEnabled: (flopId, enabled) => setState(setComputeFlopsAutobuyerEnabled(flopId, enabled)),
       tapIntroBit: () => setState(tapIntroBit),
+      saveFoundrySpeed: selection => setState(saveFoundrySpeed(selection, Date.now())),
+      spendFoundrySprintData: () => setState(spendFoundrySprintData),
+      startFoundrySpeedTrial: () => setState(startFoundrySpeedTrial(Date.now())),
+      cancelFoundrySpeedTrial: () => setState(cancelFoundrySpeedTrial),
       tapPoolBuffer: poolIndex => setState(tapPoolBuffer(poolIndex)),
       combineIntroByte: () => setState(combineIntroByte),
       pickIntroCapacityMilestone: () => setState(pickIntroCapacityMilestone),

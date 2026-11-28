@@ -1,3 +1,5 @@
+import FoundrySpeed from './FoundrySpeed.jsx'
+import { getFoundrySpeed } from 'game/engine'
 import { boostGlow, isDataStreamBoosted, isPoolBoosted } from 'components/BoostBadge'
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
@@ -8,7 +10,7 @@ import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
 import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolTapMultiplier, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, isBitrateSyncedToCapacity, getSpeedUpgradeCostBits, isProvisionDiskAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isLaterPoolProvisioningLocked } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
@@ -160,11 +162,11 @@ const formatUpgradeTimeLeft = totalSeconds => {
 // engine.getFillCurveSeconds so tile ETAs share the same closed form as production/pool fill.
 // Tiles only — the upgrade bar draws at a constant 1×. `baseRate` is Speed/Bandwidth before the
 // fill multiplier; assumes nothing else draws from the buffer.
-export const getBufferSecondsToFull = (bits, capacity, baseRate) =>
-  getFillCurveSeconds(bits, capacity, capacity, baseRate)
+export const getBufferSecondsToFull = (bits, capacity, baseRate, speed) =>
+  getFillCurveSeconds(bits, capacity, capacity, baseRate, speed)
 
-const formatBufferTimeToFull = (bits, capacity, baseRate) => {
-  const seconds = getBufferSecondsToFull(bits, capacity, baseRate)
+const formatBufferTimeToFull = (bits, capacity, baseRate, speed) => {
+  const seconds = getBufferSecondsToFull(bits, capacity, baseRate, speed)
   return seconds === null ? null : formatUpgradeTimeLeft(seconds)
 }
 
@@ -714,11 +716,11 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftT
   )
 }
 
-// Red (FILL_MULTIPLIER_MIN_PERCENT) → blue (100%) → green (FILL_MULTIPLIER_MAX_PERCENT and above).
+// Red (10%) → blue (100%) → green (1000%).
 const SPEED_COLOR_STOPS = [
-  [FILL_MULTIPLIER_MIN_PERCENT, [229, 72, 77]],
+  [10, [229, 72, 77]],
   [100, [59, 130, 246]],
-  [FILL_MULTIPLIER_MAX_PERCENT, [48, 164, 108]],
+  [1000, [48, 164, 108]],
 ]
 
 const getSpeedColor = percent => {
@@ -748,6 +750,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const storageRevealed = isStorageUnlocked(state)
   const visiblePoolCount = getVisibleStoragePoolCount(state)
+  const foundrySpeed = getFoundrySpeed(intro, visiblePoolCount)
   // Null follows the largest unlocked pool by default; 0 is an explicit "all collapsed" choice.
   const [expandedPoolIndex, setExpandedPoolIndex] = useState(null)
   useEffect(() => {
@@ -774,7 +777,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // × fill multiplier), not the theoretical base Speed.
   const dataStreamRateText = !intro.byteCreated ? null : formatStreamRate(getDataStreamDeliveredRate(intro))
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
-  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate * boostMultiplier)
+  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate * boostMultiplier, foundrySpeed)
   // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
   // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
   // from a direct bit credit into a multiplier-bonus tap.
@@ -1268,7 +1271,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         )}
       </DataStreamCard>
 
-      {intro.byteCreated && (
+      {visiblePoolCount >= 2 && intro.byteCreated && (
+        <FoundrySpeed key={`${visiblePoolCount}:${foundrySpeed}`} actions={actions} state={state}
+          speed={foundrySpeed} maximum={visiblePoolCount} />
+      )}
+
+      {intro.byteCreated && storageRevealed && (
         <ProvisionCard aria-label="Provision Disk">{provisionDiskButton}</ProvisionCard>
       )}
 
@@ -1287,7 +1295,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // speeds its consumers (getPoolTapMultiplier), not this fill.
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
-        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate)
+        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate * getComputeBoostPoolMultiplier(intro, poolIndex), foundrySpeed)
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
         // isDataLakePoolDrainAvailable (listed in the speed details below).
         const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)

@@ -9780,3 +9780,12 @@ direct-merge exclusions apply) with a current-head `APPROVE` (or passing `verify
 still never do. Accepted trade-offs, documented in `docs/AUTOMATION.md` "Auto-merge": only required
 checks gate it, PRs can land out of PR-number order, and a write-access push doesn't disarm it before
 the next daily run. "Allow auto-merge" must stay on (it was previously described as best turned off).
+
+
+## Progressive Foundry fill speed and cooldown achievements (#1261)
+
+The fixed 10× empty / 0.1× full curve compressed early fills before Storage and gave players no
+way to choose between early delivery and a fast full fill. The same log-linear curve now has
+reciprocal player-selected endpoints and grows its range with Capacity-live pools. The first byte
+is assembled from eight one-bit pings. Timed comparison trials use isolated, repeatable buffers
+so live cache or lake demand cannot decide a result.

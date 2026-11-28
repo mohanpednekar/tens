@@ -688,6 +688,8 @@ const mergeState = rawSaved => {
     intro: applyPendingComputeGrants({
       ...fresh.intro,
       ...savedIntroClean,
+      // Timed attempts start afresh after a reload or slot switch, but a completed comparison survives.
+      foundrySpeedTrial: null,
       dataLakes,
     }, pendingComputeGrants),
     computeFlops: {
